@@ -442,7 +442,8 @@ Done
 git checkout main
 git pull origin main
 git checkout member/zhangsan
-git merge main
+git reset --hard main
+git push --force-with-lease origin member/zhangsan
 ```
 
 这样可以保证你的个人分支继续与最新 `main` 保持同步。
