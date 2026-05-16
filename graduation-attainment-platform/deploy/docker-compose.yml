@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ../backend
+    container_name: graduation-backend
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    restart: always
+
+  frontend:
+    build:
+      context: ../frontend
+    container_name: graduation-frontend
+    restart: always
+
+  nginx:
+    image: nginx:stable
+    container_name: graduation-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: always
