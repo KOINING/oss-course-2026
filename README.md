@@ -21,6 +21,14 @@
 
 [小组成员信息](docs/team.md)
 
+## 项目文档入口
+
+项目本身的技术设计与开发文档统一放在 `graduation-attainment-platform/docs/` 下。
+
+当前可直接查看：
+
+- [系统总体架构设计](graduation-attainment-platform/docs/系统总体架构设计.md)
+
 
 ## 仓库结构
 
@@ -29,31 +37,25 @@ oss-course-2026/
 ├── README.md                                  # 仓库总说明
 ├── LICENSE                                    # 开源许可证
 ├── .gitignore                                 # Git 忽略规则
-├── .github/                                   # GitHub 协作模板配置
-│   ├── pull_request_template.md               # Pull Request 模板
-│   └── ISSUE_TEMPLATE/                        # Issue 模板目录
-│       └── task.md                            # 任务类 Issue 模板
+├── .github/                                   # GitHub 协作模板与 Actions 工作流
+│   ├── ISSUE_TEMPLATE/
+│   ├── pull_request_template.md
+│   └── workflows/
 ├── docs/                                      # 课程协作与项目管理文档
-│   ├── README.md                              # docs 目录说明
-│   ├── team.md                                # 小组成员信息
-│   ├── 第一周任务分配.md                        # 第一周任务拆分与安排
-│   ├── project-board.md                       # GitHub Project 看板说明
-│   └── github协作流程.md                       # 小组 GitHub 协作规范
+│   ├── team.md
+│   ├── 第一周任务分配.md
+│   ├── project-board.md
+│   └── github协作流程.md
 ├── graduation-attainment-platform/            # 应用主目录
 │   ├── README.md                              # 应用级说明文档
+│   ├── AGENTS.md                              # 项目级 AI 协作规则
+│   ├── .agents/                               # 项目内 agent / skill 规划
 │   ├── frontend/                              # 前端工程目录
-│   │   └── README.md                          # 前端目录说明
 │   ├── backend/                               # 后端工程目录
-│   │   └── README.md                          # 后端目录说明
 │   ├── sql/                                   # 数据库交付物目录
-│   │   └── README.md                          # SQL 目录说明
 │   ├── deploy/                                # 部署配置目录
-│   │   └── README.md                          # 部署目录说明
-│   └── docs/                                  # 应用设计与开发文档目录
-│       └── README.md                          # 应用文档目录说明
+│   └── docs/                                  # 应用设计与开发文档
 └── PPT/                                       # 课程汇报材料
-    ├── README.md                              # PPT 目录说明
-    └── AI辅助开发与Vibe Coding实践分享.pptx    # 汇报演示文稿
 ```
 
 
