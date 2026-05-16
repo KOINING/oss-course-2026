@@ -14,17 +14,23 @@ jobs:
   frontend-ci:
     name: Frontend Build Check
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('graduation-attainment-platform/frontend/package.json') != '' }}
-
-    defaults:
-      run:
-        working-directory: graduation-attainment-platform/frontend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check frontend project exists
+        id: frontend-check
+        shell: bash
+        run: |
+          if [ -f graduation-attainment-platform/frontend/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
+        if: steps.frontend-check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -32,25 +38,39 @@ jobs:
           cache-dependency-path: graduation-attainment-platform/frontend/package-lock.json
 
       - name: Install dependencies
+        if: steps.frontend-check.outputs.exists == 'true'
+        working-directory: graduation-attainment-platform/frontend
         run: npm install
 
       - name: Build frontend
+        if: steps.frontend-check.outputs.exists == 'true'
+        working-directory: graduation-attainment-platform/frontend
         run: npm run build
+
+      - name: Skip frontend build
+        if: steps.frontend-check.outputs.exists != 'true'
+        run: echo "Frontend project not initialized yet, skipping frontend build."
 
   backend-ci:
     name: Backend Build Check
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('graduation-attainment-platform/backend/pom.xml') != '' }}
-
-    defaults:
-      run:
-        working-directory: graduation-attainment-platform/backend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check backend project exists
+        id: backend-check
+        shell: bash
+        run: |
+          if [ -f graduation-attainment-platform/backend/pom.xml ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup JDK 21
+        if: steps.backend-check.outputs.exists == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -58,4 +78,10 @@ jobs:
           cache: maven
 
       - name: Build backend
+        if: steps.backend-check.outputs.exists == 'true'
+        working-directory: graduation-attainment-platform/backend
         run: mvn -B clean package -DskipTests
+
+      - name: Skip backend build
+        if: steps.backend-check.outputs.exists != 'true'
+        run: echo "Backend project not initialized yet, skipping backend build."
