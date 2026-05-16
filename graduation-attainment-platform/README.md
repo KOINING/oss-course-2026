@@ -32,12 +32,17 @@ graduation-attainment-platform/
 │   └── skills/
 │       └── README.md
 ├── frontend/
+│   ├── Dockerfile
 │   └── README.md
 ├── backend/
+│   ├── Dockerfile
 │   └── README.md
 ├── sql/
 │   └── README.md
 ├── deploy/
+│   ├── docker-compose.yml
+│   ├── nginx.conf
+│   ├── .env.example
 │   └── README.md
 └── docs/
     └── README.md
@@ -47,8 +52,8 @@ graduation-attainment-platform/
 
 - `frontend/`：前端工程目录，后续放置 Vue 3 管理后台代码。
 - `backend/`：后端工程目录，后续放置 Spring Boot 3 服务代码。
-- `sql/`：数据库相关交付物目录，包含 ER、DDL、初始化脚本、数据字典等。
-- `deploy/`：部署相关目录，包含 Docker Compose、Nginx、环境变量模板、部署说明等。
+- `sql/`：数据库相关交付物目录，后续放置 ER、DDL、初始化脚本、数据字典等。
+- `deploy/`：部署相关目录，当前已补充 Docker Compose、Nginx、环境变量模板和部署说明。
 - `docs/`：应用本身的技术文档目录，存放接口约定、模块说明、联调记录、验收记录等。
 - `AGENTS.md`：项目级 AI 协作规则说明文件。
 - `.agents/skills/README.md`：项目内 AI skill 规划说明。
@@ -58,9 +63,9 @@ graduation-attainment-platform/
 如果使用 AI agent 参与本目录下的开发，请优先阅读：
 
 - AGENTS.md
-- .agents/skills/
+- .agents/skills/README.md
 
 其中：
 
 - `AGENTS.md` 用于说明本项目目录中的 AI 协作边界和工作规则。
-- `.agents/skills/用于记录项目内 skill 与适用场景。
+- `.agents/skills/README.md` 用于记录项目内 skill 与适用场景。
