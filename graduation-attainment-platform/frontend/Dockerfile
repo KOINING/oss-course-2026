@@ -1,5 +1,5 @@
 # 第一阶段：构建前端静态资源
-FROM node:22-alpine3.22 AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
