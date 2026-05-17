@@ -1,5 +1,7 @@
 # 第一阶段：构建 Spring Boot 可执行 jar
-FROM maven:3-eclipse-temurin-21-alpine AS builder
+
+FROM maven:3 AS builder
+
 
 WORKDIR /app
 
@@ -9,7 +11,9 @@ COPY src ./src
 RUN mvn -B clean package -DskipTests
 
 # 第二阶段：运行后端服务
-FROM eclipse-temurin:21-jre
+
+FROM eclipse-temurin:latest
+
 
 WORKDIR /app
 
