@@ -16,33 +16,29 @@ const routes = [
   },
 
   // ========== 前端2 (zml) 扩展区开始 ==========
-  // 示例（请 zml 取消注释并替换为实际组件）：
-  // {
-  //   path: '/',
-  //   component: () => import('@/layouts/MainLayout.vue'),
-  //   redirect: DEFAULT_HOME_PATH,
-  //   children: [
-  //     {
-  //       path: 'home',
-  //       name: ROUTE_NAMES.HOME,
-  //       component: () => import('@/views/home/HomeView.vue'),
-  //       meta: { title: '首页' },
-  //     },
-  //   ],
-  // },
-  // {
-  //   path: '/:pathMatch(.*)*',
-  //   name: ROUTE_NAMES.NOT_FOUND,
-  //   component: () => import('@/views/error/NotFoundView.vue'),
-  //   meta: { public: true, title: '404' },
-  // },
-  // ========== 前端2 (zml) 扩展区结束 ==========
-
   {
     path: '/',
-    redirect: '/login',
+    component: () => import('@/layouts/MainLayout.vue'),
+    redirect: DEFAULT_HOME_PATH,
+    children: [
+      {
+        path: 'home',
+        name: ROUTE_NAMES.HOME,
+        component: () => import('@/views/home/HomeView.vue'),
+        meta: { title: '首页' },
+      },
+    ],
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: ROUTE_NAMES.NOT_FOUND,
+    component: () => import('@/views/error/NotFoundView.vue'),
+    meta: { public: true, title: '404' },
+  },
+  // ========== 前端2 (zml) 扩展区结束 ==========
 ]
+
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

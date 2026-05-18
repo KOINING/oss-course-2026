@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw test *)",
+      "Bash(./mvnw dependency:resolve -q)",
+      "Bash(./mvnw dependency:resolve)",
+      "Bash(./mvnw dependency:tree)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(./mvnw spring-boot:run -Dspring-boot.run.arguments=\"--debug\")",
+      "Bash(./mvnw clean *)",
+      "Bash(./mvnw dependency:tree -Dincludes=\"org.springframework:spring-jdbc\")",
+      "Bash(./mvnw dependency:tree -Dincludes=\"com.h2database:h2\")",
+      "Bash(taskkill //F //IM java.exe)",
+      "Bash(./mvnw compile *)"
+    ]
+  }
+}
