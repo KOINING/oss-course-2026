@@ -1,7 +1,6 @@
 # 第一阶段：构建前端静态资源
 FROM node:lts-alpine AS builder
 
-
 WORKDIR /app
 
 COPY package*.json ./
