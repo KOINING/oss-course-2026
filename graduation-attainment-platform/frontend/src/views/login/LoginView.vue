@@ -49,7 +49,7 @@ async function handleLogin() {
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="login-title">高校教务管理系统</h1>
+      <h1 class="login-title">面向专业认证的毕业要求达成度统一计算平台</h1>
       <p class="login-subtitle">请登录您的账号</p>
 
       <el-form

@@ -47,8 +47,8 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   document.title = to.meta.title
-    ? `${to.meta.title} - 高校教务管理系统`
-    : '高校教务管理系统'
+    ? `${to.meta.title} - 面向专业认证的毕业要求达成度统一计算平台`
+    : '面向专业认证的毕业要求达成度统一计算平台'
 
   const isPublic = Boolean(to.meta.public)
   const hasToken = Boolean(getToken())
