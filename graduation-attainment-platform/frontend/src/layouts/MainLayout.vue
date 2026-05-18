@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container">
     <el-aside width="200px" class="layout-aside">
-      <div class="logo">高校教务管理系统</div>
+      <div class="logo">面向专业认证的毕业要求达成度统一计算平台</div>
       <el-menu
         :default-active="activeMenu"
         router
