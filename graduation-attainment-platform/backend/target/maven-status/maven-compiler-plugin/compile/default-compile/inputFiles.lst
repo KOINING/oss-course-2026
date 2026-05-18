@@ -1,6 +1,28 @@
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/OssCourseApplication.java
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/common/BusinessException.java
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/common/GlobalExceptionHandler.java
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/common/Result.java
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/config/SwaggerConfig.java
-/Users/wangziru/IdeaProjects/oss-course/src/main/java/com/oss/osscourse/controller/HealthController.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\common\BusinessException.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\common\GlobalExceptionHandler.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\common\Result.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\config\JwtConfig.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\config\SwaggerConfig.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\config\WebConfig.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\controller\AuthController.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\controller\HealthController.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\dto\LoginRequest.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\dto\LoginResponse.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\entity\SysPermission.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\entity\SysRole.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\entity\SysRolePermission.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\entity\SysUser.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\entity\SysUserRole.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\init\DataInitializer.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\interceptor\JwtInterceptor.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\mapper\SysPermissionMapper.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\mapper\SysRoleMapper.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\mapper\SysRolePermissionMapper.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\mapper\SysUserMapper.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\mapper\SysUserRoleMapper.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\OssCourseApplication.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\service\AuthService.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\service\impl\AuthServiceImpl.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\service\impl\SysUserServiceImpl.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\service\SysUserService.java
+C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\src\main\java\com\oss\osscourse\util\JwtUtil.java
