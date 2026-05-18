@@ -72,17 +72,36 @@ jobs:
             git pull origin main
             rm -rf graduation-attainment-platform/frontend/dist
             mkdir -p graduation-attainment-platform/frontend/dist
-            rm -f graduation-attainment-platform/backend/app.jar
+            mkdir -p runtime/backend
+            rm -f runtime/backend/app.jar
           EOF
 
           scp -P "$SSH_PORT" -r graduation-attainment-platform/frontend/dist "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/graduation-attainment-platform/frontend/"
-          scp -P "$SSH_PORT" "${{ steps.backend_jar.outputs.path }}" "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/graduation-attainment-platform/backend/app.jar"
+          scp -P "$SSH_PORT" "${{ steps.backend_jar.outputs.path }}" "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/runtime/backend/app.jar"
 
       - name: Deploy application
         shell: bash
         run: |
           ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
             set -e
+            cd "$DEPLOY_PATH/runtime/backend"
+            if [ -f app.pid ] && kill -0 "\$(cat app.pid)" 2>/dev/null; then
+              kill "\$(cat app.pid)"
+              sleep 2
+            fi
+
+            nohup java -jar app.jar > app.log 2>&1 &
+            echo \$! > app.pid
+
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS http://127.0.0.1:8080/health >/dev/null; then
+                break
+              fi
+              sleep 2
+            done
+
+            curl -fsS http://127.0.0.1:8080/health >/dev/null
+
             cd "$DEPLOY_PATH/graduation-attainment-platform/deploy"
-            docker compose up -d --build
+            docker compose up -d --build --remove-orphans
           EOF
