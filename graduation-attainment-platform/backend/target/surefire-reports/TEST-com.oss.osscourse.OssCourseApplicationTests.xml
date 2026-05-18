@@ -1,0 +1,928 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.oss.osscourse.OssCourseApplicationTests" time="6.029" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+  <properties>
+    <property name="java.specification.version" value="21"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="GBK"/>
+    <property name="java.class.path" value="C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\target\test-classes;C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\target\classes;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.5.14\spring-boot-starter-web-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter\3.5.14\spring-boot-starter-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot\3.5.14\spring-boot-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.5.14\spring-boot-starter-logging-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\ch\qos\logback\logback-classic\1.5.32\logback-classic-1.5.32.jar;C:\Users\哒哒哒\.m2\repository\ch\qos\logback\logback-core\1.5.32\logback-core-1.5.32.jar;C:\Users\哒哒哒\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.24.3\log4j-to-slf4j-2.24.3.jar;C:\Users\哒哒哒\.m2\repository\org\apache\logging\log4j\log4j-api\2.24.3\log4j-api-2.24.3.jar;C:\Users\哒哒哒\.m2\repository\org\slf4j\jul-to-slf4j\2.0.17\jul-to-slf4j-2.0.17.jar;C:\Users\哒哒哒\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\哒哒哒\.m2\repository\org\yaml\snakeyaml\2.4\snakeyaml-2.4.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.5.14\spring-boot-starter-json-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.21.2\jackson-datatype-jdk8-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.21.2\jackson-datatype-jsr310-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.21.2\jackson-module-parameter-names-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.5.14\spring-boot-starter-tomcat-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.54\tomcat-embed-core-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.54\tomcat-embed-websocket-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-web\6.2.18\spring-web-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-beans\6.2.18\spring-beans-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-webmvc\6.2.18\spring-webmvc-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-aop\6.2.18\spring-aop-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-context\6.2.18\spring-context-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-expression\6.2.18\spring-expression-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\projectlombok\lombok\1.18.46\lombok-1.18.46.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring-boot3-starter\3.5.14\mybatis-plus-spring-boot3-starter-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus\3.5.14\mybatis-plus-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-core\3.5.14\mybatis-plus-core-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-annotation\3.5.14\mybatis-plus-annotation-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring\3.5.14\mybatis-plus-spring-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-extension\3.5.14\mybatis-plus-extension-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\mybatis\mybatis\3.5.19\mybatis-3.5.19.jar;C:\Users\哒哒哒\.m2\repository\org\mybatis\mybatis-spring\3.0.5\mybatis-spring-3.0.5.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring-boot-autoconfigure\3.5.14\mybatis-plus-spring-boot-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.5.14\spring-boot-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.5.14\spring-boot-starter-jdbc-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\zaxxer\HikariCP\6.3.3\HikariCP-6.3.3.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-jdbc\6.2.18\spring-jdbc-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-tx\6.2.18\spring-tx-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-ui\2.8.6\springdoc-openapi-starter-webmvc-ui-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-api\2.8.6\springdoc-openapi-starter-webmvc-api-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-common\2.8.6\springdoc-openapi-starter-common-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-core-jakarta\2.2.29\swagger-core-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\org\apache\commons\commons-lang3\3.17.0\commons-lang3-3.17.0.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-annotations-jakarta\2.2.29\swagger-annotations-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-models-jakarta\2.2.29\swagger-models-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\dataformat\jackson-dataformat-yaml\2.21.2\jackson-dataformat-yaml-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\webjars\swagger-ui\5.20.1\swagger-ui-5.20.1.jar;C:\Users\哒哒哒\.m2\repository\org\webjars\webjars-locator-lite\1.1.3\webjars-locator-lite-1.1.3.jar;C:\Users\哒哒哒\.m2\repository\org\jspecify\jspecify\1.0.0\jspecify-1.0.0.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\3.5.14\spring-boot-starter-actuator-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\3.5.14\spring-boot-actuator-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-actuator\3.5.14\spring-boot-actuator-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-observation\1.15.11\micrometer-observation-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-commons\1.15.11\micrometer-commons-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-jakarta9\1.15.11\micrometer-jakarta9-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-core\1.15.11\micrometer-core-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\org\hdrhistogram\HdrHistogram\2.2.2\HdrHistogram-2.2.2.jar;C:\Users\哒哒哒\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.5.14\spring-boot-starter-validation-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.54\tomcat-embed-el-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.3.Final\hibernate-validator-8.0.3.Final.jar;C:\Users\哒哒哒\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\哒哒哒\.m2\repository\org\jboss\logging\jboss-logging\3.6.3.Final\jboss-logging-3.6.3.Final.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\classmate\1.7.3\classmate-1.7.3.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-api\0.12.6\jjwt-api-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-impl\0.12.6\jjwt-impl-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-jackson\0.12.6\jjwt-jackson-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.21.2\jackson-databind-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.21\jackson-annotations-2.21.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.21.2\jackson-core-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\security\spring-security-crypto\6.5.10\spring-security-crypto-6.5.10.jar;C:\Users\哒哒哒\.m2\repository\com\h2database\h2\2.3.232\h2-2.3.232.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.5.14\spring-boot-starter-test-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-test\3.5.14\spring-boot-test-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.5.14\spring-boot-test-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\jayway\jsonpath\json-path\2.9.0\json-path-2.9.0.jar;C:\Users\哒哒哒\.m2\repository\org\slf4j\slf4j-api\2.0.17\slf4j-api-2.0.17.jar;C:\Users\哒哒哒\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.4\jakarta.xml.bind-api-4.0.4.jar;C:\Users\哒哒哒\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.4\jakarta.activation-api-2.1.4.jar;C:\Users\哒哒哒\.m2\repository\net\minidev\json-smart\2.5.2\json-smart-2.5.2.jar;C:\Users\哒哒哒\.m2\repository\net\minidev\accessors-smart\2.5.2\accessors-smart-2.5.2.jar;C:\Users\哒哒哒\.m2\repository\org\ow2\asm\asm\9.7.1\asm-9.7.1.jar;C:\Users\哒哒哒\.m2\repository\org\assertj\assertj-core\3.27.7\assertj-core-3.27.7.jar;C:\Users\哒哒哒\.m2\repository\net\bytebuddy\byte-buddy\1.17.8\byte-buddy-1.17.8.jar;C:\Users\哒哒哒\.m2\repository\org\awaitility\awaitility\4.2.2\awaitility-4.2.2.jar;C:\Users\哒哒哒\.m2\repository\org\hamcrest\hamcrest\3.0\hamcrest-3.0.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter\5.12.2\junit-jupiter-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.12.2\junit-jupiter-api-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\哒哒哒\.m2\repository\org\junit\platform\junit-platform-commons\1.12.2\junit-platform-commons-1.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.12.2\junit-jupiter-params-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.12.2\junit-jupiter-engine-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\platform\junit-platform-engine\1.12.2\junit-platform-engine-1.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\mockito\mockito-core\5.17.0\mockito-core-5.17.0.jar;C:\Users\哒哒哒\.m2\repository\net\bytebuddy\byte-buddy-agent\1.17.8\byte-buddy-agent-1.17.8.jar;C:\Users\哒哒哒\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\哒哒哒\.m2\repository\org\mockito\mockito-junit-jupiter\5.17.0\mockito-junit-jupiter-5.17.0.jar;C:\Users\哒哒哒\.m2\repository\org\skyscreamer\jsonassert\1.5.3\jsonassert-1.5.3.jar;C:\Users\哒哒哒\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-core\6.2.18\spring-core-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-jcl\6.2.18\spring-jcl-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-test\6.2.18\spring-test-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\xmlunit\xmlunit-core\2.10.4\xmlunit-core-2.10.4.jar;"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://java.oracle.com/"/>
+    <property name="user.timezone" value="Asia/Shanghai"/>
+    <property name="org.jboss.logging.provider" value="slf4j"/>
+    <property name="os.name" value="Windows 11"/>
+    <property name="java.vm.specification.version" value="21"/>
+    <property name="APPLICATION_NAME" value="oss-course"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="CN"/>
+    <property name="sun.boot.library.path" value="D:\workspace\BenKeKeChenBiJi\java\jdk-21_windows-x64_bin\jdk-21.0.11\bin"/>
+    <property name="sun.java.command" value="C:\Users\哒哒哒\AppData\Local\Temp\surefire15052154894417328835\surefirebooter-20260518163004008_3.jar C:\Users\哒哒哒\AppData\Local\Temp\surefire15052154894417328835 2026-05-18T16-30-03_890-jvmRun1 surefire-20260518163004008_1tmp surefire_0-20260518163004008_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\target\test-classes;C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend\target\classes;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.5.14\spring-boot-starter-web-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter\3.5.14\spring-boot-starter-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot\3.5.14\spring-boot-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.5.14\spring-boot-starter-logging-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\ch\qos\logback\logback-classic\1.5.32\logback-classic-1.5.32.jar;C:\Users\哒哒哒\.m2\repository\ch\qos\logback\logback-core\1.5.32\logback-core-1.5.32.jar;C:\Users\哒哒哒\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.24.3\log4j-to-slf4j-2.24.3.jar;C:\Users\哒哒哒\.m2\repository\org\apache\logging\log4j\log4j-api\2.24.3\log4j-api-2.24.3.jar;C:\Users\哒哒哒\.m2\repository\org\slf4j\jul-to-slf4j\2.0.17\jul-to-slf4j-2.0.17.jar;C:\Users\哒哒哒\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\哒哒哒\.m2\repository\org\yaml\snakeyaml\2.4\snakeyaml-2.4.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.5.14\spring-boot-starter-json-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.21.2\jackson-datatype-jdk8-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.21.2\jackson-datatype-jsr310-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.21.2\jackson-module-parameter-names-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.5.14\spring-boot-starter-tomcat-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.54\tomcat-embed-core-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.54\tomcat-embed-websocket-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-web\6.2.18\spring-web-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-beans\6.2.18\spring-beans-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-webmvc\6.2.18\spring-webmvc-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-aop\6.2.18\spring-aop-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-context\6.2.18\spring-context-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-expression\6.2.18\spring-expression-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\projectlombok\lombok\1.18.46\lombok-1.18.46.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring-boot3-starter\3.5.14\mybatis-plus-spring-boot3-starter-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus\3.5.14\mybatis-plus-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-core\3.5.14\mybatis-plus-core-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-annotation\3.5.14\mybatis-plus-annotation-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring\3.5.14\mybatis-plus-spring-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-extension\3.5.14\mybatis-plus-extension-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\mybatis\mybatis\3.5.19\mybatis-3.5.19.jar;C:\Users\哒哒哒\.m2\repository\org\mybatis\mybatis-spring\3.0.5\mybatis-spring-3.0.5.jar;C:\Users\哒哒哒\.m2\repository\com\baomidou\mybatis-plus-spring-boot-autoconfigure\3.5.14\mybatis-plus-spring-boot-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.5.14\spring-boot-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.5.14\spring-boot-starter-jdbc-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\zaxxer\HikariCP\6.3.3\HikariCP-6.3.3.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-jdbc\6.2.18\spring-jdbc-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-tx\6.2.18\spring-tx-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-ui\2.8.6\springdoc-openapi-starter-webmvc-ui-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-webmvc-api\2.8.6\springdoc-openapi-starter-webmvc-api-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\org\springdoc\springdoc-openapi-starter-common\2.8.6\springdoc-openapi-starter-common-2.8.6.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-core-jakarta\2.2.29\swagger-core-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\org\apache\commons\commons-lang3\3.17.0\commons-lang3-3.17.0.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-annotations-jakarta\2.2.29\swagger-annotations-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\io\swagger\core\v3\swagger-models-jakarta\2.2.29\swagger-models-jakarta-2.2.29.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\dataformat\jackson-dataformat-yaml\2.21.2\jackson-dataformat-yaml-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\webjars\swagger-ui\5.20.1\swagger-ui-5.20.1.jar;C:\Users\哒哒哒\.m2\repository\org\webjars\webjars-locator-lite\1.1.3\webjars-locator-lite-1.1.3.jar;C:\Users\哒哒哒\.m2\repository\org\jspecify\jspecify\1.0.0\jspecify-1.0.0.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\3.5.14\spring-boot-starter-actuator-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\3.5.14\spring-boot-actuator-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-actuator\3.5.14\spring-boot-actuator-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-observation\1.15.11\micrometer-observation-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-commons\1.15.11\micrometer-commons-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-jakarta9\1.15.11\micrometer-jakarta9-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\io\micrometer\micrometer-core\1.15.11\micrometer-core-1.15.11.jar;C:\Users\哒哒哒\.m2\repository\org\hdrhistogram\HdrHistogram\2.2.2\HdrHistogram-2.2.2.jar;C:\Users\哒哒哒\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.5.14\spring-boot-starter-validation-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.54\tomcat-embed-el-10.1.54.jar;C:\Users\哒哒哒\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.3.Final\hibernate-validator-8.0.3.Final.jar;C:\Users\哒哒哒\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\哒哒哒\.m2\repository\org\jboss\logging\jboss-logging\3.6.3.Final\jboss-logging-3.6.3.Final.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\classmate\1.7.3\classmate-1.7.3.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-api\0.12.6\jjwt-api-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-impl\0.12.6\jjwt-impl-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\io\jsonwebtoken\jjwt-jackson\0.12.6\jjwt-jackson-0.12.6.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.21.2\jackson-databind-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.21\jackson-annotations-2.21.jar;C:\Users\哒哒哒\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.21.2\jackson-core-2.21.2.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\security\spring-security-crypto\6.5.10\spring-security-crypto-6.5.10.jar;C:\Users\哒哒哒\.m2\repository\com\h2database\h2\2.3.232\h2-2.3.232.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.5.14\spring-boot-starter-test-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-test\3.5.14\spring-boot-test-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.5.14\spring-boot-test-autoconfigure-3.5.14.jar;C:\Users\哒哒哒\.m2\repository\com\jayway\jsonpath\json-path\2.9.0\json-path-2.9.0.jar;C:\Users\哒哒哒\.m2\repository\org\slf4j\slf4j-api\2.0.17\slf4j-api-2.0.17.jar;C:\Users\哒哒哒\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.4\jakarta.xml.bind-api-4.0.4.jar;C:\Users\哒哒哒\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.4\jakarta.activation-api-2.1.4.jar;C:\Users\哒哒哒\.m2\repository\net\minidev\json-smart\2.5.2\json-smart-2.5.2.jar;C:\Users\哒哒哒\.m2\repository\net\minidev\accessors-smart\2.5.2\accessors-smart-2.5.2.jar;C:\Users\哒哒哒\.m2\repository\org\ow2\asm\asm\9.7.1\asm-9.7.1.jar;C:\Users\哒哒哒\.m2\repository\org\assertj\assertj-core\3.27.7\assertj-core-3.27.7.jar;C:\Users\哒哒哒\.m2\repository\net\bytebuddy\byte-buddy\1.17.8\byte-buddy-1.17.8.jar;C:\Users\哒哒哒\.m2\repository\org\awaitility\awaitility\4.2.2\awaitility-4.2.2.jar;C:\Users\哒哒哒\.m2\repository\org\hamcrest\hamcrest\3.0\hamcrest-3.0.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter\5.12.2\junit-jupiter-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.12.2\junit-jupiter-api-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\哒哒哒\.m2\repository\org\junit\platform\junit-platform-commons\1.12.2\junit-platform-commons-1.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.12.2\junit-jupiter-params-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.12.2\junit-jupiter-engine-5.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\junit\platform\junit-platform-engine\1.12.2\junit-platform-engine-1.12.2.jar;C:\Users\哒哒哒\.m2\repository\org\mockito\mockito-core\5.17.0\mockito-core-5.17.0.jar;C:\Users\哒哒哒\.m2\repository\net\bytebuddy\byte-buddy-agent\1.17.8\byte-buddy-agent-1.17.8.jar;C:\Users\哒哒哒\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\哒哒哒\.m2\repository\org\mockito\mockito-junit-jupiter\5.17.0\mockito-junit-jupiter-5.17.0.jar;C:\Users\哒哒哒\.m2\repository\org\skyscreamer\jsonassert\1.5.3\jsonassert-1.5.3.jar;C:\Users\哒哒哒\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-core\6.2.18\spring-core-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-jcl\6.2.18\spring-jcl-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\springframework\spring-test\6.2.18\spring-test-6.2.18.jar;C:\Users\哒哒哒\.m2\repository\org\xmlunit\xmlunit-core\2.10.4\xmlunit-core-2.10.4.jar;"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\哒哒哒"/>
+    <property name="user.language" value="zh"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2026-04-21"/>
+    <property name="java.home" value="D:\workspace\BenKeKeChenBiJi\java\jdk-21_windows-x64_bin\jdk-21.0.11"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="FILE_LOG_CHARSET" value="UTF-8"/>
+    <property name="java.awt.headless" value="true"/>
+    <property name="surefire.real.class.path" value="C:\Users\哒哒哒\AppData\Local\Temp\surefire15052154894417328835\surefirebooter-20260518163004008_3.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="21.0.11+9-LTS-211"/>
+    <property name="user.name" value="哒哒哒"/>
+    <property name="stdout.encoding" value="GBK"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="C:\Users\哒哒哒\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://bugreport.java.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="C:\Users\哒哒哒\AppData\Local\Temp\"/>
+    <property name="com.zaxxer.hikari.pool_number" value="1"/>
+    <property name="java.version" value="21.0.11"/>
+    <property name="user.dir" value="C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="PID" value="2972"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
+    <property name="native.encoding" value="GBK"/>
+    <property name="java.library.path" value="D:\workspace\BenKeKeChenBiJi\java\jdk-21_windows-x64_bin\jdk-21.0.11\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\Users\哒哒哒\bin;D:\others\Git\mingw64\bin;D:\others\Git\usr\local\bin;D:\others\Git\usr\bin;D:\others\Git\usr\bin;D:\others\Git\mingw64\bin;D:\others\Git\usr\bin;C:\Users\哒哒哒\bin;D:\workspace\BenKeKeChenBiJi\java\jdk-21_windows-x64_bin\jdk-21.0.11\bin;D:\workspace\java\jdk1.8.0_212\bin;C:\Program Files\Common Files\Oracle\Java\javapath;D:\bin;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\Microsoft\Web Platform Installer;C:\Program Files (x86)\Microsoft ASP.NET\ASP.NET Web Pages\v1.0;C:\Program Files (x86)\Windows Kits\8.0\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\110\Tools\Binn;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;D:\workspace\本科计算机课程笔记\java\apache-maven-3.9.15\apache-maven-3.9.15-bin\apache-maven-3.9.15\bin;D:\others\Git\cmd;D:\Nodejs;C:\Users\哒哒哒\AppData\Local\Microsoft\WindowsApps;C:\Users\哒哒哒\AppData\Roaming\npm;D:\others\Git\usr\bin\vendor_perl;D:\others\Git\usr\bin\core_perl;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="GBK"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="21.0.11+9-LTS-211"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="65.0"/>
+    <property name="LOGGED_APPLICATION_NAME" value="[oss-course] "/>
+  </properties>
+  <testcase name="contextLoads" classname="com.oss.osscourse.OssCourseApplicationTests" time="0.687">
+    <system-out><![CDATA[16:30:04.890 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.oss.osscourse.OssCourseApplicationTests]: OssCourseApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:30:05.015 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.oss.osscourse.OssCourseApplication for test class com.oss.osscourse.OssCourseApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.14)
+
+2026-05-18T16:30:05.529+08:00  INFO 2972 --- [oss-course] [           main] c.o.osscourse.OssCourseApplicationTests  : Starting OssCourseApplicationTests using Java 21.0.11 with PID 2972 (started by 哒哒哒 in C:\Users\哒哒哒\Desktop\new project\oss-course-2026\graduation-attainment-platform\backend)
+2026-05-18T16:30:05.531+08:00  INFO 2972 --- [oss-course] [           main] c.o.osscourse.OssCourseApplicationTests  : No active profile set, falling back to 1 default profile: "default"
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+Get /10.55.42.67 network interface 
+Get network interface info: name:wireless_32768 (Intel(R) Wi-Fi 6 AX201 160MHz)
+Initialization Sequence datacenterId:8 workerId:26
+ _ _   |_  _ _|_. ___ _ |    _ 
+| | |\/|_)(_| | |_\  |_)||_|_\ 
+     /               |         
+                        3.5.14 
+2026-05-18T16:30:07.461+08:00  INFO 2972 --- [oss-course] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-18T16:30:07.686+08:00  INFO 2972 --- [oss-course] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:graduationdb user=SA
+2026-05-18T16:30:07.690+08:00  INFO 2972 --- [oss-course] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-18T16:30:08.624+08:00  INFO 2972 --- [oss-course] [           main] m.e.s.MybatisPlusApplicationContextAware : Register ApplicationContext instances org.springframework.web.context.support.GenericWebApplicationContext@1813f3e9
+2026-05-18T16:30:09.049+08:00  INFO 2972 --- [oss-course] [           main] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:graduationdb'
+2026-05-18T16:30:09.092+08:00  INFO 2972 --- [oss-course] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-05-18T16:30:09.177+08:00  INFO 2972 --- [oss-course] [           main] c.o.osscourse.OssCourseApplicationTests  : Started OssCourseApplicationTests in 3.984 seconds (process running for 5.022)
+2026-05-18T16:30:09.265+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : Checking mock RBAC data...
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@a251135] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@586176436 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: college:manage(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@a251135]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@11174bf] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@968448640 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: college:manage(String), 学院管理(String), system(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@11174bf]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@301770d9] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1089324622 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: major:manage(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@301770d9]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1fec9d33] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@57866172 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: major:manage(String), 专业管理(String), system(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1fec9d33]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@8e8ceb3] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@647607894 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: user:manage(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@8e8ceb3]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5d67b2b3] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1237086644 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: user:manage(String), 用户管理(String), system(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5d67b2b3]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7efa366] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1815056075 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: role:assign(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7efa366]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c3d4bd7] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@640068149 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: role:assign(String), 角色分配(String), system(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c3d4bd7]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5ca8c904] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1281445260 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: dict:manage(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5ca8c904]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2ae4c424] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@964736079 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: dict:manage(String), 字典管理(String), system(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2ae4c424]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@237aba92] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1706139228 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: requirement:write(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@237aba92]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6978a32a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1432768646 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: requirement:write(String), 毕业要求编辑(String), macro(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6978a32a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@233ece92] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1242888151 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: matrix:write(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@233ece92]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66596c4c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@22864481 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: matrix:write(String), 支撑矩阵编辑(String), macro(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66596c4c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@54c3e686] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@964954502 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: course:import(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@54c3e686]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@141229f6] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1916505855 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: course:import(String), 课程导入(String), macro(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@141229f6]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3987a1e8] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@550917991 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: class:import(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3987a1e8]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@250e8712] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@200063290 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: class:import(String), 班级学生导入(String), macro(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@250e8712]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@f60c14e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@488624810 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: objective:write(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@f60c14e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4c78e00c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@582202832 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: objective:write(String), 课程目标编辑(String), syllabus(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4c78e00c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b506a79] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1220114235 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: weight:write(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b506a79]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@43ca96a0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2087233084 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: weight:write(String), 内部权重编辑(String), syllabus(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@43ca96a0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5443086a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1463856502 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: point:write(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5443086a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@40a84ea8] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2043169223 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: point:write(String), 考核点编辑(String), syllabus(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@40a84ea8]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@35840ecc] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1744645655 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: score:import(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@35840ecc]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@65a2e14e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1587485260 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: score:import(String), 成绩导入录入(String), assessment(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@65a2e14e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4bf89d3d] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1165725635 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: calc:trigger(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4bf89d3d]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@37a1beb3] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@298487665 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: calc:trigger(String), 达成度计算触发(String), assessment(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@37a1beb3]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1e54e900] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@130574494 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,perm_code,perm_name,module_name,remark,created_at,updated_at FROM sys_permission WHERE (perm_code = ?)
+==> Parameters: report:export(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1e54e900]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3da61af2] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2018683696 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_permission ( perm_code, perm_name, module_name ) VALUES ( ?, ?, ? )
+==> Parameters: report:export(String), 报表导出(String), report(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3da61af2]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5bf4dfb] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@147043892 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_code,role_name,status,remark,created_at,updated_at FROM sys_role WHERE (role_code = ?)
+==> Parameters: admin(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5bf4dfb]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@65259737] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@505920393 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role ( role_code, role_name, status, remark ) VALUES ( ?, ?, ?, ? )
+==> Parameters: admin(String), 系统管理员(String), 1(Integer), 系统全局配置、用户账号管理(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@65259737]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@532ea86b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1108976844 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_code,role_name,status,remark,created_at,updated_at FROM sys_role WHERE (role_code = ?)
+==> Parameters: academic_affairs(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@532ea86b]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2dbb8da0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@825281081 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role ( role_code, role_name, status, remark ) VALUES ( ?, ?, ?, ? )
+==> Parameters: academic_affairs(String), 教务管理员(String), 1(Integer), 培养方案导入、班级学生管理、报表导出(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2dbb8da0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@17fb5184] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@407615603 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_code,role_name,status,remark,created_at,updated_at FROM sys_role WHERE (role_code = ?)
+==> Parameters: program_director(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@17fb5184]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@696ce057] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1589288513 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role ( role_code, role_name, status, remark ) VALUES ( ?, ?, ?, ? )
+==> Parameters: program_director(String), 专业负责人(String), 1(Integer), 毕业要求维护、支撑矩阵配置、专业级计算(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@696ce057]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@13809363] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1447901504 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_code,role_name,status,remark,created_at,updated_at FROM sys_role WHERE (role_code = ?)
+==> Parameters: instructor(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@13809363]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@58ad0586] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1383055428 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role ( role_code, role_name, status, remark ) VALUES ( ?, ?, ?, ? )
+==> Parameters: instructor(String), 课程主讲教师(String), 1(Integer), 课程大纲编写、考核点设定、成绩录入、课程级计算(String)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@58ad0586]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7adbec34] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1256871900 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: admin(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7adbec34]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@49338f3] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1016689071 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: admin(String), $2a$10$UrEq45I1brH9ixf0qu5yQelOjpUBSmjLjJTJ3oBbaUMV0dEBBNTEK(String), 赵管理员(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@49338f3]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4abdd5e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1725305496 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: teacher_zhang(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4abdd5e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7b9fea11] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@209516740 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: teacher_zhang(String), $2a$10$AzVhTjTl3hXgZI5PWExHoe0Ca0Dr93v7RaO1I0uKKTpogmj7uV5xG(String), 张教授(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7b9fea11]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56e78538] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@7544750 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: teacher_li(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56e78538]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@438a2d3] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1877590088 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: teacher_li(String), $2a$10$ZYqSdmuPzhiwcZ9NcHXrSOdyx.LNS8BqtK3YHTGwNlgfMmVOJL4L6(String), 李副教授(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@438a2d3]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@54d46c8] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@500934560 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: teacher_wang(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@54d46c8]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5c34b0f2] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2113847484 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: teacher_wang(String), $2a$10$ArB5vx7M6yTe8mlJ4L7meO8meiYtJXn9C6Y76U5pkQIXVY14I0evm(String), 王讲师(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5c34b0f2]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@12eaa2cd] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1389162903 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: director_chen(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@12eaa2cd]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b06681c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@553039584 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: director_chen(String), $2a$10$uuBjfSmHoWuB0iURcJncsOJbJpBuvkZawICawpqPAfN./pRnRQ4RK(String), 陈主任(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b06681c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@67cd84f9] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1387827678 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,real_name,status,created_at,updated_at FROM sys_user WHERE (username = ?)
+==> Parameters: academic_wu(String)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@67cd84f9]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4ae6451d] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1597156119 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user ( username, password, real_name, status ) VALUES ( ?, ?, ?, ? )
+==> Parameters: academic_wu(String), $2a$10$LBLSMQyYZc4njzoQQQbLsuyNTWVRaRY4IHnXCCFfspNXx1U3Z2HVS(String), 吴老师(String), 1(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4ae6451d]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3a45308f] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1894076099 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 1(Long), 1(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3a45308f]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66130c3b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2023591894 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 1(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66130c3b]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@42fa5cb] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@988315192 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 2(Long), 4(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@42fa5cb]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@44e4cf8a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1351814143 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 2(Long), 4(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@44e4cf8a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@296bfddb] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1351307120 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 3(Long), 4(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@296bfddb]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@32f14274] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2062904102 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 3(Long), 4(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@32f14274]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c86c486] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@108849833 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 4(Long), 4(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c86c486]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3ea6faf0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1876630105 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 4(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3ea6faf0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@55c341d0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@881578083 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 5(Long), 3(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@55c341d0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3d73cd78] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@181211485 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 5(Long), 3(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3d73cd78]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@45cf0c15] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@791528455 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,user_id,role_id,created_at FROM sys_user_role WHERE (user_id = ? AND role_id = ?)
+==> Parameters: 6(Long), 2(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@45cf0c15]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c96c497] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1848867745 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_user_role ( user_id, role_id ) VALUES ( ?, ? )
+==> Parameters: 6(Long), 2(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@c96c497]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@28654aff] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1576976929 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 1(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@28654aff]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5e9cb95] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2076760639 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 1(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5e9cb95]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7978550b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1388081103 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 2(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7978550b]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1942a36e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@610700123 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 2(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1942a36e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1f8d42d1] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@780043512 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 3(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1f8d42d1]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@22ab1b8a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@839348439 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 3(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@22ab1b8a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4769378c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@493495005 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 4(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4769378c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@67671db1] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1852790850 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 4(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@67671db1]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@60b4c754] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@746876245 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 5(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@60b4c754]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@735167e1] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1734909057 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 5(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@735167e1]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@21a0795f] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@784422651 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 6(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@21a0795f]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56d742ad] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1970815074 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 6(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56d742ad]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5730b513] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1944213376 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 7(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5730b513]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1f4cb17b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@671127968 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 7(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1f4cb17b]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7aca299e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@469053200 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 8(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7aca299e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6148827c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1302977132 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 8(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6148827c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66048c9e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1413194465 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 9(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66048c9e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@71458178] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1916559238 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 9(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@71458178]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@301e5d23] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@960220523 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 10(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@301e5d23]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@64a8d575] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1954051593 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 10(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@64a8d575]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@36cdcae0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1375340999 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 11(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@36cdcae0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@73db7df0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1151632828 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 11(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@73db7df0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1c66cd02] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@902795743 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 12(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1c66cd02]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@55a66bbf] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2130883284 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 12(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@55a66bbf]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@780dbed7] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@830839136 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 13(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@780dbed7]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5718e77c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1030126425 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 13(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5718e77c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@28888124] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@627597596 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 14(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@28888124]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2bda7a5b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1194807205 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 14(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2bda7a5b]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@289da1bc] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1310414130 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 1(Long), 15(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@289da1bc]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@366bf608] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1264377095 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 1(Long), 15(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@366bf608]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@e890591] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@447706039 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 2(Long), 8(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@e890591]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@731d0d5c] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1577337565 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 2(Long), 8(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@731d0d5c]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@18e76101] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2033490785 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 2(Long), 9(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@18e76101]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@62581ef6] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@506903242 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 2(Long), 9(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@62581ef6]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3dfa2f64] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1615348777 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 2(Long), 15(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3dfa2f64]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@42c55978] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1762544384 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 2(Long), 15(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@42c55978]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5e3d84a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@656977363 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 3(Long), 6(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5e3d84a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4fce3ed7] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1409497701 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 3(Long), 6(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4fce3ed7]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4fb99927] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@765326134 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 3(Long), 7(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4fb99927]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@131b58d4] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1585879232 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 3(Long), 7(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@131b58d4]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5df54296] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@531828317 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 3(Long), 14(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5df54296]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56a72887] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1015933451 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 3(Long), 14(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56a72887]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4b9beefe] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1289601078 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 3(Long), 15(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4b9beefe]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@23d12a3a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1893679609 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 3(Long), 15(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@23d12a3a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@64a7ad02] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1180241360 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 4(Long), 10(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@64a7ad02]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6c737fdb] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1722366757 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 10(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@6c737fdb]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3f3f554f] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@830929141 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 4(Long), 11(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@3f3f554f]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@467cd4b9] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1772339008 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 11(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@467cd4b9]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2c731a16] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@708058685 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 4(Long), 12(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2c731a16]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@a4dcede] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@2128619880 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 12(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@a4dcede]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a773f08] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1085805965 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 4(Long), 13(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a773f08]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@24e7087a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1538514663 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 13(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@24e7087a]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@285b491f] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@878915766 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: SELECT id,role_id,permission_id,created_at FROM sys_role_permission WHERE (role_id = ? AND permission_id = ?)
+==> Parameters: 4(Long), 14(Long)
+<==      Total: 0
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@285b491f]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@71e2843b] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@550764532 wrapping conn0: url=jdbc:h2:mem:graduationdb user=SA] will not be managed by Spring
+==>  Preparing: INSERT INTO sys_role_permission ( role_id, permission_id ) VALUES ( ?, ? )
+==> Parameters: 4(Long), 14(Long)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@71e2843b]
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : Mock RBAC data ready.
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : --- Mock Accounts ---
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : admin / 123456          -> 系统管理员
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : teacher_zhang / 123456  -> 课程主讲教师（张教授）
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : teacher_li / 123456     -> 课程主讲教师（李副教授）
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : teacher_wang / 123456   -> 课程主讲教师（王讲师）
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : director_chen / 123456  -> 专业负责人
+2026-05-18T16:30:10.031+08:00  INFO 2972 --- [oss-course] [           main] com.oss.osscourse.init.DataInitializer   : academic_wu / 123456    -> 教务管理员
+]]></system-out>
+    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\ßÕßÕßÕ\.m2\repository\net\bytebuddy\byte-buddy-agent\1.17.8\byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+</testsuite>
