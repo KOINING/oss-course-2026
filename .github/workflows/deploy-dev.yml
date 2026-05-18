@@ -90,6 +90,10 @@ jobs:
               sleep 2
             fi
 
+            set -a
+            . "$DEPLOY_PATH/graduation-attainment-platform/deploy/.env"
+            set +a
+
             nohup java -jar app.jar > app.log 2>&1 &
             echo \$! > app.pid
 
