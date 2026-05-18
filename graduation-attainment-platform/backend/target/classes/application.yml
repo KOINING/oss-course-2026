@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: oss-course
+  datasource:
+    url: jdbc:h2:mem:graduationdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  sql:
+    init:
+      mode: always
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.oss.osscourse.entity
+  global-config:
+    db-config:
+      id-type: auto
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+
+jwt:
+  secret: "ThisIsASecretKeyForGraduationPlatformHS256Algorithm2024!"
+  expiration: 86400000
