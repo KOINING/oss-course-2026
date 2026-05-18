@@ -10,23 +10,79 @@ jobs:
   deploy:
     name: Deploy to Dev Server
     runs-on: ubuntu-latest
+    env:
+      SSH_PORT: ${{ secrets.SERVER_PORT }}
+      SSH_HOST: ${{ secrets.SERVER_HOST }}
+      SSH_USER: ${{ secrets.SERVER_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: graduation-attainment-platform/frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build frontend
+        working-directory: graduation-attainment-platform/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend
+        working-directory: graduation-attainment-platform/backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean package -DskipTests
+
+      - name: Locate backend jar
+        id: backend_jar
+        shell: bash
+        run: |
+          JAR_PATH="$(find graduation-attainment-platform/backend/target -maxdepth 1 -name '*.jar' ! -name '*original*.jar' | head -n 1)"
+          if [ -z "$JAR_PATH" ]; then
+            echo "Backend jar was not found." >&2
+            exit 1
+          fi
+          echo "path=$JAR_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync repository and artifacts
+        shell: bash
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
+            set -e
+            cd "$DEPLOY_PATH"
+            git pull origin main
+            rm -rf graduation-attainment-platform/frontend/dist
+            mkdir -p graduation-attainment-platform/frontend/dist
+            rm -f graduation-attainment-platform/backend/app.jar
+          EOF
+
+          scp -P "$SSH_PORT" -r graduation-attainment-platform/frontend/dist "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/graduation-attainment-platform/frontend/"
+          scp -P "$SSH_PORT" "${{ steps.backend_jar.outputs.path }}" "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/graduation-attainment-platform/backend/app.jar"
 
       - name: Deploy application
+        shell: bash
         run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << EOF
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
             set -e
-            cd "${{ secrets.DEPLOY_PATH }}"
-            git pull origin main
-            docker compose -f graduation-attainment-platform/deploy/docker-compose.yml up -d --build
+            cd "$DEPLOY_PATH/graduation-attainment-platform/deploy"
+            docker compose up -d --build
           EOF
