@@ -15,6 +15,7 @@ jobs:
       SSH_HOST: ${{ secrets.SERVER_HOST }}
       SSH_USER: ${{ secrets.SERVER_USER }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_REF: ${{ github.ref_name }}
 
     steps:
       - name: Checkout
@@ -69,8 +70,14 @@ jobs:
           ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
             set -e
             cd "$DEPLOY_PATH"
-            git pull origin main
             rm -rf graduation-attainment-platform/frontend/dist
+            git fetch origin "$DEPLOY_REF"
+            if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
+              git checkout "$DEPLOY_REF"
+            else
+              git checkout -b "$DEPLOY_REF" FETCH_HEAD
+            fi
+            git pull origin "$DEPLOY_REF"
             mkdir -p graduation-attainment-platform/frontend/dist
             mkdir -p runtime/backend
             rm -f runtime/backend/app.jar
