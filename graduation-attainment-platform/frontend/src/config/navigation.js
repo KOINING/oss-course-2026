@@ -102,6 +102,25 @@ export const NAVIGATION_SECTIONS = [
     ],
   },
   {
+    key: 'system-admin',
+    label: '系统管理',
+    icon: 'UserFilled',
+    children: [
+      {
+        key: 'account-role-management',
+        label: '账号与角色管理',
+        path: '/account-role-management',
+        routeName: ROUTE_NAMES.ACCOUNT_ROLE_MANAGEMENT,
+        roles: ['admin'],
+        moduleTitle: '系统管理',
+        summary:
+          '系统管理员用于管理教务管理员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
+        entities: ['sys_user', 'sys_role', 'sys_user_role', 'sys_role_permission'],
+        componentKey: 'account-role-management',
+      },
+    ],
+  },
+  {
     key: 'module-c',
     label: '模块 C',
     icon: 'DataAnalysis',

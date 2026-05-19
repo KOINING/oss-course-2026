@@ -66,6 +66,7 @@ import {
   HomeFilled,
   Reading,
   Setting,
+  UserFilled,
 } from '@element-plus/icons-vue'
 import { getRoleDetails, getVisibleSections } from '@/config/navigation'
 import { useUserStore } from '@/stores/user'
@@ -81,6 +82,7 @@ const iconMap = {
   Reading,
   DataAnalysis,
   Document,
+  UserFilled,
 }
 
 const activeMenu = computed(() => route.path)

@@ -5,13 +5,20 @@ import { getProtectedRoutes } from '@/config/navigation'
 import { getToken } from '@/utils/auth'
 import { APP_TITLE, DEFAULT_HOME_PATH, ROUTE_NAMES } from '@/utils/constants'
 
+function resolveProtectedComponent(item) {
+  if (item.componentKey === 'account-role-management') {
+    return () => import('@/views/admin/AccountRoleManagementView.vue')
+  }
+
+  return item.routeName === ROUTE_NAMES.HOME
+    ? () => import('@/views/home/HomeView.vue')
+    : () => import('@/views/module/ModulePlaceholderView.vue')
+}
+
 const protectedChildren = getProtectedRoutes().map((item) => ({
   path: item.path.replace(/^\//, ''),
   name: item.routeName,
-  component:
-    item.routeName === ROUTE_NAMES.HOME
-      ? () => import('@/views/home/HomeView.vue')
-      : () => import('@/views/module/ModulePlaceholderView.vue'),
+  component: resolveProtectedComponent(item),
   meta: {
     title: item.label,
     summary: item.summary,
