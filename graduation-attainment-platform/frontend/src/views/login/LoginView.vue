@@ -2,15 +2,16 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { Lock, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { DEFAULT_HOME_PATH } from '@/utils/constants'
+import { APP_TITLE, DEFAULT_HOME_PATH } from '@/utils/constants'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const loading = ref(false)
+const formRef = ref(null)
 
 const form = reactive({
   username: '',
@@ -21,8 +22,6 @@ const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
-
-const formRef = ref(null)
 
 async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -39,7 +38,7 @@ async function handleLogin() {
     const redirect = route.query.redirect || DEFAULT_HOME_PATH
     router.push(redirect)
   } catch {
-    /* 错误已由 axios 拦截器提示 */
+    // 错误提示由请求拦截器统一处理。
   } finally {
     loading.value = false
   }
@@ -49,8 +48,8 @@ async function handleLogin() {
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="login-title">面向专业认证的毕业要求达成度统一计算平台</h1>
-      <p class="login-subtitle">请登录您的账号</p>
+      <h1 class="login-title">{{ APP_TITLE }}</h1>
+      <p class="login-subtitle">请输入账号密码进入系统</p>
 
       <el-form
         ref="formRef"
@@ -104,7 +103,7 @@ async function handleLogin() {
 }
 
 .login-card {
-  width: 400px;
+  width: 420px;
   padding: 40px 36px;
   background: #fff;
   border-radius: 8px;
@@ -117,6 +116,7 @@ async function handleLogin() {
   font-weight: 600;
   color: #303133;
   text-align: center;
+  line-height: 1.5;
 }
 
 .login-subtitle {
