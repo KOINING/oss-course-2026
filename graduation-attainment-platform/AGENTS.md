@@ -1,6 +1,6 @@
 # 项目级 AGENTS 说明
 
-本文件用于约束 AI agent 在 `graduation-attainment-platform/` 目录中的工作方式，只服务于应用本体开发区，不覆盖仓库根目录下的课程协作文档、`.github/` 配置和 `PPT/` 材料。
+本文档用于约束 AI agent 在 `graduation-attainment-platform/` 目录中的工作方式，只服务于应用本体开发区，不覆盖仓库根目录下的课程协作文档、`.github/` 配置和 `PPT/` 材料。
 
 ## 当前阶段
 
@@ -38,8 +38,10 @@
 
 ## 技能目录说明
 
-- 项目内 AI 相关规划位于 `.agents/skills/`。
-- 当前阶段只保留 `skills` 根级说明文件，不默认假设各 skill 目录已经正式落地。
+- 项目内 repo-local skill 统一放在 `.codex/skills/`。
+- 每个 skill 使用独立目录组织，目录名即 skill 名称，至少包含 `SKILL.md`。
+- 如需额外 agent 配置，放在对应 skill 目录下的 `agents/` 子目录。
+- 当前已落地 skill：`action-api-design`。
 - 后续如果需要扩展具体 skill，可优先按以下规划名称创建：
   - `project-orchestrator`
   - `frontend-vue-admin`
