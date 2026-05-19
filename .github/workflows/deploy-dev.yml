@@ -121,4 +121,5 @@ jobs:
 
             cd "$DEPLOY_PATH/graduation-attainment-platform/deploy"
             docker compose up -d --build --remove-orphans
+            docker compose restart nginx
           EOF

@@ -31,6 +31,7 @@ request.interceptors.response.use(
       if (payload.code === 0 || payload.code === 200) {
         return payload.data !== undefined ? payload.data : payload
       }
+
       ElMessage.error(payload.message || '请求失败')
       return Promise.reject(new Error(payload.message || '请求失败'))
     }
