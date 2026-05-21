@@ -439,11 +439,12 @@ Done
 合并完成后，建议回到本地执行：
 
 ```bash
+git checkout member/zhangsan
+git fetch --all
 git checkout main
 git pull origin main
-git checkout member/zhangsan
-git reset --hard main
-git push --force-with-lease origin member/zhangsan
+git merge member/zhangsan
+git push -u origin main
 ```
 
 这样可以保证你的个人分支继续与最新 `main` 保持同步。
