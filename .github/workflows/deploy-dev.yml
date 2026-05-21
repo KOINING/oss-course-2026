@@ -10,23 +10,116 @@ jobs:
   deploy:
     name: Deploy to Dev Server
     runs-on: ubuntu-latest
+    env:
+      SSH_PORT: ${{ secrets.SERVER_PORT }}
+      SSH_HOST: ${{ secrets.SERVER_HOST }}
+      SSH_USER: ${{ secrets.SERVER_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_REF: ${{ github.ref_name }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: graduation-attainment-platform/frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build frontend
+        working-directory: graduation-attainment-platform/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend
+        working-directory: graduation-attainment-platform/backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean package -DskipTests
+
+      - name: Locate backend jar
+        id: backend_jar
+        shell: bash
+        run: |
+          JAR_PATH="$(find graduation-attainment-platform/backend/target -maxdepth 1 -name '*.jar' ! -name '*original*.jar' | head -n 1)"
+          if [ -z "$JAR_PATH" ]; then
+            echo "Backend jar was not found." >&2
+            exit 1
+          fi
+          echo "path=$JAR_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync repository and artifacts
+        shell: bash
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
+            set -e
+            cd "$DEPLOY_PATH"
+            rm -rf graduation-attainment-platform/frontend/dist
+            git fetch origin "$DEPLOY_REF"
+            if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
+              git checkout "$DEPLOY_REF"
+            else
+              git checkout -b "$DEPLOY_REF" FETCH_HEAD
+            fi
+            git pull origin "$DEPLOY_REF"
+            mkdir -p graduation-attainment-platform/frontend/dist
+            mkdir -p runtime/backend
+            rm -f runtime/backend/app.jar
+          EOF
+
+          scp -P "$SSH_PORT" -r graduation-attainment-platform/frontend/dist "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/graduation-attainment-platform/frontend/"
+          scp -P "$SSH_PORT" "${{ steps.backend_jar.outputs.path }}" "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/runtime/backend/app.jar"
 
       - name: Deploy application
+        shell: bash
         run: |
-          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << EOF
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
             set -e
-            cd "${{ secrets.DEPLOY_PATH }}"
-            git pull origin main
-            docker compose -f graduation-attainment-platform/deploy/docker-compose.yml up -d --build
+            cd "$DEPLOY_PATH/runtime/backend"
+            if [ -f app.pid ] && kill -0 "\$(cat app.pid)" 2>/dev/null; then
+              kill "\$(cat app.pid)"
+              sleep 2
+            fi
+
+            set -a
+            . "$DEPLOY_PATH/graduation-attainment-platform/deploy/.env"
+            set +a
+
+            nohup java -jar app.jar > app.log 2>&1 &
+            echo \$! > app.pid
+
+            sleep 5
+
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+              if curl -fsS http://127.0.0.1:8080/health >/dev/null; then
+                break
+              fi
+              sleep 2
+            done
+
+            if ! curl -fsS http://127.0.0.1:8080/health >/dev/null; then
+              echo "Backend failed to become healthy. Recent backend log:"
+              tail -n 200 app.log || true
+              exit 1
+            fi
+
+            cd "$DEPLOY_PATH/graduation-attainment-platform/deploy"
+            docker compose up -d --build --remove-orphans
+            docker compose restart nginx
           EOF

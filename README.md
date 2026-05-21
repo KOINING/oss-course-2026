@@ -42,14 +42,10 @@ oss-course-2026/
 │   ├── pull_request_template.md
 │   └── workflows/
 ├── docs/                                      # 课程协作与项目管理文档
-│   ├── team.md
-│   ├── 第一周任务分配.md
-│   ├── project-board.md
-│   └── github协作流程.md
 ├── graduation-attainment-platform/            # 应用主目录
 │   ├── README.md                              # 应用级说明文档
 │   ├── AGENTS.md                              # 项目级 AI 协作规则
-│   ├── .agents/                               # 项目内 agent / skill 规划
+│   ├── .codex/                                # 项目内 AI 协作配置目录
 │   ├── frontend/                              # 前端工程目录
 │   ├── backend/                               # 后端工程目录
 │   ├── sql/                                   # 数据库交付物目录
@@ -58,4 +54,11 @@ oss-course-2026/
 └── PPT/                                       # 课程汇报材料
 ```
 
+## 各目录职责
+
+- `.github/`：存放 GitHub Issue、Pull Request 模板和 Actions 工作流配置。
+- `docs/`：存放课程协作、任务分配、GitHub 流程和项目管理相关文档。
+- `graduation-attainment-platform/`：应用主目录，集中管理系统实现、部署配置和技术文档。
+- `graduation-attainment-platform/.codex/skills/`：存放项目内 repo-local AI skills 和相关协作配置。
+- `PPT/`：存放课程汇报材料与演示文档。
 
