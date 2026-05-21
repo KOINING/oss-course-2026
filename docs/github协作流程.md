@@ -179,14 +179,7 @@ git merge main
 
 ## 9. 添加文件到暂存区
 
-推荐只添加本次任务相关文件，避免误提交无关内容。
-
-```bash
-git add README.md
-git add README.md docs/team.md
-```
-
-如果你非常确定当前目录下所有改动都需要提交，也可以使用：**（建议直接使用这个）**
+**（建议直接使用这个）**
 
 ```bash
 git add .
@@ -221,13 +214,7 @@ final
 
 ## 11. 推送个人分支到 GitHub
 
-如果远程仓库中已经有你的个人分支，并且本地已经建立跟踪关系，正常推送时直接使用：
-
-```bash
-git push
-```
-
-如果你第一次需要建立本地与远程分支的关联，也可以使用：
+使用：
 
 ```bash
 git push -u origin member/zhangsan
@@ -418,25 +405,7 @@ docs: update README
 PR 合并后，不再删除个人分支。  
 因为个人分支是长期使用的固定分支，后续任务还要继续复用。
 
-PR 合并成功后，应把 Project 看板中的任务状态从：
-
-```text
-Review
-```
-
-改为：
-
-```text
-Done
-```
-
-这表示：
-
-- 审核已经通过
-- PR 已成功合并到 `main`
-- 该任务正式完成
-
-合并完成后，建议回到本地执行：
+合并完成后，回到本地执行：
 
 ```bash
 git checkout member/zhangsan
