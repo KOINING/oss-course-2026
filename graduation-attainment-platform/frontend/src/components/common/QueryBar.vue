@@ -30,10 +30,8 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'search', 'reset'])
 
 function updateField(prop, value) {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    [prop]: value,
-  })
+  props.modelValue[prop] = value
+  emit('update:modelValue', props.modelValue)
 }
 
 function handleSearch() {
