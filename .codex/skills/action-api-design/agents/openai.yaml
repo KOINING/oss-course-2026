@@ -1,0 +1,7 @@
+interface:
+  display_name: "动作式接口设计规范"
+  short_description: "统一前后端动作式 URL 命名，并校验前端、后端与 Nginx 路径一致性。"
+  default_prompt: "Use $action-api-design to design or review this repo's frontend/backend APIs with action-style URLs and aligned proxy paths."
+
+policy:
+  allow_implicit_invocation: true

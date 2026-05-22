@@ -1,12 +1,33 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import pinia from '@/stores'
+import { useUserStore } from '@/stores/user'
+import { getProtectedRoutes } from '@/config/navigation'
 import { getToken } from '@/utils/auth'
-import { ROUTE_NAMES, DEFAULT_HOME_PATH } from '@/utils/constants'
+import { APP_TITLE, DEFAULT_HOME_PATH, ROUTE_NAMES } from '@/utils/constants'
 
-/**
- * 路由表
- * - 登录页：wzj 已完成
- * - Layout / 首页 / 404：由前端2 (zml) 在下方标记区域补充
- */
+function resolveProtectedComponent(item) {
+  if (item.componentKey === 'account-role-management') {
+    return () => import('@/views/admin/AccountRoleManagementView.vue')
+  }
+
+  return item.routeName === ROUTE_NAMES.HOME
+    ? () => import('@/views/home/HomeView.vue')
+    : () => import('@/views/module/ModulePlaceholderView.vue')
+}
+
+const protectedChildren = getProtectedRoutes().map((item) => ({
+  path: item.path.replace(/^\//, ''),
+  name: item.routeName,
+  component: resolveProtectedComponent(item),
+  meta: {
+    title: item.label,
+    summary: item.summary,
+    entities: item.entities,
+    moduleTitle: item.moduleTitle,
+    sectionLabel: item.sectionLabel,
+  },
+}))
+
 const routes = [
   {
     path: '/login',
@@ -14,20 +35,11 @@ const routes = [
     component: () => import('@/views/login/LoginView.vue'),
     meta: { public: true, title: '登录' },
   },
-
-  // ========== 前端2 (zml) 扩展区开始 ==========
   {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     redirect: DEFAULT_HOME_PATH,
-    children: [
-      {
-        path: 'home',
-        name: ROUTE_NAMES.HOME,
-        component: () => import('@/views/home/HomeView.vue'),
-        meta: { title: '首页' },
-      },
-    ],
+    children: protectedChildren,
   },
   {
     path: '/:pathMatch(.*)*',
@@ -35,35 +47,39 @@ const routes = [
     component: () => import('@/views/error/NotFoundView.vue'),
     meta: { public: true, title: '404' },
   },
-  // ========== 前端2 (zml) 扩展区结束 ==========
 ]
-
-
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
-router.beforeEach((to, _from, next) => {
-  document.title = to.meta.title
-    ? `${to.meta.title} - 高校教务管理系统`
-    : '高校教务管理系统'
+router.beforeEach(async (to) => {
+  document.title = to.meta.title ? `${to.meta.title} - ${APP_TITLE}` : APP_TITLE
 
   const isPublic = Boolean(to.meta.public)
   const hasToken = Boolean(getToken())
+  const userStore = useUserStore(pinia)
 
   if (!isPublic && !hasToken) {
-    next({ name: ROUTE_NAMES.LOGIN, query: { redirect: to.fullPath } })
-    return
+    return { name: ROUTE_NAMES.LOGIN, query: { redirect: to.fullPath } }
   }
 
   if (to.name === ROUTE_NAMES.LOGIN && hasToken) {
-    next(DEFAULT_HOME_PATH)
-    return
+    return DEFAULT_HOME_PATH
   }
 
-  next()
+  if (!isPublic && hasToken && !userStore.profileLoaded) {
+    try {
+      await userStore.fetchUserInfo()
+    } catch {
+      if (!getToken()) {
+        return { name: ROUTE_NAMES.LOGIN, query: { redirect: to.fullPath } }
+      }
+    }
+  }
+
+  return true
 })
 
 export default router

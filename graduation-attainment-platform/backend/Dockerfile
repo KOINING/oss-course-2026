@@ -1,19 +1,9 @@
-# 第一阶段：构建 Spring Boot 可执行 jar
-FROM maven:3.9.9-eclipse-temurin-21 AS builder
+# 运行阶段：Actions 预先构建 jar，容器只负责启动服务
+FROM eclipse-temurin:latest
 
 WORKDIR /app
 
-COPY pom.xml ./
-COPY src ./src
-
-RUN mvn -B clean package -DskipTests
-
-# 第二阶段：运行后端服务
-FROM eclipse-temurin:21-jre
-
-WORKDIR /app
-
-COPY --from=builder /app/target/*.jar app.jar
+COPY app.jar app.jar
 
 EXPOSE 8080
 
