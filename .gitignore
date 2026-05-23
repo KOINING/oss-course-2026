@@ -18,6 +18,11 @@
 *.zip
 *.tar.gz
 *.rar
+.DS_Store
+
+# Maven / Gradle build outputs
+target/
+build/
 
 # Maven / Gradle build outputs
 target/
