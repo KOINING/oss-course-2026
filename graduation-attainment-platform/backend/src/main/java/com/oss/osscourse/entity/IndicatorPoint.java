@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("IndicatorPoint")
+@TableName("indicator_point")
 public class IndicatorPoint {
     @TableId(type = IdType.AUTO)
     private Long ipId;
