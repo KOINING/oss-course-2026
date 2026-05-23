@@ -1,0 +1,593 @@
+<template>
+  <div class="requirements-page">
+    <!-- 页面头部 -->
+    <el-card class="page-card">
+      <template #header>
+        <div class="page-header">
+          <div>
+            <p class="page-section">模块 A：基础与宏观数据管理</p>
+            <h1>毕业要求与指标点</h1>
+            <p class="page-summary">
+              维护毕业要求主体及二级指标点，形成专业认证的目标体系，作为课程支撑矩阵配置的依据。
+            </p>
+          </div>
+        </div>
+      </template>
+
+      <!-- 毕业要求区域 -->
+      <section class="entity-section">
+        <div class="section-header">
+          <h2>毕业要求</h2>
+          <el-button type="primary" @click="openGrCreateDialog">新增毕业要求</el-button>
+        </div>
+
+        <el-form :inline="true" :model="grFilters" class="filter-form">
+          <el-form-item label="编号">
+            <el-input v-model.trim="grFilters.grCode" placeholder="请输入编号" clearable />
+          </el-form-item>
+          <el-form-item label="所属专业">
+            <el-select
+              v-model="grFilters.majorId"
+              placeholder="全部专业"
+              clearable
+              style="width: 200px"
+            >
+              <el-option
+                v-for="m in majorOptions"
+                :key="m.majorId"
+                :label="m.majorName"
+                :value="m.majorId"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadGrs">查询</el-button>
+            <el-button @click="resetGrFilters">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table
+          v-loading="grLoading"
+          :data="grs"
+          border
+          highlight-current-row
+          @current-change="onGrRowChange"
+        >
+          <el-table-column prop="grCode" label="编号" width="100" />
+          <el-table-column prop="grDescription" label="描述" min-width="320" show-overflow-tooltip />
+          <el-table-column prop="majorName" label="所属专业" width="180" />
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
+              <div class="table-actions">
+                <el-button link type="primary" @click.stop="openGrEditDialog(row)">编辑</el-button>
+                <el-popconfirm
+                  title="确认删除该毕业要求吗？若存在关联指标点将无法删除。"
+                  @confirm="handleGrDelete(row)"
+                >
+                  <template #reference>
+                    <el-button link type="danger">删除</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <el-empty description="暂无毕业要求数据" />
+          </template>
+        </el-table>
+      </section>
+
+      <!-- 指标点区域 -->
+      <section class="entity-section">
+        <div class="section-header">
+          <h2>指标点</h2>
+          <el-button type="primary" @click="openIpCreateDialog">新增指标点</el-button>
+        </div>
+
+        <el-form :inline="true" :model="ipFilters" class="filter-form">
+          <el-form-item label="编号">
+            <el-input v-model.trim="ipFilters.ipCode" placeholder="请输入编号" clearable />
+          </el-form-item>
+          <el-form-item label="所属毕业要求">
+            <el-select
+              v-model="ipFilters.grId"
+              placeholder="全部毕业要求"
+              clearable
+              style="width: 240px"
+            >
+              <el-option
+                v-for="gr in grOptions"
+                :key="gr.grId"
+                :label="`${gr.grCode} - ${gr.grDescription}`"
+                :value="gr.grId"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadIps">查询</el-button>
+            <el-button @click="resetIpFilters">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table
+          v-loading="ipLoading"
+          :data="ips"
+          border
+        >
+          <el-table-column prop="ipCode" label="编号" width="100" />
+          <el-table-column prop="ipDescription" label="描述" min-width="280" show-overflow-tooltip />
+          <el-table-column label="所属毕业要求" width="240">
+            <template #default="{ row }">
+              <span v-if="row.grCode">{{ row.grCode }} - {{ row.grDescription }}</span>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
+              <div class="table-actions">
+                <el-button link type="primary" @click="openIpEditDialog(row)">编辑</el-button>
+                <el-popconfirm
+                  title="确认删除该指标点吗？"
+                  @confirm="handleIpDelete(row)"
+                >
+                  <template #reference>
+                    <el-button link type="danger">删除</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <el-empty description="暂无指标点数据" />
+          </template>
+        </el-table>
+      </section>
+    </el-card>
+
+    <!-- 毕业要求弹窗 -->
+    <el-dialog
+      v-model="grDialogVisible"
+      :title="grDialogMode === 'create' ? '新增毕业要求' : '编辑毕业要求'"
+      width="560px"
+      destroy-on-close
+    >
+      <el-form ref="grFormRef" :model="grForm" :rules="grFormRules" label-width="104px">
+        <el-form-item label="编号" prop="grCode">
+          <el-input v-model.trim="grForm.grCode" placeholder="请输入毕业要求编号" />
+        </el-form-item>
+        <el-form-item label="描述" prop="grDescription">
+          <el-input
+            v-model.trim="grForm.grDescription"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入毕业要求描述"
+          />
+        </el-form-item>
+        <el-form-item label="所属专业" prop="majorId">
+          <el-select v-model="grForm.majorId" placeholder="请选择所属专业" style="width: 100%">
+            <el-option
+              v-for="m in majorOptions"
+              :key="m.majorId"
+              :label="m.majorName"
+              :value="m.majorId"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="grDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="grSubmitLoading" @click="handleGrSubmit">
+            保存
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 指标点弹窗 -->
+    <el-dialog
+      v-model="ipDialogVisible"
+      :title="ipDialogMode === 'create' ? '新增指标点' : '编辑指标点'"
+      width="560px"
+      destroy-on-close
+    >
+      <el-form ref="ipFormRef" :model="ipForm" :rules="ipFormRules" label-width="120px">
+        <el-form-item label="编号" prop="ipCode">
+          <el-input v-model.trim="ipForm.ipCode" placeholder="请输入指标点编号" />
+        </el-form-item>
+        <el-form-item label="描述" prop="ipDescription">
+          <el-input
+            v-model.trim="ipForm.ipDescription"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入指标点描述"
+          />
+        </el-form-item>
+        <el-form-item label="所属毕业要求" prop="grId">
+          <el-select v-model="ipForm.grId" placeholder="请选择所属毕业要求" style="width: 100%">
+            <el-option
+              v-for="gr in grOptions"
+              :key="gr.grId"
+              :label="`${gr.grCode} - ${gr.grDescription}`"
+              :value="gr.grId"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="ipDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="ipSubmitLoading" @click="handleIpSubmit">
+            保存
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import {
+  addGraduationRequirementApi,
+  addIndicatorPointApi,
+  deleteGraduationRequirementApi,
+  deleteIndicatorPointApi,
+  listGraduationRequirementsApi,
+  listIndicatorPointsApi,
+  listMajorsApi,
+  updateGraduationRequirementApi,
+  updateIndicatorPointApi,
+} from '@/api/requirements'
+import { DEFAULT_HOME_PATH } from '@/utils/constants'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const isProgramDirector = computed(() => userStore.roleCodes.includes('program_director'))
+
+// ========== 下拉选项 ==========
+const majorOptions = ref([])
+const grOptions = ref([])
+
+async function loadMajorOptions() {
+  majorOptions.value = await listMajorsApi()
+}
+
+async function loadGrOptions() {
+  grOptions.value = await listGraduationRequirementsApi()
+}
+
+// ========== 毕业要求 ==========
+const grLoading = ref(false)
+const grSubmitLoading = ref(false)
+const grDialogVisible = ref(false)
+const grDialogMode = ref('create')
+const grs = ref([])
+const grFormRef = ref(null)
+const selectedGrId = ref(null)
+
+const grFilters = reactive({
+  grCode: '',
+  majorId: null,
+})
+
+const grForm = reactive({
+  grId: null,
+  grCode: '',
+  grDescription: '',
+  majorId: null,
+})
+
+const grFormRules = {
+  grCode: [{ required: true, message: '请输入毕业要求编号', trigger: 'blur' }],
+  grDescription: [{ required: true, message: '请输入毕业要求描述', trigger: 'blur' }],
+  majorId: [{ required: true, message: '请选择所属专业', trigger: 'change' }],
+}
+
+function normalizeGrFilters() {
+  return {
+    grCode: grFilters.grCode || undefined,
+    majorId: grFilters.majorId || undefined,
+  }
+}
+
+async function loadGrs() {
+  grLoading.value = true
+  try {
+    grs.value = await listGraduationRequirementsApi(normalizeGrFilters())
+    await loadGrOptions()
+  } finally {
+    grLoading.value = false
+  }
+}
+
+function resetGrFilters() {
+  grFilters.grCode = ''
+  grFilters.majorId = null
+  loadGrs()
+}
+
+function onGrRowChange(row) {
+  if (row) {
+    selectedGrId.value = row.grId
+    ipFilters.grId = row.grId
+    loadIps()
+  } else {
+    selectedGrId.value = null
+    ipFilters.grId = null
+    loadIps()
+  }
+}
+
+function resetGrForm() {
+  grForm.grId = null
+  grForm.grCode = ''
+  grForm.grDescription = ''
+  grForm.majorId = null
+}
+
+function openGrCreateDialog() {
+  grDialogMode.value = 'create'
+  resetGrForm()
+  grDialogVisible.value = true
+  nextTick(() => grFormRef.value?.clearValidate())
+}
+
+function openGrEditDialog(row) {
+  grDialogMode.value = 'edit'
+  resetGrForm()
+  grForm.grId = row.grId
+  grForm.grCode = row.grCode
+  grForm.grDescription = row.grDescription
+  grForm.majorId = row.majorId
+  grDialogVisible.value = true
+  nextTick(() => grFormRef.value?.clearValidate())
+}
+
+async function handleGrSubmit() {
+  await grFormRef.value?.validate()
+
+  grSubmitLoading.value = true
+  try {
+    if (grDialogMode.value === 'create') {
+      await addGraduationRequirementApi({
+        grCode: grForm.grCode,
+        grDescription: grForm.grDescription,
+        majorId: grForm.majorId,
+      })
+      ElMessage.success('毕业要求创建成功')
+    } else {
+      await updateGraduationRequirementApi({
+        grId: grForm.grId,
+        grCode: grForm.grCode,
+        grDescription: grForm.grDescription,
+        majorId: grForm.majorId,
+      })
+      ElMessage.success('毕业要求更新成功')
+    }
+    grDialogVisible.value = false
+    await loadGrs()
+  } finally {
+    grSubmitLoading.value = false
+  }
+}
+
+async function handleGrDelete(row) {
+  try {
+    await deleteGraduationRequirementApi({ grId: row.grId })
+    ElMessage.success('毕业要求删除成功')
+    if (selectedGrId.value === row.grId) {
+      selectedGrId.value = null
+      ipFilters.grId = null
+      await loadIps()
+    }
+    await loadGrs()
+  } catch {
+    // 错误已由拦截器处理
+  }
+}
+
+// ========== 指标点 ==========
+const ipLoading = ref(false)
+const ipSubmitLoading = ref(false)
+const ipDialogVisible = ref(false)
+const ipDialogMode = ref('create')
+const ips = ref([])
+const ipFormRef = ref(null)
+
+const ipFilters = reactive({
+  ipCode: '',
+  grId: null,
+})
+
+const ipForm = reactive({
+  ipId: null,
+  ipCode: '',
+  ipDescription: '',
+  grId: null,
+})
+
+const ipFormRules = {
+  ipCode: [{ required: true, message: '请输入指标点编号', trigger: 'blur' }],
+  ipDescription: [{ required: true, message: '请输入指标点描述', trigger: 'blur' }],
+  grId: [{ required: true, message: '请选择所属毕业要求', trigger: 'change' }],
+}
+
+function normalizeIpFilters() {
+  return {
+    ipCode: ipFilters.ipCode || undefined,
+    grId: ipFilters.grId || undefined,
+  }
+}
+
+async function loadIps() {
+  ipLoading.value = true
+  try {
+    ips.value = await listIndicatorPointsApi(normalizeIpFilters())
+  } finally {
+    ipLoading.value = false
+  }
+}
+
+function resetIpFilters() {
+  ipFilters.ipCode = ''
+  ipFilters.grId = null
+  loadIps()
+}
+
+function resetIpForm() {
+  ipForm.ipId = null
+  ipForm.ipCode = ''
+  ipForm.ipDescription = ''
+  ipForm.grId = null
+}
+
+function openIpCreateDialog() {
+  ipDialogMode.value = 'create'
+  resetIpForm()
+  ipDialogVisible.value = true
+  nextTick(() => ipFormRef.value?.clearValidate())
+}
+
+function openIpEditDialog(row) {
+  ipDialogMode.value = 'edit'
+  resetIpForm()
+  ipForm.ipId = row.ipId
+  ipForm.ipCode = row.ipCode
+  ipForm.ipDescription = row.ipDescription
+  ipForm.grId = row.grId
+  ipDialogVisible.value = true
+  nextTick(() => ipFormRef.value?.clearValidate())
+}
+
+async function handleIpSubmit() {
+  await ipFormRef.value?.validate()
+
+  ipSubmitLoading.value = true
+  try {
+    if (ipDialogMode.value === 'create') {
+      await addIndicatorPointApi({
+        ipCode: ipForm.ipCode,
+        ipDescription: ipForm.ipDescription,
+        grId: ipForm.grId,
+      })
+      ElMessage.success('指标点创建成功')
+    } else {
+      await updateIndicatorPointApi({
+        ipId: ipForm.ipId,
+        ipCode: ipForm.ipCode,
+        ipDescription: ipForm.ipDescription,
+        grId: ipForm.grId,
+      })
+      ElMessage.success('指标点更新成功')
+    }
+    ipDialogVisible.value = false
+    await loadIps()
+  } finally {
+    ipSubmitLoading.value = false
+  }
+}
+
+async function handleIpDelete(row) {
+  try {
+    await deleteIndicatorPointApi({ ipId: row.ipId })
+    ElMessage.success('指标点删除成功')
+    await loadIps()
+  } catch {
+    // 错误已由拦截器处理
+  }
+}
+
+// ========== 初始化 ==========
+onMounted(async () => {
+  if (!isProgramDirector.value) {
+    ElMessage.error('当前账号无权访问毕业要求与指标点页面')
+    router.replace(DEFAULT_HOME_PATH)
+    return
+  }
+
+  await loadMajorOptions()
+  await Promise.all([loadGrs(), loadIps()])
+})
+</script>
+
+<style scoped>
+.requirements-page {
+  padding: 20px;
+}
+
+.page-card {
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.page-header h1 {
+  margin: 4px 0 8px;
+  color: #1f2937;
+  font-size: 26px;
+}
+
+.page-section {
+  margin: 0;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.page-summary {
+  margin: 0;
+  max-width: 720px;
+  color: #64748b;
+  line-height: 1.75;
+}
+
+.entity-section {
+  margin-bottom: 28px;
+}
+
+.entity-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.filter-form {
+  margin-bottom: 12px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.text-muted {
+  color: #94a3b8;
+}
+</style>
