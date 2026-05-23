@@ -12,6 +12,11 @@
 | v4  | 28 | +8表status字段 / +teaching_class.calc_status / +3补充表 / +4视图 / +6索引 |
 
 ---
+# 毕业要求达成度计算平台 — 数据库 22 张核心表字段说明
+
+下面整理的是 `os_sql` 导出的 22 张表，`备注`列中写明字段含义，适合直接放入数据库设计文档。
+
+***
 
 ## 第1组：标准 RBAC 权限体系（5张）
 
@@ -28,6 +33,15 @@
 | `status` | `TINYINT` | 非空，默认 `1` | 1=启用 0=禁用 |
 | `created_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP | 记录创建时间 |
 | `updated_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP ON UPDATE | 记录最后修改时间 |
+| 字段名          | 类型             | 约束                                                    | 备注                 |
+| ------------ | -------------- | ----------------------------------------------------- | ------------------ |
+| `id`         | `BIGINT`       | 主键，自增                                                 | 用户主键，唯一标识用户        |
+| `username`   | `VARCHAR(50)`  | 非空，唯一                                                 | 登录账号               |
+| `password`   | `VARCHAR(255)` | 非空                                                    | 密码密文，禁止存储明文        |
+| `real_name`  | `VARCHAR(50)`  | 非空                                                    | 用户真实姓名             |
+| `status`     | `TINYINT`      | 非空，默认 `1`                                             | 用户状态，`1` 启用，`0` 禁用 |
+| `created_at` | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP`                             | 记录创建时间             |
+| `updated_at` | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | 记录最后修改时间           |
 
 补充约束：
 
@@ -44,6 +58,15 @@
 | `remark` | `VARCHAR(255)` | 可空 | 角色备注 |
 | `created_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP | 记录创建时间 |
 | `updated_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP ON UPDATE | 记录最后修改时间 |
+| 字段名          | 类型             | 约束                                                    | 备注                 |
+| ------------ | -------------- | ----------------------------------------------------- | ------------------ |
+| `id`         | `BIGINT`       | 主键，自增                                                 | 角色主键，唯一标识角色        |
+| `role_code`  | `VARCHAR(50)`  | 非空，唯一                                                 | 角色编码，程序中用于识别角色     |
+| `role_name`  | `VARCHAR(100)` | 非空                                                    | 角色名称，如"系统管理员"      |
+| `status`     | `TINYINT`      | 非空，默认 `1`                                             | 角色状态，`1` 启用，`0` 停用 |
+| `remark`     | `VARCHAR(255)` | 可空                                                    | 角色说明、备注信息          |
+| `created_at` | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP`                             | 记录创建时间             |
+| `updated_at` | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | 记录最后修改时间           |
 
 补充约束：
 
@@ -60,6 +83,15 @@
 | `remark` | `VARCHAR(255)` | 可空 | 权限备注 |
 | `created_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP | 记录创建时间 |
 | `updated_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP ON UPDATE | 记录最后修改时间 |
+| 字段名           | 类型             | 约束                                                    | 备注                      |
+| ------------- | -------------- | ----------------------------------------------------- | ----------------------- |
+| `id`          | `BIGINT`       | 主键，自增                                                 | 权限主键，唯一标识权限             |
+| `perm_code`   | `VARCHAR(100)` | 非空，唯一                                                 | 权限编码，程序中用于校验权限          |
+| `perm_name`   | `VARCHAR(100)` | 非空                                                    | 权限名称，如"成绩导入"            |
+| `module_name` | `VARCHAR(50)`  | 可空                                                    | 所属模块，如 `system`、`score` |
+| `remark`      | `VARCHAR(255)` | 可空                                                    | 权限说明、备注信息               |
+| `created_at`  | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP`                             | 记录创建时间                  |
+| `updated_at`  | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | 记录最后修改时间                |
 
 补充约束：
 
@@ -109,6 +141,47 @@
 | `status` | `TINYINT` | 非空，默认 `1` | **v4新增** 1=启用 0=禁用 |
 | `created_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP | 记录创建时间 |
 | `updated_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP ON UPDATE | 记录最后修改时间 |
+| 字段名          | 类型         | 约束                        | 备注                        |
+| ------------ | ---------- | ------------------------- | ------------------------- |
+| `id`         | `BIGINT`   | 主键，自增                     | 用户角色关联主键                  |
+| `user_id`    | `BIGINT`   | 非空，外键                     | 关联的用户 ID，对应 `sys_user.id` |
+| `role_id`    | `BIGINT`   | 非空，外键                     | 关联的角色 ID，对应 `sys_role.id` |
+| `created_at` | `DATETIME` | 非空，默认 `CURRENT_TIMESTAMP` | 关联关系创建时间                  |
+
+补充约束：
+
+- `UNIQUE (user_id, role_id)`：同一个用户不能重复分配同一个角色
+- 外键 `user_id → sys_user(id) ON DELETE RESTRICT`
+- 外键 `role_id → sys_role(id) ON DELETE RESTRICT`
+
+### 5. `sys_role_permission` 角色权限关联表
+
+| 字段名             | 类型         | 约束                        | 备注                              |
+| --------------- | ---------- | ------------------------- | ------------------------------- |
+| `id`            | `BIGINT`   | 主键，自增                     | 角色权限关联主键                        |
+| `role_id`       | `BIGINT`   | 非空，外键                     | 关联的角色 ID，对应 `sys_role.id`       |
+| `permission_id` | `BIGINT`   | 非空，外键                     | 关联的权限 ID，对应 `sys_permission.id` |
+| `created_at`    | `DATETIME` | 非空，默认 `CURRENT_TIMESTAMP` | 关联关系创建时间                        |
+
+补充约束：
+
+- `UNIQUE (role_id, permission_id)`：同一个角色不能重复绑定同一个权限
+- 外键 `role_id → sys_role(id) ON DELETE RESTRICT`
+- 外键 `permission_id → sys_permission(id) ON DELETE RESTRICT`
+
+***
+
+## 第2组：基础组织与时间实体（3张）
+
+### 6. `College` 学院表
+
+| 字段名            | 类型             | 约束                                                    | 备注                 |
+| -------------- | -------------- | ----------------------------------------------------- | ------------------ |
+| `college_id`   | `BIGINT`       | 主键，自增                                                 | 学院主键，唯一标识学院        |
+| `college_code` | `VARCHAR(20)`  | 非空，唯一                                                 | 学院编码，如 `001`       |
+| `college_name` | `VARCHAR(100)` | 非空                                                    | 学院名称，如"计算机科学与技术学院" |
+| `created_at`   | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP`                             | 记录创建时间             |
+| `updated_at`   | `DATETIME`     | 非空，默认 `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | 记录最后修改时间           |
 
 补充约束：
 

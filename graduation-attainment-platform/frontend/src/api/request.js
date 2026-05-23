@@ -5,7 +5,7 @@ import { ROUTE_NAMES } from '@/utils/constants'
 import router from '@/router'
 
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -31,6 +31,7 @@ request.interceptors.response.use(
       if (payload.code === 0 || payload.code === 200) {
         return payload.data !== undefined ? payload.data : payload
       }
+
       ElMessage.error(payload.message || '请求失败')
       return Promise.reject(new Error(payload.message || '请求失败'))
     }
