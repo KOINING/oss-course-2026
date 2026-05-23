@@ -9,6 +9,11 @@ function resolveProtectedComponent(item) {
   if (item.componentKey === 'account-role-management') {
     return () => import('@/views/admin/AccountRoleManagementView.vue')
   }
+
+  if (item.routeName === ROUTE_NAMES.REQUIREMENTS) {
+    return () => import('@/views/requirements/RequirementsView.vue')
+  }
+
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/module/BasicDataView.vue')
   }
