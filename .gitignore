@@ -1,27 +1,16 @@
-# IDE和编辑器配置
-.idea/
-.vscode/
-.claude/
-.codex/
-*.iml
-*.ipr
-*.iws
-.DS_Store
-
-# 编译后的class文件
+# Compiled class file
 *.class
 
-# 日志文件
+# Log file
 *.log
-logs/
 
-# BlueJ项目文件
+# BlueJ files
 *.ctxt
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# 打包文件
+# Package Files #
 *.jar
 *.war
 *.nar
@@ -29,32 +18,16 @@ logs/
 *.zip
 *.tar.gz
 *.rar
+.DS_Store
 
-# 构建输出目录
+# Maven / Gradle build outputs
 target/
 build/
 
-# Java虚拟机崩溃日志
-# 参考: http://www.java.com/en/download/help/error_hotspot.xml
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
 
-# Node.js项目
-node_modules/
-dist/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# 环境变量文件
-.env
-.env.local
-.env.*.local
-
-# 临时文件
-*.tmp
-*.temp
-*.swp
-
-# Maven包装器
-.mvn/wrapper/maven-wrapper.jar
+# Local files (not to be committed)
+.local/
