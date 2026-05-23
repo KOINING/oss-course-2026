@@ -13,7 +13,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_DEV_API_TARGET || 'http://39.104.52.187',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: process.env.VITE_DEV_API_TARGET || 'http://39.104.52.187',
         changeOrigin: true,
       },
     },
