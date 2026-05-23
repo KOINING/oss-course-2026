@@ -2,11 +2,14 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
-import com.oss.osscourse.dto.course.*;
+import com.oss.osscourse.dto.course.CourseCreateRequest;
+import com.oss.osscourse.dto.course.CourseQueryRequest;
+import com.oss.osscourse.dto.course.CourseResponse;
+import com.oss.osscourse.dto.course.CourseSaveRequest;
+import com.oss.osscourse.dto.course.CourseStatusRequest;
+import com.oss.osscourse.dto.course.CourseUpdateRequest;
 import com.oss.osscourse.entity.Course;
-import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.Major;
-import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.CourseService;
@@ -24,7 +27,6 @@ import java.util.stream.Collectors;
 public class CourseServiceImpl implements CourseService {
 
     private final CourseMapper courseMapper;
-    private final CourseMajorMapper courseMajorMapper;
     private final MajorMapper majorMapper;
 
     @Override
@@ -32,11 +34,14 @@ public class CourseServiceImpl implements CourseService {
         LambdaQueryWrapper<Course> wrapper = new LambdaQueryWrapper<>();
 
         if (request != null) {
-            if (request.getCourseCode() != null && !request.getCourseCode().trim().isEmpty()) {
+            if (hasText(request.getCourseCode())) {
                 wrapper.like(Course::getCourseCode, request.getCourseCode().trim());
             }
-            if (request.getCourseName() != null && !request.getCourseName().trim().isEmpty()) {
+            if (hasText(request.getCourseName())) {
                 wrapper.like(Course::getCourseName, request.getCourseName().trim());
+            }
+            if (request.getMajorId() != null) {
+                wrapper.eq(Course::getMajorId, request.getMajorId());
             }
             if (request.getStatus() != null) {
                 wrapper.eq(Course::getStatus, request.getStatus());
@@ -46,44 +51,19 @@ public class CourseServiceImpl implements CourseService {
         wrapper.orderByAsc(Course::getCourseCode);
 
         List<Course> courses = courseMapper.selectList(wrapper);
+        Map<Long, Major> majorMap = buildMajorMap(courses);
 
-        // 构建 courseId -> majorId 映射
-        List<Long> courseIds = courses.stream().map(Course::getCourseId).collect(Collectors.toList());
-        Map<Long, Long> courseMajorMap = Map.of();
-        Map<Long, Major> majorMap = Map.of();
-
-        if (!courseIds.isEmpty()) {
-            List<CourseMajor> courseMajors = courseMajorMapper.selectList(
-                    new LambdaQueryWrapper<CourseMajor>().in(CourseMajor::getCourseId, courseIds));
-            courseMajorMap = courseMajors.stream()
-                    .collect(Collectors.toMap(CourseMajor::getCourseId, CourseMajor::getMajorId, (a, b) -> a));
-
-            List<Long> majorIds = courseMajors.stream()
-                    .map(CourseMajor::getMajorId).distinct().collect(Collectors.toList());
-            if (!majorIds.isEmpty()) {
-                majorMap = majorMapper.selectBatchIds(majorIds).stream()
-                        .collect(Collectors.toMap(Major::getMajorId, m -> m));
-            }
-        }
-
-        // 按 majorId 过滤
-        if (request != null && request.getMajorId() != null) {
-            final Map<Long, Long> finalCourseMajorMap = courseMajorMap;
-            courses = courses.stream()
-                    .filter(c -> finalCourseMajorMap.getOrDefault(c.getCourseId(), -1L).equals(request.getMajorId()))
-                    .collect(Collectors.toList());
-        }
-
-        final Map<Long, Long> finalCourseMajorMap = courseMajorMap;
-        final Map<Long, Major> finalMajorMap = majorMap;
         return courses.stream()
-                .map(c -> {
-                    Long majorId = finalCourseMajorMap.get(c.getCourseId());
+                .map(course -> {
+                    Long majorId = course.getMajorId();
                     String majorName = null;
-                    if (majorId != null && finalMajorMap.containsKey(majorId)) {
-                        majorName = finalMajorMap.get(majorId).getMajorName();
+                    if (majorId != null) {
+                        Major major = majorMap.get(majorId);
+                        if (major != null) {
+                            majorName = major.getMajorName();
+                        }
                     }
-                    return toResponse(c, majorId, majorName);
+                    return toResponse(course, majorId, majorName);
                 })
                 .collect(Collectors.toList());
     }
@@ -93,17 +73,15 @@ public class CourseServiceImpl implements CourseService {
         if (courseId == null) {
             throw new BusinessException(400, "课程ID不能为空");
         }
+
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new BusinessException(404, "课程不存在");
         }
 
-        Long majorId = null;
+        Long majorId = course.getMajorId();
         String majorName = null;
-        CourseMajor courseMajor = courseMajorMapper.selectOne(
-                new LambdaQueryWrapper<CourseMajor>().eq(CourseMajor::getCourseId, courseId));
-        if (courseMajor != null) {
-            majorId = courseMajor.getMajorId();
+        if (majorId != null) {
             Major major = majorMapper.selectById(majorId);
             if (major != null) {
                 majorName = major.getMajorName();
@@ -120,22 +98,16 @@ public class CourseServiceImpl implements CourseService {
                 .eq(Course::getCourseCode, request.getCourseCode())) != null) {
             throw new BusinessException(400, "课程编码已存在");
         }
-        if (majorMapper.selectById(request.getMajorId()) == null) {
-            throw new BusinessException(400, "所选专业不存在");
-        }
+        validateMajorExists(request.getMajorId());
 
         Course course = new Course();
         course.setCourseCode(request.getCourseCode());
         course.setCourseName(request.getCourseName());
         course.setCredit(request.getCredit());
+        course.setMajorId(request.getMajorId());
         course.setStatus(request.getStatus() != null ? request.getStatus() : 1);
 
         courseMapper.insert(course);
-
-        CourseMajor courseMajor = new CourseMajor();
-        courseMajor.setCourseId(course.getCourseId());
-        courseMajor.setMajorId(request.getMajorId());
-        courseMajorMapper.insert(courseMajor);
     }
 
     @Override
@@ -149,16 +121,17 @@ public class CourseServiceImpl implements CourseService {
             createRequest.setMajorId(request.getMajorId());
             createRequest.setStatus(request.getStatus());
             createCourse(createRequest);
-        } else {
-            CourseUpdateRequest updateRequest = new CourseUpdateRequest();
-            updateRequest.setCourseId(request.getCourseId());
-            updateRequest.setCourseCode(request.getCourseCode());
-            updateRequest.setCourseName(request.getCourseName());
-            updateRequest.setCredit(request.getCredit());
-            updateRequest.setMajorId(request.getMajorId());
-            updateRequest.setStatus(request.getStatus());
-            updateCourse(updateRequest);
+            return;
         }
+
+        CourseUpdateRequest updateRequest = new CourseUpdateRequest();
+        updateRequest.setCourseId(request.getCourseId());
+        updateRequest.setCourseCode(request.getCourseCode());
+        updateRequest.setCourseName(request.getCourseName());
+        updateRequest.setCredit(request.getCredit());
+        updateRequest.setMajorId(request.getMajorId());
+        updateRequest.setStatus(request.getStatus());
+        updateCourse(updateRequest);
     }
 
     @Override
@@ -173,7 +146,7 @@ public class CourseServiceImpl implements CourseService {
             throw new BusinessException(404, "课程不存在");
         }
 
-        if (request.getCourseCode() != null && !request.getCourseCode().isEmpty()) {
+        if (hasText(request.getCourseCode())) {
             Course existing = courseMapper.selectOne(new LambdaQueryWrapper<Course>()
                     .eq(Course::getCourseCode, request.getCourseCode())
                     .ne(Course::getCourseId, request.getCourseId()));
@@ -183,7 +156,7 @@ public class CourseServiceImpl implements CourseService {
             course.setCourseCode(request.getCourseCode());
         }
 
-        if (request.getCourseName() != null && !request.getCourseName().isEmpty()) {
+        if (hasText(request.getCourseName())) {
             course.setCourseName(request.getCourseName());
         }
 
@@ -191,28 +164,16 @@ public class CourseServiceImpl implements CourseService {
             course.setCredit(request.getCredit());
         }
 
+        if (request.getMajorId() != null) {
+            validateMajorExists(request.getMajorId());
+            course.setMajorId(request.getMajorId());
+        }
+
         if (request.getStatus() != null) {
             course.setStatus(request.getStatus());
         }
 
         courseMapper.updateById(course);
-
-        if (request.getMajorId() != null) {
-            if (majorMapper.selectById(request.getMajorId()) == null) {
-                throw new BusinessException(400, "所选专业不存在");
-            }
-            CourseMajor courseMajor = courseMajorMapper.selectOne(
-                    new LambdaQueryWrapper<CourseMajor>().eq(CourseMajor::getCourseId, request.getCourseId()));
-            if (courseMajor != null) {
-                courseMajor.setMajorId(request.getMajorId());
-                courseMajorMapper.updateById(courseMajor);
-            } else {
-                courseMajor = new CourseMajor();
-                courseMajor.setCourseId(request.getCourseId());
-                courseMajor.setMajorId(request.getMajorId());
-                courseMajorMapper.insert(courseMajor);
-            }
-        }
     }
 
     @Override
@@ -221,10 +182,12 @@ public class CourseServiceImpl implements CourseService {
         if (request.getStatus() != 0 && request.getStatus() != 1) {
             throw new BusinessException(400, "状态值必须为0或1");
         }
+
         Course course = courseMapper.selectById(request.getCourseId());
         if (course == null) {
             throw new BusinessException(404, "课程不存在");
         }
+
         course.setStatus(request.getStatus());
         courseMapper.updateById(course);
     }
@@ -235,18 +198,42 @@ public class CourseServiceImpl implements CourseService {
         if (courseId == null) {
             throw new BusinessException(400, "课程ID不能为空");
         }
+
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new BusinessException(404, "课程不存在");
         }
 
-        courseMajorMapper.delete(new LambdaQueryWrapper<CourseMajor>()
-                .eq(CourseMajor::getCourseId, courseId));
         try {
             courseMapper.deleteById(courseId);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(400, "该课程下存在关联数据（教学班级、课程目标等），无法删除。请先停用该课程");
+            throw new BusinessException(400, "该课程下存在关联数据，无法删除，请先停用该课程");
         }
+    }
+
+    private Map<Long, Major> buildMajorMap(List<Course> courses) {
+        List<Long> majorIds = courses.stream()
+                .map(Course::getMajorId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (majorIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return majorMapper.selectBatchIds(majorIds).stream()
+                .collect(Collectors.toMap(Major::getMajorId, major -> major));
+    }
+
+    private void validateMajorExists(Long majorId) {
+        if (majorId == null || majorMapper.selectById(majorId) == null) {
+            throw new BusinessException(400, "所选专业不存在");
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private CourseResponse toResponse(Course course, Long majorId, String majorName) {
