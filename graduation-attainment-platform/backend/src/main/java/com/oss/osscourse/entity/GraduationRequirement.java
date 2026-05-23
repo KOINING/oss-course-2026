@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("GraduationRequirement")
+@TableName("graduation_requirement")
 public class GraduationRequirement {
     @TableId(type = IdType.AUTO)
     private Long grId;

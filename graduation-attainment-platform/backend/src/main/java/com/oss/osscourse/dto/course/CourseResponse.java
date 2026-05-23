@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,7 +19,7 @@ public class CourseResponse {
     @Schema(description = "课程ID", example = "1")
     private Long courseId;
 
-    @Schema(description = "课程代码", example = "CS201")
+    @Schema(description = "课程编码", example = "CS201")
     private String courseCode;
 
     @Schema(description = "课程名称", example = "数据结构")
@@ -27,13 +28,13 @@ public class CourseResponse {
     @Schema(description = "学分", example = "4.0")
     private Float credit;
 
-    @Schema(description = "所属专业ID", example = "1")
-    private Long majorId;
+    @Schema(description = "所属专业ID列表", example = "[1,2]")
+    private List<Long> majorIds;
 
-    @Schema(description = "所属专业名称", example = "计算机科学与技术")
-    private String majorName;
+    @Schema(description = "所属专业名称列表", example = "[\"计算机科学与技术\",\"软件工程\"]")
+    private List<String> majorNames;
 
-    @Schema(description = "状态：1=开课中，0=停开", example = "1")
+    @Schema(description = "状态：1=启用，0=停用", example = "1")
     private Integer status;
 
     @Schema(description = "创建时间")
