@@ -71,13 +71,13 @@ jobs:
             set -e
             cd "$DEPLOY_PATH"
             rm -rf graduation-attainment-platform/frontend/dist
-            git fetch origin "$DEPLOY_REF"
+            git fetch origin "$DEPLOY_REF":"refs/remotes/origin/$DEPLOY_REF"
             if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
               git checkout "$DEPLOY_REF"
             else
-              git checkout -b "$DEPLOY_REF" FETCH_HEAD
+              git checkout -b "$DEPLOY_REF"
             fi
-            git pull origin "$DEPLOY_REF"
+            git reset --hard "origin/$DEPLOY_REF"
             mkdir -p graduation-attainment-platform/frontend/dist
             mkdir -p runtime/backend
             rm -f runtime/backend/app.jar
