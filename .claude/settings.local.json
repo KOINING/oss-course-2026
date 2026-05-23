@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw test *)",
+      "Bash(./mvnw dependency:resolve -q)",
+      "Bash(./mvnw dependency:resolve)",
+      "Bash(./mvnw dependency:tree)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(./mvnw spring-boot:run -Dspring-boot.run.arguments=\"--debug\")",
+      "Bash(./mvnw clean *)",
+      "Bash(./mvnw dependency:tree -Dincludes=\"org.springframework:spring-jdbc\")",
+      "Bash(./mvnw dependency:tree -Dincludes=\"com.h2database:h2\")",
+      "Bash(taskkill //F //IM java.exe)",
+      "Bash(./mvnw compile *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(where python3 *)",
+      "Bash(cmd *)",
+      "Bash(python -m pip install python-docx)",
+      "Bash(python *)",
+      "Bash(powershell *)",
+      "Bash(dir \"C:\\\\Users\\\\哒哒哒\\\\Desktop\\\\\" 2>&1 | head -20 *)",
+      "Read(//c/Users/**)",
+      "Bash(/c/Windows/py.exe --version)",
+      "Bash(/c/Windows/py.exe -m pip install python-docx)",
+      "Bash(/c/Windows/py.exe read_docx.py)",
+      "Bash(/c/Windows/py.exe *)",
+      "Bash(copy *)"
+    ]
+  }
+}
