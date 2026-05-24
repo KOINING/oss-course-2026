@@ -13,6 +13,7 @@ public class GraduationRequirement {
     private String grCode;
     private String grDescription;
     private Long majorId;
+    private Integer status;
 
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;

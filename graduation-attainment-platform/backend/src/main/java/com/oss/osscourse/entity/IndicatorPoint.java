@@ -13,6 +13,7 @@ public class IndicatorPoint {
     private String ipCode;
     private String ipDescription;
     private Long grId;
+    private Integer status;
 
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;

@@ -40,6 +40,17 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="状态">
+            <el-select
+              v-model="grFilters.status"
+              placeholder="全部状态"
+              clearable
+              style="width: 120px"
+            >
+              <el-option :value="1" label="启用" />
+              <el-option :value="0" label="停用" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="loadGrs">查询</el-button>
             <el-button @click="resetGrFilters">重置</el-button>
@@ -56,10 +67,27 @@
           <el-table-column prop="grCode" label="编号" width="100" />
           <el-table-column prop="grDescription" label="描述" min-width="320" show-overflow-tooltip />
           <el-table-column prop="majorName" label="所属专业" width="180" />
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="plain">
+                {{ row.status === 1 ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
                 <el-button link type="primary" @click.stop="openGrEditDialog(row)">编辑</el-button>
+                <el-popconfirm
+                  :title="row.status === 1 ? '确认停用该毕业要求吗？' : '确认启用该毕业要求吗？'"
+                  @confirm="handleToggleGrStatus(row)"
+                >
+                  <template #reference>
+                    <el-button link :type="row.status === 1 ? 'warning' : 'success'">
+                      {{ row.status === 1 ? '停用' : '启用' }}
+                    </el-button>
+                  </template>
+                </el-popconfirm>
                 <el-popconfirm
                   title="确认删除该毕业要求吗？若存在关联指标点将无法删除。"
                   @confirm="handleGrDelete(row)"
@@ -103,6 +131,17 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="状态">
+            <el-select
+              v-model="ipFilters.status"
+              placeholder="全部状态"
+              clearable
+              style="width: 120px"
+            >
+              <el-option :value="1" label="启用" />
+              <el-option :value="0" label="停用" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="loadIps">查询</el-button>
             <el-button @click="resetIpFilters">重置</el-button>
@@ -122,10 +161,27 @@
               <span v-else class="text-muted">-</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="plain">
+                {{ row.status === 1 ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
                 <el-button link type="primary" @click="openIpEditDialog(row)">编辑</el-button>
+                <el-popconfirm
+                  :title="row.status === 1 ? '确认停用该指标点吗？' : '确认启用该指标点吗？'"
+                  @confirm="handleToggleIpStatus(row)"
+                >
+                  <template #reference>
+                    <el-button link :type="row.status === 1 ? 'warning' : 'success'">
+                      {{ row.status === 1 ? '停用' : '启用' }}
+                    </el-button>
+                  </template>
+                </el-popconfirm>
                 <el-popconfirm
                   title="确认删除该指标点吗？"
                   @confirm="handleIpDelete(row)"
@@ -173,6 +229,12 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="grForm.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -214,6 +276,12 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="ipForm.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -241,7 +309,9 @@ import {
   listIndicatorPointsApi,
   listMajorsApi,
   updateGraduationRequirementApi,
+  updateGraduationRequirementStatusApi,
   updateIndicatorPointApi,
+  updateIndicatorPointStatusApi,
 } from '@/api/requirements'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
 import { useUserStore } from '@/stores/user'
@@ -275,6 +345,7 @@ const selectedGrId = ref(null)
 const grFilters = reactive({
   grCode: '',
   majorId: null,
+  status: null,
 })
 
 const grForm = reactive({
@@ -282,6 +353,7 @@ const grForm = reactive({
   grCode: '',
   grDescription: '',
   majorId: null,
+  status: 1,
 })
 
 const grFormRules = {
@@ -294,6 +366,7 @@ function normalizeGrFilters() {
   return {
     grCode: grFilters.grCode || undefined,
     majorId: grFilters.majorId || undefined,
+    status: grFilters.status ?? undefined,
   }
 }
 
@@ -310,6 +383,7 @@ async function loadGrs() {
 function resetGrFilters() {
   grFilters.grCode = ''
   grFilters.majorId = null
+  grFilters.status = null
   loadGrs()
 }
 
@@ -330,6 +404,7 @@ function resetGrForm() {
   grForm.grCode = ''
   grForm.grDescription = ''
   grForm.majorId = null
+  grForm.status = 1
 }
 
 function openGrCreateDialog() {
@@ -346,6 +421,7 @@ function openGrEditDialog(row) {
   grForm.grCode = row.grCode
   grForm.grDescription = row.grDescription
   grForm.majorId = row.majorId
+  grForm.status = row.status ?? 1
   grDialogVisible.value = true
   nextTick(() => grFormRef.value?.clearValidate())
 }
@@ -360,6 +436,7 @@ async function handleGrSubmit() {
         grCode: grForm.grCode,
         grDescription: grForm.grDescription,
         majorId: grForm.majorId,
+        status: grForm.status,
       })
       ElMessage.success('毕业要求创建成功')
     } else {
@@ -368,6 +445,7 @@ async function handleGrSubmit() {
         grCode: grForm.grCode,
         grDescription: grForm.grDescription,
         majorId: grForm.majorId,
+        status: grForm.status,
       })
       ElMessage.success('毕业要求更新成功')
     }
@@ -393,6 +471,13 @@ async function handleGrDelete(row) {
   }
 }
 
+async function handleToggleGrStatus(row) {
+  const nextStatus = row.status === 1 ? 0 : 1
+  await updateGraduationRequirementStatusApi({ grId: row.grId, status: nextStatus })
+  ElMessage.success(nextStatus === 1 ? '毕业要求已启用' : '毕业要求已停用')
+  await loadGrs()
+}
+
 // ========== 指标点 ==========
 const ipLoading = ref(false)
 const ipSubmitLoading = ref(false)
@@ -404,6 +489,7 @@ const ipFormRef = ref(null)
 const ipFilters = reactive({
   ipCode: '',
   grId: null,
+  status: null,
 })
 
 const ipForm = reactive({
@@ -411,6 +497,7 @@ const ipForm = reactive({
   ipCode: '',
   ipDescription: '',
   grId: null,
+  status: 1,
 })
 
 const ipFormRules = {
@@ -423,6 +510,7 @@ function normalizeIpFilters() {
   return {
     ipCode: ipFilters.ipCode || undefined,
     grId: ipFilters.grId || undefined,
+    status: ipFilters.status ?? undefined,
   }
 }
 
@@ -438,6 +526,7 @@ async function loadIps() {
 function resetIpFilters() {
   ipFilters.ipCode = ''
   ipFilters.grId = null
+  ipFilters.status = null
   loadIps()
 }
 
@@ -446,6 +535,7 @@ function resetIpForm() {
   ipForm.ipCode = ''
   ipForm.ipDescription = ''
   ipForm.grId = null
+  ipForm.status = 1
 }
 
 function openIpCreateDialog() {
@@ -462,6 +552,7 @@ function openIpEditDialog(row) {
   ipForm.ipCode = row.ipCode
   ipForm.ipDescription = row.ipDescription
   ipForm.grId = row.grId
+  ipForm.status = row.status ?? 1
   ipDialogVisible.value = true
   nextTick(() => ipFormRef.value?.clearValidate())
 }
@@ -476,6 +567,7 @@ async function handleIpSubmit() {
         ipCode: ipForm.ipCode,
         ipDescription: ipForm.ipDescription,
         grId: ipForm.grId,
+        status: ipForm.status,
       })
       ElMessage.success('指标点创建成功')
     } else {
@@ -484,6 +576,7 @@ async function handleIpSubmit() {
         ipCode: ipForm.ipCode,
         ipDescription: ipForm.ipDescription,
         grId: ipForm.grId,
+        status: ipForm.status,
       })
       ElMessage.success('指标点更新成功')
     }
@@ -492,6 +585,13 @@ async function handleIpSubmit() {
   } finally {
     ipSubmitLoading.value = false
   }
+}
+
+async function handleToggleIpStatus(row) {
+  const nextStatus = row.status === 1 ? 0 : 1
+  await updateIndicatorPointStatusApi({ ipId: row.ipId, status: nextStatus })
+  ElMessage.success(nextStatus === 1 ? '指标点已启用' : '指标点已停用')
+  await loadIps()
 }
 
 async function handleIpDelete(row) {

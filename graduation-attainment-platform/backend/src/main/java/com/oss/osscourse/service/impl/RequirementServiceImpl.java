@@ -10,6 +10,7 @@ import com.oss.osscourse.mapper.GraduationRequirementMapper;
 import com.oss.osscourse.mapper.IndicatorPointMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.RequirementService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +41,7 @@ public class RequirementServiceImpl implements RequirementService {
             List<String> permissions) {
         assertManagePermission(roles, permissions);
         GraduationRequirementQueryRequest query = request == null ? new GraduationRequirementQueryRequest() : request;
-        return grMapper.selectRequirementList(trimToNull(query.getGrCode()), query.getMajorId());
+        return grMapper.selectRequirementList(trimToNull(query.getGrCode()), query.getMajorId(), query.getStatus());
     }
 
     @Override
@@ -70,6 +71,7 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setGrCode(grCode);
         entity.setGrDescription(grDescription);
         entity.setMajorId(majorId);
+        entity.setStatus(request.getStatus() == null ? 1 : normalizeStatus(request.getStatus()));
         grMapper.insert(entity);
     }
 
@@ -110,6 +112,9 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setGrCode(grCode);
         entity.setGrDescription(grDescription);
         entity.setMajorId(majorId);
+        if (request.getStatus() != null) {
+            entity.setStatus(normalizeStatus(request.getStatus()));
+        }
         grMapper.updateById(entity);
     }
 
@@ -132,7 +137,26 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(400, "该毕业要求下存在 " + ipCount + " 个指标点，请先删除指标点后再删除毕业要求");
         }
 
-        grMapper.deleteById(grId);
+        try {
+            grMapper.deleteById(grId);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "该毕业要求存在关联数据，无法删除，请改为停用");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateGraduationRequirementStatus(UpdateGraduationRequirementStatusRequest request,
+                                                  List<String> roles,
+                                                  List<String> permissions) {
+        assertManagePermission(roles, permissions);
+
+        GraduationRequirement entity = grMapper.selectById(request.getGrId());
+        if (entity == null) {
+            throw new BusinessException(404, "毕业要求不存在");
+        }
+        entity.setStatus(normalizeStatus(request.getStatus()));
+        grMapper.updateById(entity);
     }
 
     @Override
@@ -141,7 +165,7 @@ public class RequirementServiceImpl implements RequirementService {
                                                              List<String> permissions) {
         assertManagePermission(roles, permissions);
         IndicatorPointQueryRequest query = request == null ? new IndicatorPointQueryRequest() : request;
-        return ipMapper.selectIndicatorPointList(trimToNull(query.getIpCode()), query.getGrId());
+        return ipMapper.selectIndicatorPointList(trimToNull(query.getIpCode()), query.getGrId(), query.getStatus());
     }
 
     @Override
@@ -171,6 +195,7 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setIpCode(ipCode);
         entity.setIpDescription(ipDescription);
         entity.setGrId(grId);
+        entity.setStatus(request.getStatus() == null ? 1 : normalizeStatus(request.getStatus()));
         ipMapper.insert(entity);
     }
 
@@ -211,6 +236,9 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setIpCode(ipCode);
         entity.setIpDescription(ipDescription);
         entity.setGrId(grId);
+        if (request.getStatus() != null) {
+            entity.setStatus(normalizeStatus(request.getStatus()));
+        }
         ipMapper.updateById(entity);
     }
 
@@ -228,7 +256,26 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(404, "指标点不存在");
         }
 
-        ipMapper.deleteById(ipId);
+        try {
+            ipMapper.deleteById(ipId);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "该指标点存在关联数据，无法删除，请改为停用");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateIndicatorPointStatus(UpdateIndicatorPointStatusRequest request,
+                                           List<String> roles,
+                                           List<String> permissions) {
+        assertManagePermission(roles, permissions);
+
+        IndicatorPoint entity = ipMapper.selectById(request.getIpId());
+        if (entity == null) {
+            throw new BusinessException(404, "指标点不存在");
+        }
+        entity.setStatus(normalizeStatus(request.getStatus()));
+        ipMapper.updateById(entity);
     }
 
     @Override
@@ -251,6 +298,13 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(400, message);
         }
         return trimmed;
+    }
+
+    private Integer normalizeStatus(Integer status) {
+        if (status == null || (status != 0 && status != 1)) {
+            throw new BusinessException(400, "状态值必须为0或1");
+        }
+        return status;
     }
 
     private String trimToNull(String value) {
