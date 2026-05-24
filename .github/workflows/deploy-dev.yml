@@ -70,6 +70,10 @@ jobs:
           ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << EOF
             set -e
             cd "$DEPLOY_PATH"
+            mkdir -p runtime/backend
+            if [ ! -f runtime/backend/.env ] && [ -f graduation-attainment-platform/deploy/.env ]; then
+              cp graduation-attainment-platform/deploy/.env runtime/backend/.env
+            fi
             rm -rf graduation-attainment-platform/frontend/dist
             git fetch origin "$DEPLOY_REF":"refs/remotes/origin/$DEPLOY_REF"
             if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
@@ -97,8 +101,15 @@ jobs:
               sleep 2
             fi
 
+            ENV_FILE="$DEPLOY_PATH/runtime/backend/.env"
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "Missing backend env file: $ENV_FILE"
+              echo "Create it from graduation-attainment-platform/deploy/.env.example and set the real database connection."
+              exit 1
+            fi
+
             set -a
-            . "$DEPLOY_PATH/graduation-attainment-platform/deploy/.env"
+            . "$ENV_FILE"
             set +a
 
             nohup java -jar app.jar > app.log 2>&1 &
