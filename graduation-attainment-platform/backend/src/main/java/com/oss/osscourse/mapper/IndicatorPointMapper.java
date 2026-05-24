@@ -15,7 +15,7 @@ public interface IndicatorPointMapper extends BaseMapper<IndicatorPoint> {
     @Select({
             "<script>",
             "SELECT ip.ip_id AS ipId, ip.ip_code AS ipCode, ip.ip_description AS ipDescription,",
-            "ip.gr_id AS grId, gr.gr_code AS grCode, gr.gr_description AS grDescription",
+            "ip.gr_id AS grId, gr.gr_code AS grCode, gr.gr_description AS grDescription, ip.status AS status",
             "FROM indicator_point ip",
             "LEFT JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
             "<where>",
@@ -25,12 +25,16 @@ public interface IndicatorPointMapper extends BaseMapper<IndicatorPoint> {
             "<if test='grId != null'>",
             "AND ip.gr_id = #{grId}",
             "</if>",
+            "<if test='status != null'>",
+            "AND ip.status = #{status}",
+            "</if>",
             "</where>",
             "ORDER BY ip.gr_id ASC, ip.ip_code ASC",
             "</script>"
     })
     List<IndicatorPointResponse> selectIndicatorPointList(@Param("ipCode") String ipCode,
-                                                            @Param("grId") Long grId);
+                                                            @Param("grId") Long grId,
+                                                            @Param("status") Integer status);
 
     @Select("SELECT COUNT(*) FROM indicator_point WHERE gr_id = #{grId}")
     int countByGrId(@Param("grId") Long grId);

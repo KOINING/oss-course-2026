@@ -22,6 +22,10 @@ public interface RequirementService {
                                     List<String> roles,
                                     List<String> permissions);
 
+    void updateGraduationRequirementStatus(UpdateGraduationRequirementStatusRequest request,
+                                           List<String> roles,
+                                           List<String> permissions);
+
     List<IndicatorPointResponse> listIndicatorPoints(IndicatorPointQueryRequest request,
                                                       List<String> roles,
                                                       List<String> permissions);
@@ -37,6 +41,10 @@ public interface RequirementService {
     void deleteIndicatorPoint(Long ipId,
                              List<String> roles,
                              List<String> permissions);
+
+    void updateIndicatorPointStatus(UpdateIndicatorPointStatusRequest request,
+                                    List<String> roles,
+                                    List<String> permissions);
 
     List<Major> listMajors(List<String> roles, List<String> permissions);
 }

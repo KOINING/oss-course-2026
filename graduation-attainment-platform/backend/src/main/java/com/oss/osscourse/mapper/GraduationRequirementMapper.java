@@ -15,7 +15,7 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
     @Select({
             "<script>",
             "SELECT gr.gr_id AS grId, gr.gr_code AS grCode, gr.gr_description AS grDescription,",
-            "gr.major_id AS majorId, m.major_name AS majorName",
+            "gr.major_id AS majorId, m.major_name AS majorName, gr.status AS status",
             "FROM graduation_requirement gr",
             "LEFT JOIN major m ON gr.major_id = m.major_id",
             "<where>",
@@ -25,10 +25,14 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
             "<if test='majorId != null'>",
             "AND gr.major_id = #{majorId}",
             "</if>",
+            "<if test='status != null'>",
+            "AND gr.status = #{status}",
+            "</if>",
             "</where>",
             "ORDER BY gr.gr_id ASC",
             "</script>"
     })
     List<GraduationRequirementResponse> selectRequirementList(@Param("grCode") String grCode,
-                                                               @Param("majorId") Long majorId);
+                                                               @Param("majorId") Long majorId,
+                                                               @Param("status") Integer status);
 }

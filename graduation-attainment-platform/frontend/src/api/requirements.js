@@ -16,6 +16,10 @@ export function deleteGraduationRequirementApi(data) {
   return request.post('/requirements/deleteGraduationRequirement', data)
 }
 
+export function updateGraduationRequirementStatusApi(data) {
+  return request.post('/requirements/updateGraduationRequirementStatus', data)
+}
+
 export function listIndicatorPointsApi(data = {}) {
   return request.post('/requirements/listIndicatorPoints', data)
 }
@@ -30,6 +34,10 @@ export function updateIndicatorPointApi(data) {
 
 export function deleteIndicatorPointApi(data) {
   return request.post('/requirements/deleteIndicatorPoint', data)
+}
+
+export function updateIndicatorPointStatusApi(data) {
+  return request.post('/requirements/updateIndicatorPointStatus', data)
 }
 
 export function listMajorsApi() {
