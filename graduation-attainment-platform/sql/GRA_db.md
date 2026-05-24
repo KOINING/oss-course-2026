@@ -127,48 +127,6 @@
 - `FOREIGN KEY (role_id) REFERENCES sys_role(id) ON DELETE RESTRICT`
 - `FOREIGN KEY (permission_id) REFERENCES sys_permission(id) ON DELETE RESTRICT`
 
----
-
-## 第2组：基础组织与时间实体（3张）
-
-### 6. `college` 学院表
-
-| 字段名 | 类型 | 约束 | 备注 |
-|--------|------|------|------|
-| `college_id` | `BIGINT` | 主键，自增 | 学院主键 |
-| `college_code` | `VARCHAR(20)` | 非空，唯一 | 学院编码，如 `"CS"` |
-| `college_name` | `VARCHAR(100)` | 非空 | 学院名称 |
-| `status` | `TINYINT` | 非空，默认 `1` | **v4新增** 1=启用 0=禁用 |
-| `created_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP | 记录创建时间 |
-| `updated_at` | `DATETIME` | 非空，默认 CURRENT_TIMESTAMP ON UPDATE | 记录最后修改时间 |
-| 字段名          | 类型         | 约束                        | 备注                        |
-| ------------ | ---------- | ------------------------- | ------------------------- |
-| `id`         | `BIGINT`   | 主键，自增                     | 用户角色关联主键                  |
-| `user_id`    | `BIGINT`   | 非空，外键                     | 关联的用户 ID，对应 `sys_user.id` |
-| `role_id`    | `BIGINT`   | 非空，外键                     | 关联的角色 ID，对应 `sys_role.id` |
-| `created_at` | `DATETIME` | 非空，默认 `CURRENT_TIMESTAMP` | 关联关系创建时间                  |
-
-补充约束：
-
-- `UNIQUE (user_id, role_id)`：同一个用户不能重复分配同一个角色
-- 外键 `user_id → sys_user(id) ON DELETE RESTRICT`
-- 外键 `role_id → sys_role(id) ON DELETE RESTRICT`
-
-### 5. `sys_role_permission` 角色权限关联表
-
-| 字段名             | 类型         | 约束                        | 备注                              |
-| --------------- | ---------- | ------------------------- | ------------------------------- |
-| `id`            | `BIGINT`   | 主键，自增                     | 角色权限关联主键                        |
-| `role_id`       | `BIGINT`   | 非空，外键                     | 关联的角色 ID，对应 `sys_role.id`       |
-| `permission_id` | `BIGINT`   | 非空，外键                     | 关联的权限 ID，对应 `sys_permission.id` |
-| `created_at`    | `DATETIME` | 非空，默认 `CURRENT_TIMESTAMP` | 关联关系创建时间                        |
-
-补充约束：
-
-- `UNIQUE (role_id, permission_id)`：同一个角色不能重复绑定同一个权限
-- 外键 `role_id → sys_role(id) ON DELETE RESTRICT`
-- 外键 `permission_id → sys_permission(id) ON DELETE RESTRICT`
-
 ***
 
 ## 第2组：基础组织与时间实体（3张）
