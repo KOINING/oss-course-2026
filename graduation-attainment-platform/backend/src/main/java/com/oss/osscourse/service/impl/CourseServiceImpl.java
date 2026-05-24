@@ -204,10 +204,25 @@ public class CourseServiceImpl implements CourseService {
             throw new BusinessException(404, "course not found");
         }
 
+        Long teachingClassRefCount = courseMapper.countTeachingClassReferences(courseId);
+        if (teachingClassRefCount != null && teachingClassRefCount > 0) {
+            throw new BusinessException(400, "该课程已被教学班引用，无法删除");
+        }
+
+        Long supportRefCount = courseMapper.countIndicatorSupportReferences(courseId);
+        if (supportRefCount != null && supportRefCount > 0) {
+            throw new BusinessException(400, "该课程已被课程支撑关系引用，无法删除");
+        }
+
+        Long objectiveRefCount = courseMapper.countCourseObjectiveReferences(courseId);
+        if (objectiveRefCount != null && objectiveRefCount > 0) {
+            throw new BusinessException(400, "该课程已被课程目标或考核点数据引用，无法删除");
+        }
+
         try {
             courseMapper.deleteById(courseId);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(400, "course has related records and cannot be deleted");
+            throw new BusinessException(400, "该课程存在关联数据，无法删除");
         }
     }
 

@@ -2,6 +2,8 @@ package com.oss.osscourse.common;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.spring.MyBatisSystemException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,6 +39,20 @@ public class GlobalExceptionHandler {
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining("; "));
         return Result.error(400, msg);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("DataIntegrityViolationException: {}", e.getMessage());
+        return Result.error(400, "当前数据已被其他业务数据引用，无法删除或修改");
+    }
+
+    @ExceptionHandler(MyBatisSystemException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleMyBatisSystemException(MyBatisSystemException e) {
+        log.warn("MyBatisSystemException: {}", e.getMessage());
+        return Result.error(400, "当前数据已被其他业务数据引用，无法删除或修改");
     }
 
     @ExceptionHandler(RuntimeException.class)

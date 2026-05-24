@@ -2,11 +2,17 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
-import com.oss.osscourse.dto.college.*;
+import com.oss.osscourse.dto.college.CollegeCreateRequest;
+import com.oss.osscourse.dto.college.CollegeQueryRequest;
+import com.oss.osscourse.dto.college.CollegeResponse;
+import com.oss.osscourse.dto.college.CollegeUpdateRequest;
 import com.oss.osscourse.entity.College;
+import com.oss.osscourse.entity.Major;
 import com.oss.osscourse.mapper.CollegeMapper;
+import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.CollegeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +24,7 @@ import java.util.stream.Collectors;
 public class CollegeServiceImpl implements CollegeService {
 
     private final CollegeMapper collegeMapper;
+    private final MajorMapper majorMapper;
 
     @Override
     public List<CollegeResponse> listColleges(CollegeQueryRequest request) {
@@ -57,7 +64,6 @@ public class CollegeServiceImpl implements CollegeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createCollege(CollegeCreateRequest request) {
-        // 检查学院编码是否已存在
         if (collegeMapper.selectOne(new LambdaQueryWrapper<College>()
                 .eq(College::getCollegeCode, request.getCollegeCode())) != null) {
             throw new BusinessException(400, "学院编码已存在");
@@ -82,7 +88,6 @@ public class CollegeServiceImpl implements CollegeService {
             throw new BusinessException(404, "学院不存在");
         }
 
-        // 检查学院编码是否已存在（排除自身）
         if (request.getCollegeCode() != null && !request.getCollegeCode().isEmpty()) {
             College existing = collegeMapper.selectOne(new LambdaQueryWrapper<College>()
                     .eq(College::getCollegeCode, request.getCollegeCode())
@@ -112,10 +117,17 @@ public class CollegeServiceImpl implements CollegeService {
             throw new BusinessException(404, "学院不存在");
         }
 
-        // 检查是否有关联的专业
-        // TODO: 检查Major表是否有引用
+        Long majorRefCount = majorMapper.selectCount(
+                new LambdaQueryWrapper<Major>().eq(Major::getCollegeId, collegeId));
+        if (majorRefCount != null && majorRefCount > 0) {
+            throw new BusinessException(400, "该学院下存在专业数据，无法删除");
+        }
 
-        collegeMapper.deleteById(collegeId);
+        try {
+            collegeMapper.deleteById(collegeId);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "该学院存在关联数据，无法删除");
+        }
     }
 
     private CollegeResponse toResponse(College college) {
