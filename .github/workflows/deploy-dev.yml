@@ -114,7 +114,8 @@ jobs:
 
             REQUIRED_VARS="SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD JWT_SECRET"
             for var in \$REQUIRED_VARS; do
-              if [ -z "\$(eval "printf '%s' \"\${\$var}\"")" ]; then
+              value="\$(printenv "\$var")"
+              if [ -z "\$value" ]; then
                 echo "Missing required backend env: \$var"
                 echo "Check \$ENV_FILE and ensure all backend secrets are configured."
                 exit 1
