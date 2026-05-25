@@ -112,6 +112,16 @@ jobs:
             . "\$ENV_FILE"
             set +a
 
+            REQUIRED_VARS="SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD JWT_SECRET"
+            for var in \$REQUIRED_VARS; do
+              value="\$(printenv "\$var")"
+              if [ -z "\$value" ]; then
+                echo "Missing required backend env: \$var"
+                echo "Check \$ENV_FILE and ensure all backend secrets are configured."
+                exit 1
+              fi
+            done
+
             nohup java -jar app.jar > app.log 2>&1 &
             echo \$! > app.pid
 
