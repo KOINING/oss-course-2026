@@ -75,6 +75,8 @@
         </el-table>
       </section>
 
+      <div class="section-divider" aria-hidden="true"></div>
+
       <section class="entity-section">
         <div class="section-header">
           <h2>指标点</h2>
@@ -577,6 +579,12 @@ onMounted(async () => {
   margin-bottom: 0;
 }
 
+.section-divider {
+  height: 1px;
+  margin: 4px 0 28px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
 .section-header {
   display: flex;
   align-items: center;
@@ -593,6 +601,10 @@ onMounted(async () => {
 
 .filter-form {
   margin-bottom: 12px;
+}
+
+:deep(.el-table thead .cell) {
+  font-weight: 700;
 }
 
 .table-actions {
