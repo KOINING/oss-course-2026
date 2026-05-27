@@ -11,7 +11,4 @@ public class IndicatorPointQueryRequest {
 
     @Schema(description = "所属毕业要求ID", example = "1")
     private Long grId;
-
-    @Schema(description = "状态：1=启用，0=停用", example = "1")
-    private Integer status;
 }

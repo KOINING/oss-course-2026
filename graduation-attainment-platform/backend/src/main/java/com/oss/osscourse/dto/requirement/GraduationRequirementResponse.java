@@ -22,7 +22,4 @@ public class GraduationRequirementResponse {
 
     @Schema(description = "所属专业名称", example = "计算机科学与技术")
     private String majorName;
-
-    @Schema(description = "状态：1=启用，0=停用", example = "1")
-    private Integer status;
 }

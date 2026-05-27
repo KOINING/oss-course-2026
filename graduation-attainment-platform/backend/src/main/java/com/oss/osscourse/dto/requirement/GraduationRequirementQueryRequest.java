@@ -11,7 +11,4 @@ public class GraduationRequirementQueryRequest {
 
     @Schema(description = "所属专业ID", example = "1")
     private Long majorId;
-
-    @Schema(description = "状态：1=启用，0=停用", example = "1")
-    private Integer status;
 }
