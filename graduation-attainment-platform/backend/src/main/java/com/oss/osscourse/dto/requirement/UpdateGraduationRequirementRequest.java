@@ -23,7 +23,4 @@ public class UpdateGraduationRequirementRequest {
     @NotNull(message = "所属专业不能为空")
     @Schema(description = "所属专业ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long majorId;
-
-    @Schema(description = "状态：1=启用，0=停用；不传则保持原状态", example = "1")
-    private Integer status;
 }
