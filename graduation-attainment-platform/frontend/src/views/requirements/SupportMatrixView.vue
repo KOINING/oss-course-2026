@@ -206,7 +206,7 @@ import {
   listIndicatorPointsForMatrixApi,
   listMajorsForMatrixApi,
   saveSupportMatrixApi,
-} from '@/api/supportMatrix'
+} from '@/api/supportmatrix.js'
 
 const router = useRouter()
 
