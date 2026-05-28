@@ -14,6 +14,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/requirements/RequirementsView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.SUPPORT_MATRIX) {
+    return () => import('@/views/requirements/SupportMatrixView.vue')
+  }
+
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }

@@ -5,10 +5,10 @@ spring:
   application:
     name: oss-course
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://39.104.52.187:3306/GraduationDB?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    url: jdbc:mysql://127.0.0.1:3306/GraduationDB?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   sql:
     init:
       mode: never
