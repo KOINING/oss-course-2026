@@ -75,13 +75,13 @@ jobs:
               cp graduation-attainment-platform/deploy/.env runtime/backend/.env
             fi
             rm -rf graduation-attainment-platform/frontend/dist
-            git fetch origin "$DEPLOY_REF":"refs/remotes/origin/$DEPLOY_REF"
+            git fetch origin "$DEPLOY_REF"
             if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
               git checkout "$DEPLOY_REF"
             else
               git checkout -b "$DEPLOY_REF"
             fi
-            git reset --hard "origin/$DEPLOY_REF"
+            git reset --hard FETCH_HEAD
             mkdir -p graduation-attainment-platform/frontend/dist
             mkdir -p runtime/backend
             rm -f runtime/backend/app.jar
