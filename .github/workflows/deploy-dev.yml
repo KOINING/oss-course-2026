@@ -75,13 +75,13 @@ jobs:
               cp graduation-attainment-platform/deploy/.env runtime/backend/.env
             fi
             rm -rf graduation-attainment-platform/frontend/dist
-            git fetch origin "$DEPLOY_REF":"refs/remotes/origin/$DEPLOY_REF"
+            git fetch origin "$DEPLOY_REF"
             if git show-ref --verify --quiet "refs/heads/$DEPLOY_REF"; then
               git checkout "$DEPLOY_REF"
             else
               git checkout -b "$DEPLOY_REF"
             fi
-            git reset --hard "origin/$DEPLOY_REF"
+            git reset --hard FETCH_HEAD
             mkdir -p graduation-attainment-platform/frontend/dist
             mkdir -p runtime/backend
             rm -f runtime/backend/app.jar
@@ -111,6 +111,16 @@ jobs:
             set -a
             . "\$ENV_FILE"
             set +a
+
+            REQUIRED_VARS="SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD JWT_SECRET"
+            for var in \$REQUIRED_VARS; do
+              value="\$(printenv "\$var")"
+              if [ -z "\$value" ]; then
+                echo "Missing required backend env: \$var"
+                echo "Check \$ENV_FILE and ensure all backend secrets are configured."
+                exit 1
+              fi
+            done
 
             nohup java -jar app.jar > app.log 2>&1 &
             echo \$! > app.pid

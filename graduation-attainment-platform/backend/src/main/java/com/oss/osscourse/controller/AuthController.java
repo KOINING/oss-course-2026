@@ -20,20 +20,16 @@ public class AuthController {
 
     @PostMapping("/login")
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
-        try {
-            LoginResponse response = authService.login(request);
-            return Result.ok("登录成功", response);
-        } catch (RuntimeException e) {
-            return Result.fail(401, e.getMessage());
-        }
+        LoginResponse response = authService.login(request);
+        return Result.ok("登录成功", response);
     }
 
     @GetMapping("/userinfo")
     public Result<?> userInfo(@RequestAttribute("userId") Long userId,
-                               @RequestAttribute("username") String username,
-                               @RequestAttribute("realName") String realName,
-                               @RequestAttribute("roles") List<String> roles,
-                               @RequestAttribute("permissions") List<String> permissions) {
+                              @RequestAttribute("username") String username,
+                              @RequestAttribute("realName") String realName,
+                              @RequestAttribute("roles") List<String> roles,
+                              @RequestAttribute("permissions") List<String> permissions) {
         LoginResponse.UserInfo info = LoginResponse.UserInfo.builder()
                 .id(userId)
                 .username(username)
