@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -65,5 +66,14 @@ public class CourseController {
             @Valid @RequestBody CourseDeleteRequest request) {
         courseService.deleteCourse(request.getCourseId());
         return Result.ok("课程已删除", null);
+    }
+
+    @PostMapping("/importCourses")
+    @Operation(summary = "全专业课程清单导入", description = "上传Excel文件批量导入课程数据，返回导入结果概要（总条数、成功数、失败数及失败明细）")
+    public Result<CourseImportResult> importCourses(
+            @Parameter(description = "课程清单Excel文件", required = true)
+            @RequestParam("file") MultipartFile file) {
+        CourseImportResult result = courseService.importCourses(file);
+        return Result.ok(result);
     }
 }

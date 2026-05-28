@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /tmp/*.output)",
+      "Read(//mnt/c/Users/28457/AppData/Local/Temp/claude/**)",
+      "Bash(mysql --version)",
+      "Bash(java --version)",
+      "Bash(mvn --version)",
+      "Bash(sc query *)",
+      "Bash(mysqld --console --skip-grant-tables)",
+      "Bash(mysql -u root -e \"SELECT 1\")",
+      "Read(//d/mysql/**)",
+      "Bash(mkdir -p \"D:/mysql/data\")",
+      "Bash(mysqld --initialize-insecure --datadir=\"D:/mysql/data\")",
+      "Bash(mysqld --datadir=\"D:/mysql/data\" --console)",
+      "Bash(mysql -u root -e \"ALTER USER 'root'@'localhost' IDENTIFIED BY '123456'; FLUSH PRIVILEGES;\")",
+      "Bash(mysql -u root -p123456 -e \"CREATE DATABASE IF NOT EXISTS GraduationDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; SELECT 1 AS db_created;\")",
+      "Bash(mysql *)",
+      "Bash(mvn compile *)",
+      "Bash(mvn spring-boot:run -q)",
+      "Bash(curl *)",
+      "Bash(taskkill //F //IM java.exe)",
+      "Bash(D:\\\\mysql\\\\bin\\\\mysql *)",
+      "Bash(./mvnw compile *)"
+    ]
+  }
+}

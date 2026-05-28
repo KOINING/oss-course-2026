@@ -1,6 +1,7 @@
 package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.LoginRequest;
 import com.oss.osscourse.dto.LoginResponse;
 import com.oss.osscourse.entity.SysUser;
@@ -39,13 +40,13 @@ public class AuthServiceImpl implements AuthService {
         );
 
         if (user == null) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new BusinessException(401, "用户名或密码错误");
         }
         if (user.getStatus() == 0) {
-            throw new RuntimeException("账户已被禁用");
+            throw new BusinessException(401, "账号已被禁用");
         }
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new BusinessException(401, "用户名或密码错误");
         }
 
         List<String> roles = sysUserService.getUserRoles(user.getId());

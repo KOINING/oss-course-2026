@@ -5,10 +5,10 @@ spring:
   application:
     name: oss-course
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/GraduationDB?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    url: ${SPRING_DATASOURCE_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   sql:
     init:
       mode: never
@@ -39,5 +39,5 @@ mybatis-plus:
     cache-enabled: false
 
 jwt:
-  secret: "ThisIsASecretKeyForGraduationPlatformHS256Algorithm2024!"
-  expiration: 86400000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
