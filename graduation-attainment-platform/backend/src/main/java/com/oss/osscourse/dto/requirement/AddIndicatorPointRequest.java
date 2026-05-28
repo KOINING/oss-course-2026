@@ -19,7 +19,4 @@ public class AddIndicatorPointRequest {
     @NotNull(message = "所属毕业要求不能为空")
     @Schema(description = "所属毕业要求ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long grId;
-
-    @Schema(description = "状态：1=启用，0=停用；不传默认启用", example = "1")
-    private Integer status;
 }
