@@ -17,6 +17,19 @@ function resolveProtectedComponent(item) {
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }
+
+  if (item.routeName === ROUTE_NAMES.SUPPORT_MATRIX) {
+    return () => import('@/views/matrix/SupportMatrixView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.DATA_IMPORT) {
+    return () => import('@/views/import/ImportView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.COMPONENT_DEMO) {
+    return () => import('@/views/system/ComponentDemoView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')

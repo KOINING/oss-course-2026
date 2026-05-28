@@ -180,6 +180,82 @@
                 <el-icon><Plus /></el-icon>
                 新增课程
               </el-button>
+              <el-button
+                v-if="isAcademicAffairs"
+                type="success"
+                @click="showImportSection = !showImportSection; resetImportState()"
+              >
+                <el-icon><UploadFilled /></el-icon>
+                {{ showImportSection ? '收起导入' : '导入课程清单' }}
+              </el-button>
+              <el-button
+                v-if="isAcademicAffairs"
+                plain
+                size="small"
+                :icon="Download"
+                @click="downloadCourseTemplate"
+              >
+                下载模板
+              </el-button>
+            </div>
+
+            <!-- 课程清单导入区域（仅教务管理人员可见） -->
+            <div v-if="isAcademicAffairs && showImportSection" class="import-section">
+              <el-divider />
+              <div class="import-area">
+                <div class="import-area__header">
+                  <h4>全专业课程清单 Excel 导入</h4>
+                  <div class="import-template-hints">
+                    <span class="template-label">模板字段：</span>
+                    <el-tag v-for="f in courseTemplateHeaders" :key="f" size="small" effect="plain">{{ f }}</el-tag>
+                  </div>
+                </div>
+
+                <el-upload
+                  drag
+                  :auto-upload="false"
+                  :before-upload="beforeCourseUpload"
+                  :on-change="handleCourseFileChange"
+                  :limit="1"
+                  accept=".xlsx,.xls,.csv"
+                >
+                  <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                  <div class="upload-text">
+                    <span class="upload-link">点击选择</span>
+                    <span> 或将 Excel 文件拖拽到此区域</span>
+                  </div>
+                  <template #tip>
+                    <div class="upload-tip">支持 .xlsx、.xls、.csv 格式</div>
+                  </template>
+                </el-upload>
+
+                <div class="import-action">
+                  <el-button
+                    type="primary"
+                    :loading="courseImporting"
+                    :disabled="!courseFile"
+                    @click="handleCourseImport"
+                  >
+                    开始导入
+                  </el-button>
+                  <el-button
+                    v-if="importFinished || importError"
+                    @click="resetImportState"
+                  >
+                    重新导入
+                  </el-button>
+                </div>
+
+                <!-- 导入结果预览（始终可见） -->
+                <div class="import-result">
+                  <ImportResultPreview
+                    title="全专业课程清单导入结果"
+                    :summary="importResult.summary"
+                    :failed-items="importResult.failedItems"
+                    :loading="courseImporting"
+                  />
+                </div>
+              </div>
             </div>
 
             <el-table v-loading="courseLoading" :data="courses" border stripe>
@@ -381,12 +457,14 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Download, Plus, UploadFilled } from '@element-plus/icons-vue'
 import AcademicTermPanel from './AcademicTermPanel.vue'
 import CollegePanel from './CollegePanel.vue'
+import ImportResultPreview from '@/components/import/ImportResultPreview.vue'
+import { useUserStore } from '@/stores/user'
 import {
   deleteCourseApi,
   deleteMajorApi,
@@ -399,8 +477,11 @@ import {
   updateCourseStatusApi,
   updateMajorStatusApi,
 } from '@/api/basic'
+import { importCoursesApi } from '@/api/import'
 
 const route = useRoute()
+const userStore = useUserStore()
+const isAcademicAffairs = computed(() => userStore.roleCodes.includes('academic_affairs'))
 const activeTab = ref('academic-term')
 
 const collegeOptions = ref([])
@@ -646,6 +727,83 @@ async function handleDeleteCourse(row) {
   await loadCourses()
 }
 
+// ---- 课程清单导入 ----
+const courseTemplateHeaders = ['所属专业代码', '课程代码', '课程名称', '学分', '状态']
+const courseTemplateSample = [
+  ['080901', 'CS201', '数据结构', '4.0', '1'],
+  ['080901', 'CS301', '操作系统', '3.0', '1'],
+]
+
+const showImportSection = ref(false)
+const courseFile = ref(null)
+const courseImporting = ref(false)
+const importResult = reactive({
+  summary: { totalCount: 0, successCount: 0, failureCount: 0 },
+  failedItems: [],
+})
+
+function downloadCourseTemplate() {
+  const BOM = '﻿'
+  const headers = courseTemplateHeaders.join(',')
+  const sampleLines = courseTemplateSample.map((r) => r.join(',')).join('\n')
+  const csv = BOM + headers + '\n' + sampleLines + '\n'
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '课程清单导入模板.csv'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+function handleCourseFileChange(file) {
+  courseFile.value = file
+}
+
+function beforeCourseUpload(file) {
+  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
+  if (!isExcel) {
+    ElMessage.error('仅支持 .xlsx、.xls 或 .csv 格式')
+    return false
+  }
+  return false
+}
+
+function resetImportState() {
+  importResult.summary = { totalCount: 0, successCount: 0, failureCount: 0 }
+  importResult.failedItems = []
+  courseFile.value = null
+}
+
+async function handleCourseImport() {
+  if (!courseFile.value) {
+    ElMessage.warning('请先选择要导入的 Excel 文件')
+    return
+  }
+  const formData = new FormData()
+  formData.append('file', courseFile.value.raw)
+  courseImporting.value = true
+  try {
+    const data = await importCoursesApi(formData)
+    importResult.summary = {
+      totalCount: data.totalCount ?? 0,
+      successCount: data.successCount ?? 0,
+      failureCount: data.failureCount ?? 0,
+    }
+    importResult.failedItems = data.failedItems ?? []
+    if (data.successCount > 0) {
+      await loadCourses()
+    }
+    ElMessage.success('课程清单导入完成')
+  } catch (e) {
+    ElMessage.error(e.message || '导入请求失败')
+  } finally {
+    courseImporting.value = false
+  }
+}
+
 onMounted(async () => {
   await Promise.all([loadColleges(), loadMajorOptions(), loadMajors()])
 })
@@ -723,5 +881,67 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.import-section {
+  margin-top: 4px;
+}
+
+.import-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.import-area__header h4 {
+  margin: 0 0 8px;
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.import-template-hints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.template-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #94a3b8;
+}
+
+.upload-text {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.upload-link {
+  color: #2563eb;
+  cursor: pointer;
+}
+
+.upload-tip {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.import-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-result {
+  margin-top: 4px;
 }
 </style>

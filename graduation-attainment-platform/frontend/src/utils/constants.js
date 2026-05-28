@@ -7,10 +7,12 @@ export const ROUTE_NAMES = {
   ACCOUNT_ROLE_MANAGEMENT: 'AccountRoleManagement',
   REQUIREMENTS: 'Requirements',
   SUPPORT_MATRIX: 'SupportMatrix',
+  DATA_IMPORT: 'DataImport',
   COURSE_OBJECTIVES: 'CourseObjectives',
   ASSESSMENT: 'Assessment',
   REPORTS: 'Reports',
   NOT_FOUND: 'NotFound',
+  COMPONENT_DEMO: 'ComponentDemo',
 }
 
 export const DEFAULT_HOME_PATH = '/home'
