@@ -10,6 +10,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/admin/AccountRoleManagementView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.REQUIREMENTS) {
+    return () => import('@/views/requirements/RequirementsView.vue')
+  }
+
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic/BasicDataView.vue')
   }
