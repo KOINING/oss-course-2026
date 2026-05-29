@@ -1,0 +1,46 @@
+package com.oss.osscourse.service;
+
+import com.oss.osscourse.dto.student.*;
+
+import java.util.List;
+
+public interface StudentService {
+
+    /**
+     * 查询学生列表
+     * @param request 查询条件
+     * @return 学生列表
+     */
+    List<StudentResponse> listStudents(StudentQueryRequest request);
+
+    /**
+     * 查询学生下拉列表（供选择使用）
+     * @return 学生列表
+     */
+    List<StudentResponse> listStudentsForSelect();
+
+    /**
+     * 根据ID查询学生详情
+     * @param studentId 学生ID
+     * @return 学生详情
+     */
+    StudentResponse getStudentById(Long studentId);
+
+    /**
+     * 新增或更新学生
+     * @param request 保存请求
+     */
+    void saveStudent(StudentSaveRequest request);
+
+    /**
+     * 更新学生状态
+     * @param request 状态更新请求
+     */
+    void updateStudentStatus(StudentStatusRequest request);
+
+    /**
+     * 删除学生
+     * @param studentId 学生ID
+     */
+    void deleteStudent(Long studentId);
+}

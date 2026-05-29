@@ -6,15 +6,16 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("teaching_class")
-public class TeachingClass {
-    @TableId(value = "class_id", type = IdType.AUTO)
-    private Long classId;
-    private String className;
-    private Long courseId;
-    private Long termId;
-    private Long teacherId;
-    private String calcStatus;
+@TableName("teacher")
+public class Teacher {
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+    private String teacherNo;
+    private String teacherName;
+    private String title;
+    private Long majorId;
+    private Long userId;
+    private Integer status;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
