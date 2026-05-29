@@ -15,7 +15,7 @@ function resolveProtectedComponent(item) {
   }
 
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
-    return () => import('@/views/basic/BasicDataView.vue')
+    return () => import('@/views/basic-data/BasicDataView.vue')
   }
 
   if (item.routeName === ROUTE_NAMES.TEACHING_CLASS) {
@@ -28,7 +28,7 @@ function resolveProtectedComponent(item) {
 
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
-    : () => import('@/views/module/ModulePlaceholderView.vue')
+    : () => import('@/views/system/ModulePlaceholderView.vue')
 }
 
 const protectedChildren = getProtectedRoutes().map((item) => ({
@@ -48,7 +48,7 @@ const routes = [
   {
     path: '/login',
     name: ROUTE_NAMES.LOGIN,
-    component: () => import('@/views/login/LoginView.vue'),
+    component: () => import('@/views/auth/LoginView.vue'),
     meta: { public: true, title: '登录' },
   },
   {
@@ -60,7 +60,7 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     name: ROUTE_NAMES.NOT_FOUND,
-    component: () => import('@/views/error/NotFoundView.vue'),
+    component: () => import('@/views/system/NotFoundView.vue'),
     meta: { public: true, title: '404' },
   },
 ]
