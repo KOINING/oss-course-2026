@@ -4,6 +4,8 @@ export const ROUTE_NAMES = {
   LOGIN: 'Login',
   HOME: 'Home',
   BASIC_DATA: 'BasicData',
+  TEACHING_CLASS: 'TeachingClass',
+  STUDENT_LIST: 'StudentList',
   ACCOUNT_ROLE_MANAGEMENT: 'AccountRoleManagement',
   REQUIREMENTS: 'Requirements',
   SUPPORT_MATRIX: 'SupportMatrix',

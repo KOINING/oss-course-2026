@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AcademicTermPanel from './AcademicTermPanel.vue'
 import CollegePanel from './CollegePanel.vue'
+import CoursePanel from './CoursePanel.vue'
 
 const route = useRoute()
 const activeTab = ref('academic-term')
@@ -27,6 +28,9 @@ const activeTab = ref('academic-term')
         </el-tab-pane>
         <el-tab-pane label="学院" name="college">
           <CollegePanel />
+        </el-tab-pane>
+        <el-tab-pane label="课程清单" name="course">
+          <CoursePanel />
         </el-tab-pane>
       </el-tabs>
     </el-card>
