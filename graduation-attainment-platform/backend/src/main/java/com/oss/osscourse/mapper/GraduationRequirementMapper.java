@@ -16,8 +16,8 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
             "<script>",
             "SELECT gr.gr_id AS grId, gr.gr_code AS grCode, gr.gr_description AS grDescription,",
             "gr.major_id AS majorId, m.major_name AS majorName",
-            "FROM GraduationRequirement gr",
-            "LEFT JOIN Major m ON gr.major_id = m.major_id",
+            "FROM graduation_requirement gr",
+            "LEFT JOIN major m ON gr.major_id = m.major_id",
             "<where>",
             "<if test='grCode != null and grCode != \"\"'>",
             "AND gr.gr_code LIKE CONCAT('%', #{grCode}, '%')",
@@ -30,5 +30,5 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
             "</script>"
     })
     List<GraduationRequirementResponse> selectRequirementList(@Param("grCode") String grCode,
-                                                               @Param("majorId") Long majorId);
+                                                             @Param("majorId") Long majorId);
 }

@@ -190,9 +190,18 @@
                   <el-tag type="success" effect="plain">{{ row.credit }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="majorName" label="所属专业" min-width="160">
+              <el-table-column label="所属专业" min-width="220">
                 <template #default="{ row }">
-                  <el-tag type="primary" effect="plain">{{ row.majorName }}</el-tag>
+                  <div class="major-tag-list">
+                    <el-tag
+                      v-for="majorName in row.majorNames || []"
+                      :key="majorName"
+                      type="primary"
+                      effect="plain"
+                    >
+                      {{ majorName }}
+                    </el-tag>
+                  </div>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="100">
@@ -330,12 +339,15 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="所属专业" prop="majorId">
+        <el-form-item label="所属专业" prop="majorIds">
           <el-select
-            v-model="courseForm.majorId"
+            v-model="courseForm.majorIds"
             placeholder="请选择所属专业"
             style="width: 100%"
             filterable
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
           >
             <el-option
               v-for="major in majorOptions"
@@ -435,7 +447,7 @@ const courseForm = reactive({
   courseCode: '',
   courseName: '',
   credit: 2,
-  majorId: null,
+  majorIds: [],
   status: 1,
 })
 
@@ -462,7 +474,7 @@ const courseFormRules = {
     { max: 100, message: '课程名称最长 100 位', trigger: 'blur' },
   ],
   credit: [{ required: true, message: '请输入学分', trigger: 'change' }],
-  majorId: [{ required: true, message: '请选择所属专业', trigger: 'change' }],
+  majorIds: [{ required: true, message: '请选择所属专业', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
@@ -545,7 +557,7 @@ function resetCourseForm() {
   courseForm.courseCode = ''
   courseForm.courseName = ''
   courseForm.credit = 2
-  courseForm.majorId = null
+  courseForm.majorIds = []
   courseForm.status = 1
 }
 
@@ -571,7 +583,7 @@ function openCourseDialog(mode, row = null) {
     courseForm.courseCode = row.courseCode
     courseForm.courseName = row.courseName
     courseForm.credit = row.credit
-    courseForm.majorId = row.majorId
+    courseForm.majorIds = Array.isArray(row.majorIds) ? [...row.majorIds] : []
     courseForm.status = row.status
   }
   courseDialogVisible.value = true
@@ -699,6 +711,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.major-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .dialog-footer {

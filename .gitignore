@@ -31,3 +31,4 @@ replay_pid*
 
 # Local files (not to be committed)
 .local/
+graduation-attainment-platform/deploy/.env
