@@ -143,19 +143,19 @@ public class StudentClassServiceImpl implements StudentClassService {
         if (teachingClassCode == null || teachingClassCode.isEmpty()) {
             return "教学班编号不能为空";
         }
-        List<TeachingClass> tcList = teachingClassMapper.selectList(
-                new LambdaQueryWrapper<TeachingClass>()
-                        .eq(TeachingClass::getTeachingClassCode, teachingClassCode));
-        if (tcList.isEmpty()) {
+        Long classId;
+        try {
+            classId = Long.parseLong(teachingClassCode);
+        } catch (NumberFormatException e) {
+            return "教学班编号必须为合法数值: " + teachingClassCode;
+        }
+        TeachingClass teachingClass = teachingClassMapper.selectById(classId);
+        if (teachingClass == null) {
             return "教学班编号不存在: " + teachingClassCode;
         }
-        if (tcList.size() > 1) {
-            return "教学班编号不唯一: " + teachingClassCode;
-        }
-        TeachingClass teachingClass = tcList.get(0);
 
         // 同一学生不能重复导入到同一教学班
-        String duplicateKey = student.getId() + "-" + teachingClass.getTeachingClassId();
+        String duplicateKey = student.getId() + "-" + teachingClass.getClassId();
         if (!processedRecords.add(duplicateKey)) {
             return "学生 " + studentNo + " 在同一批次中重复导入到教学班 " + teachingClassCode;
         }
@@ -164,7 +164,7 @@ public class StudentClassServiceImpl implements StudentClassService {
         Long existingCount = studentClassMapper.selectCount(
                 new LambdaQueryWrapper<StudentClass>()
                         .eq(StudentClass::getStudentId, student.getId())
-                        .eq(StudentClass::getTeachingClassId, teachingClass.getTeachingClassId()));
+                        .eq(StudentClass::getClassId, teachingClass.getClassId()));
         if (existingCount != null && existingCount > 0) {
             return "学生 " + studentNo + " 已存在于教学班 " + teachingClassCode + " 中";
         }
@@ -172,7 +172,7 @@ public class StudentClassServiceImpl implements StudentClassService {
         // 创建关联
         StudentClass sc = new StudentClass();
         sc.setStudentId(student.getId());
-        sc.setTeachingClassId(teachingClass.getTeachingClassId());
+        sc.setClassId(teachingClass.getClassId());
         studentClassMapper.insert(sc);
 
         return null;
@@ -185,7 +185,7 @@ public class StudentClassServiceImpl implements StudentClassService {
         }
         return studentClassMapper.selectList(
                 new LambdaQueryWrapper<StudentClass>()
-                        .eq(StudentClass::getTeachingClassId, teachingClassId)
+                        .eq(StudentClass::getClassId, teachingClassId)
                         .orderByAsc(StudentClass::getScId));
     }
 
