@@ -3,6 +3,7 @@ package com.oss.osscourse.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.course.CourseCreateRequest;
+import com.oss.osscourse.dto.course.CourseImportResult;
 import com.oss.osscourse.dto.course.CourseQueryRequest;
 import com.oss.osscourse.dto.course.CourseResponse;
 import com.oss.osscourse.dto.course.CourseSaveRequest;
@@ -16,13 +17,21 @@ import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.CourseService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -224,6 +233,169 @@ public class CourseServiceImpl implements CourseService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(400, "该课程存在关联数据，无法删除");
         }
+    }
+
+    @Override
+    public CourseImportResult importCourses(MultipartFile file) {
+        List<CourseImportResult.FailedItem> failedItems = new ArrayList<>();
+        int successCount = 0;
+        int totalCount = 0;
+        Set<String> courseCodesInBatch = new HashSet<>();
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet.getLastRowNum() < 1) {
+                throw new BusinessException(400, "Excel文件无数据行");
+            }
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowEmpty(row)) {
+                    continue;
+                }
+                totalCount++;
+                int excelRowNum = i + 1;
+
+                try {
+                    String error = validateAndImportCourseRow(row, courseCodesInBatch);
+                    if (error != null) {
+                        failedItems.add(CourseImportResult.FailedItem.builder()
+                                .rowNumber(excelRowNum)
+                                .reason(error)
+                                .build());
+                    } else {
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    failedItems.add(CourseImportResult.FailedItem.builder()
+                            .rowNumber(excelRowNum)
+                            .reason("系统错误: " + e.getMessage())
+                            .build());
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(400, "Excel文件解析失败: " + e.getMessage());
+        }
+
+        return CourseImportResult.builder()
+                .totalCount(totalCount)
+                .successCount(successCount)
+                .failureCount(failedItems.size())
+                .failedItems(failedItems)
+                .build();
+    }
+
+    private String validateAndImportCourseRow(Row row, Set<String> courseCodesInBatch) {
+        String majorCode = getCellStringValue(row.getCell(0));
+        String courseCode = getCellStringValue(row.getCell(1));
+        String courseName = getCellStringValue(row.getCell(2));
+        String creditStr = getCellStringValue(row.getCell(3));
+        String statusStr = getCellStringValue(row.getCell(4));
+
+        // 所属专业代码必须已存在
+        if (majorCode == null || majorCode.isEmpty()) {
+            return "所属专业代码不能为空";
+        }
+        Major major = majorMapper.selectOne(
+                new LambdaQueryWrapper<Major>()
+                        .eq(Major::getMajorCode, majorCode));
+        if (major == null) {
+            return "所属专业代码不存在: " + majorCode;
+        }
+
+        // 课程代码不能为空
+        if (courseCode == null || courseCode.isEmpty()) {
+            return "课程代码不能为空";
+        }
+
+        // 课程名称不能为空
+        if (courseName == null || courseName.isEmpty()) {
+            return "课程名称不能为空";
+        }
+
+        // 学分必须为合法数值
+        Float credit;
+        if (creditStr == null || creditStr.isEmpty()) {
+            return "学分不能为空";
+        }
+        try {
+            credit = Float.parseFloat(creditStr);
+            if (credit < 0) {
+                return "学分不能为负数: " + creditStr;
+            }
+        } catch (NumberFormatException e) {
+            return "学分必须为合法数值: " + creditStr;
+        }
+
+        // 状态
+        Integer status = 1;
+        if (statusStr != null && !statusStr.isEmpty()) {
+            try {
+                status = Integer.parseInt(statusStr);
+                if (status != 0 && status != 1) {
+                    return "状态值必须为0或1: " + statusStr;
+                }
+            } catch (NumberFormatException e) {
+                return "状态值必须为合法整数: " + statusStr;
+            }
+        }
+
+        // 课程代码在同一模板中不能重复
+        if (!courseCodesInBatch.add(courseCode)) {
+            return "课程代码在导入模板中重复: " + courseCode;
+        }
+
+        // 检查数据库中是否已存在相同课程代码
+        Course existingInDb = courseMapper.selectOne(
+                new LambdaQueryWrapper<Course>()
+                        .eq(Course::getCourseCode, courseCode));
+        if (existingInDb != null) {
+            return "课程代码已存在: " + courseCode;
+        }
+
+        // 创建课程
+        Course course = new Course();
+        course.setCourseCode(courseCode);
+        course.setCourseName(courseName);
+        course.setCredit(credit);
+        course.setStatus(status);
+        courseMapper.insert(course);
+
+        // 创建课程-专业关联
+        CourseMajor relation = new CourseMajor();
+        relation.setCourseId(course.getCourseId());
+        relation.setMajorId(major.getMajorId());
+        courseMajorMapper.insert(relation);
+
+        return null;
+    }
+
+    private String getCellStringValue(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            double val = cell.getNumericCellValue();
+            if (val == Math.floor(val) && !Double.isInfinite(val)) {
+                return String.valueOf((long) val);
+            }
+            return String.valueOf(val);
+        }
+        String value = cell.getStringCellValue();
+        return value != null ? value.trim() : null;
+    }
+
+    private boolean isRowEmpty(Row row) {
+        for (int c = 0; c < row.getLastCellNum(); c++) {
+            Cell cell = row.getCell(c);
+            if (cell != null && cell.getCellType() != CellType.BLANK
+                    && getCellStringValue(cell) != null && !getCellStringValue(cell).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private List<CourseResponse> buildCourseResponses(List<Course> courses) {
