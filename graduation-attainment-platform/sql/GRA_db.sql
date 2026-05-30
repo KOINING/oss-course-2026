@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS course_major (
 
 CREATE TABLE IF NOT EXISTS teaching_class (
     class_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    class_code VARCHAR(32) NOT NULL UNIQUE COMMENT '教学班编号，业务唯一标识',
     class_name VARCHAR(50) NOT NULL,
     course_id BIGINT NOT NULL,
     term_id BIGINT NOT NULL,
@@ -679,10 +680,10 @@ INSERT INTO course_major (course_id, major_id) VALUES
 -- ================================================================
 -- N. 教学班级（3 个）
 -- ================================================================
-INSERT INTO teaching_class (class_name, course_id, term_id, teacher_id) VALUES
-('数据结构2024-2025-1班', 1, 1, 1),
-('操作系统2024-2025-1班', 2, 1, 2),
-('计算机网络2024-2025-1班', 3, 1, 3);
+INSERT INTO teaching_class (class_code, class_name, course_id, term_id, teacher_id) VALUES
+('TC2024CS01', '数据结构2024-2025-1班', 1, 1, 1),
+('TC2024CS02', '操作系统2024-2025-1班', 2, 1, 2),
+('TC2024CS03', '计算机网络2024-2025-1班', 3, 1, 3);
 
 -- ================================================================
 -- O. 学生（10 名，计算机科学与技术 2022 级）

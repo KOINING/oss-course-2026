@@ -93,6 +93,17 @@ export const NAVIGATION_SECTIONS = [
         entities: ['GraduationRequirement', 'IndicatorPoint'],
       },
       {
+        key: 'data-import',
+        label: '数据导入',
+        path: '/data-import',
+        routeName: ROUTE_NAMES.DATA_IMPORT,
+        roles: ['academic_affairs'],
+        moduleTitle: '模块 A：基础与宏观数据管理',
+        summary:
+          '通过 Excel 模板批量导入全专业课程清单和教学班学生名单，支持逐行校验与错误定位。',
+        entities: ['Course', 'TeachingClass', 'Student', 'StudentClass'],
+      },
+      {
         key: 'support-matrix',
         label: '支撑矩阵配置',
         path: '/support-matrix',
@@ -139,6 +150,17 @@ export const NAVIGATION_SECTIONS = [
           '系统管理员用于管理教务管理员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
         entities: ['sys_user', 'sys_role', 'sys_user_role', 'sys_role_permission'],
         componentKey: 'account-role-management',
+      },
+      {
+        key: 'component-demo',
+        label: '组件预览（开发）',
+        path: '/component-demo',
+        routeName: ROUTE_NAMES.COMPONENT_DEMO,
+        roles: ['admin'],
+        moduleTitle: '系统管理',
+        summary:
+          '页面组 C 前端组件预览与调试页面（开发期间使用，上线前移除）。',
+        entities: [],
       },
     ],
   },
