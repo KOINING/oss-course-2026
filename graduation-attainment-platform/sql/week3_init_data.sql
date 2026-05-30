@@ -12,8 +12,8 @@ USE GraduationDB;
 -- A. 新增教师系统用户（2名，id 9~10）
 -- ================================================================
 INSERT INTO sys_user (username, password, real_name, email, phone, status) VALUES
-('teacher_zhao', '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '赵讲师',   'zhao@university.edu.cn',  '13800000009', 1),
-('teacher_sun',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '孙副教授', 'sun@university.edu.cn',   '13800000010', 1);
+('teacher_zhao', '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '赵讲师',   'zhao@university.edu.cn',  '13800000009', 1),
+('teacher_sun',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '孙副教授', 'sun@university.edu.cn',   '13800000010', 1);
 
 -- ================================================================
 -- B. 新增教师（2名，id 4~5，role=4 instructor）
