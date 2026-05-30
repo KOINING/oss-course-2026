@@ -20,6 +20,15 @@ function resolveProtectedComponent(item) {
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }
+
+  if (item.routeName === ROUTE_NAMES.TEACHING_CLASS) {
+    return () => import('@/views/basic/TeachingClassView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.STUDENT_LIST) {
+    return () => import('@/views/basic/StudentListView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')
