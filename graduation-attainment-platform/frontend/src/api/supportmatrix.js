@@ -28,8 +28,24 @@ export function getSupportMatrixApi(data = {}) {
     return request.post('/supportMatrix/getSupportMatrix', data)
 }
 
+export function listCourseIndicatorSupportsApi(data = {}) {
+    return request.post('/supportMatrix/listCourseIndicatorSupports', data)
+}
+
 export function saveSupportMatrixApi(data) {
     return request.post('/supportMatrix/saveSupportMatrix', data)
+}
+
+export function addCourseIndicatorSupportApi(data) {
+    return request.post('/supportMatrix/addCourseIndicatorSupport', data)
+}
+
+export function updateCourseIndicatorSupportApi(data) {
+    return request.post('/supportMatrix/updateCourseIndicatorSupport', data)
+}
+
+export function deleteCourseIndicatorSupportApi(data) {
+    return request.post('/supportMatrix/deleteCourseIndicatorSupport', data)
 }
 
 export function resetSupportMatrixApi(data) {
