@@ -21,8 +21,7 @@
       "Bash(curl *)",
       "Bash(taskkill //F //IM java.exe)",
       "Bash(D:\\\\mysql\\\\bin\\\\mysql *)",
-      "Bash(netstat -ano)",
-      "Bash(findstr \":5173\")"
+      "Bash(./mvnw compile *)"
     ]
   }
 }
