@@ -21,16 +21,12 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }
 
-  if (item.routeName === ROUTE_NAMES.SUPPORT_MATRIX) {
-    return () => import('@/views/matrix/SupportMatrixView.vue')
+  if (item.routeName === ROUTE_NAMES.TEACHING_CLASS) {
+    return () => import('@/views/basic/TeachingClassView.vue')
   }
 
-  if (item.routeName === ROUTE_NAMES.DATA_IMPORT) {
-    return () => import('@/views/import/ImportView.vue')
-  }
-
-  if (item.routeName === ROUTE_NAMES.COMPONENT_DEMO) {
-    return () => import('@/views/system/ComponentDemoView.vue')
+  if (item.routeName === ROUTE_NAMES.STUDENT_LIST) {
+    return () => import('@/views/basic/StudentListView.vue')
   }
 
   return item.routeName === ROUTE_NAMES.HOME

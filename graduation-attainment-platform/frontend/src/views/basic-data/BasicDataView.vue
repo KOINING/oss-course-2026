@@ -379,80 +379,6 @@
         </div>
       </template>
     </el-dialog>
-
-    <el-dialog
-      v-model="courseDialogVisible"
-      :title="courseDialogMode === 'create' ? '新增课程' : '编辑课程'"
-      width="520px"
-      destroy-on-close
-    >
-      <el-form
-        ref="courseFormRef"
-        :model="courseForm"
-        :rules="courseFormRules"
-        label-width="90px"
-      >
-        <el-form-item label="课程代码" prop="courseCode">
-          <el-input
-            v-model.trim="courseForm.courseCode"
-            placeholder="请输入课程代码，如 CS201"
-            :disabled="courseDialogMode === 'edit'"
-          />
-        </el-form-item>
-        <el-form-item label="课程名称" prop="courseName">
-          <el-input
-            v-model.trim="courseForm.courseName"
-            placeholder="请输入课程名称"
-          />
-        </el-form-item>
-        <el-form-item label="学分" prop="credit">
-          <el-input-number
-            v-model="courseForm.credit"
-            :min="0.5"
-            :max="20"
-            :step="0.5"
-            :precision="1"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="所属专业" prop="majorIds">
-          <el-select
-            v-model="courseForm.majorIds"
-            placeholder="请选择所属专业"
-            style="width: 100%"
-            filterable
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-          >
-            <el-option
-              v-for="major in majorOptions"
-              :key="major.majorId"
-              :label="major.majorName"
-              :value="major.majorId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="courseForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="courseDialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="courseSubmitLoading"
-            @click="handleCourseSubmit"
-          >
-            保存
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -466,15 +392,10 @@ import CollegePanel from './CollegePanel.vue'
 import ImportResultPreview from '@/components/import/ImportResultPreview.vue'
 import { useUserStore } from '@/stores/user'
 import {
-  deleteCourseApi,
   deleteMajorApi,
   listCollegesApi,
-  listCoursesApi,
   listMajorsApi,
-  listMajorsForSelectApi,
-  saveCourseApi,
   saveMajorApi,
-  updateCourseStatusApi,
   updateMajorStatusApi,
 } from '@/api/basic'
 import { importCoursesApi } from '@/api/import'
@@ -485,7 +406,6 @@ const isAcademicAffairs = computed(() => userStore.roleCodes.includes('academic_
 const activeTab = ref('academic-term')
 
 const collegeOptions = ref([])
-const majorOptions = ref([])
 
 const majorLoading = ref(false)
 const majorSubmitLoading = ref(false)
@@ -493,13 +413,6 @@ const majorDialogVisible = ref(false)
 const majorDialogMode = ref('create')
 const majors = ref([])
 const majorFormRef = ref(null)
-
-const courseLoading = ref(false)
-const courseSubmitLoading = ref(false)
-const courseDialogVisible = ref(false)
-const courseDialogMode = ref('create')
-const courses = ref([])
-const courseFormRef = ref(null)
 
 const majorFilters = reactive({
   majorCode: '',
@@ -516,22 +429,6 @@ const majorForm = reactive({
   status: 1,
 })
 
-const courseFilters = reactive({
-  courseCode: '',
-  courseName: '',
-  majorId: null,
-  status: null,
-})
-
-const courseForm = reactive({
-  courseId: null,
-  courseCode: '',
-  courseName: '',
-  credit: 2,
-  majorIds: [],
-  status: 1,
-})
-
 const majorFormRules = {
   majorCode: [
     { required: true, message: '请输入专业代码', trigger: 'blur' },
@@ -545,32 +442,8 @@ const majorFormRules = {
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
-const courseFormRules = {
-  courseCode: [
-    { required: true, message: '请输入课程代码', trigger: 'blur' },
-    { max: 20, message: '课程代码最长 20 位', trigger: 'blur' },
-  ],
-  courseName: [
-    { required: true, message: '请输入课程名称', trigger: 'blur' },
-    { max: 100, message: '课程名称最长 100 位', trigger: 'blur' },
-  ],
-  credit: [{ required: true, message: '请输入学分', trigger: 'change' }],
-  majorIds: [{ required: true, message: '请选择所属专业', trigger: 'change' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
-}
-
-watch(activeTab, (tab) => {
-  if (tab === 'course' && courses.value.length === 0) {
-    loadCourses()
-  }
-})
-
 async function loadColleges() {
   collegeOptions.value = await listCollegesApi()
-}
-
-async function loadMajorOptions() {
-  majorOptions.value = await listMajorsForSelectApi()
 }
 
 function normalizeMajorFilters() {
@@ -579,15 +452,6 @@ function normalizeMajorFilters() {
     majorName: majorFilters.majorName || undefined,
     collegeId: majorFilters.collegeId || undefined,
     status: majorFilters.status === null ? undefined : majorFilters.status,
-  }
-}
-
-function normalizeCourseFilters() {
-  return {
-    courseCode: courseFilters.courseCode || undefined,
-    courseName: courseFilters.courseName || undefined,
-    majorId: courseFilters.majorId || undefined,
-    status: courseFilters.status === null ? undefined : courseFilters.status,
   }
 }
 
@@ -600,15 +464,6 @@ async function loadMajors() {
   }
 }
 
-async function loadCourses() {
-  courseLoading.value = true
-  try {
-    courses.value = await listCoursesApi(normalizeCourseFilters())
-  } finally {
-    courseLoading.value = false
-  }
-}
-
 function resetMajorFilters() {
   majorFilters.majorCode = ''
   majorFilters.majorName = ''
@@ -617,29 +472,12 @@ function resetMajorFilters() {
   loadMajors()
 }
 
-function resetCourseFilters() {
-  courseFilters.courseCode = ''
-  courseFilters.courseName = ''
-  courseFilters.majorId = null
-  courseFilters.status = null
-  loadCourses()
-}
-
 function resetMajorForm() {
   majorForm.majorId = null
   majorForm.majorCode = ''
   majorForm.majorName = ''
   majorForm.collegeId = null
   majorForm.status = 1
-}
-
-function resetCourseForm() {
-  courseForm.courseId = null
-  courseForm.courseCode = ''
-  courseForm.courseName = ''
-  courseForm.credit = 2
-  courseForm.majorIds = []
-  courseForm.status = 1
 }
 
 function openMajorDialog(mode, row = null) {
@@ -656,21 +494,6 @@ function openMajorDialog(mode, row = null) {
   nextTick(() => majorFormRef.value?.clearValidate())
 }
 
-function openCourseDialog(mode, row = null) {
-  courseDialogMode.value = mode
-  resetCourseForm()
-  if (mode === 'edit' && row) {
-    courseForm.courseId = row.courseId
-    courseForm.courseCode = row.courseCode
-    courseForm.courseName = row.courseName
-    courseForm.credit = row.credit
-    courseForm.majorIds = Array.isArray(row.majorIds) ? [...row.majorIds] : []
-    courseForm.status = row.status
-  }
-  courseDialogVisible.value = true
-  nextTick(() => courseFormRef.value?.clearValidate())
-}
-
 async function handleMajorSubmit() {
   await majorFormRef.value?.validate()
   majorSubmitLoading.value = true
@@ -680,24 +503,9 @@ async function handleMajorSubmit() {
       majorDialogMode.value === 'create' ? '专业创建成功' : '专业更新成功',
     )
     majorDialogVisible.value = false
-    await Promise.all([loadMajors(), loadMajorOptions()])
+    await loadMajors()
   } finally {
     majorSubmitLoading.value = false
-  }
-}
-
-async function handleCourseSubmit() {
-  await courseFormRef.value?.validate()
-  courseSubmitLoading.value = true
-  try {
-    await saveCourseApi({ ...courseForm })
-    ElMessage.success(
-      courseDialogMode.value === 'create' ? '课程创建成功' : '课程更新成功',
-    )
-    courseDialogVisible.value = false
-    await loadCourses()
-  } finally {
-    courseSubmitLoading.value = false
   }
 }
 
@@ -708,23 +516,10 @@ async function handleToggleMajorStatus(row) {
   await loadMajors()
 }
 
-async function handleToggleCourseStatus(row) {
-  const nextStatus = row.status === 1 ? 0 : 1
-  await updateCourseStatusApi({ courseId: row.courseId, status: nextStatus })
-  ElMessage.success(nextStatus === 1 ? '课程已启用' : '课程已停用')
-  await loadCourses()
-}
-
 async function handleDeleteMajor(row) {
   await deleteMajorApi(row.majorId)
   ElMessage.success('专业删除成功')
-  await Promise.all([loadMajors(), loadMajorOptions()])
-}
-
-async function handleDeleteCourse(row) {
-  await deleteCourseApi(row.courseId)
-  ElMessage.success('课程删除成功')
-  await loadCourses()
+  await loadMajors()
 }
 
 // ---- 课程清单导入 ----
@@ -805,7 +600,7 @@ async function handleCourseImport() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadColleges(), loadMajorOptions(), loadMajors()])
+  await Promise.all([loadColleges(), loadMajors()])
 })
 </script>
 
@@ -869,12 +664,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.major-tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .dialog-footer {
