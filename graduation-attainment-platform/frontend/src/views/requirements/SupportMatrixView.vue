@@ -46,20 +46,6 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="学年学期">
-          <el-select
-              v-model="filters.termId"
-              placeholder="请选择学年学期"
-              style="width: 220px"
-          >
-            <el-option
-                v-for="t in termOptions"
-                :key="t.termId"
-                :label="t.termName"
-                :value="t.termId"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="tableLoading" @click="loadMatrix">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
@@ -74,7 +60,7 @@
           class="notice-alert"
       >
         <template #default>
-          说明：请为每个课程目标选择支撑的毕业要求指标点，并填写支撑权重，每列权重之和须等于 1.00。
+          说明：请为每门课程选择支撑的毕业要求指标点，并填写支撑权重；课程筛选仅影响当前展示行，每列权重之和仍按当前专业下全部课程计算，且必须等于 1.00。
         </template>
       </el-alert>
 
@@ -91,7 +77,7 @@
                 <div class="corner-inner">
                   <div class="corner-label">
                     <span>课程</span>
-                    <span>共 {{ courses.length }} 门</span>
+                    <span>显示 {{ visibleCourses.length }} / 共 {{ courses.length }} 门</span>
                   </div>
                 </div>
               </th>
@@ -130,7 +116,7 @@
 
             <tbody>
             <!-- 每门课程一行 -->
-            <tr v-for="course in courses" :key="course.courseId">
+            <tr v-for="course in visibleCourses" :key="course.courseId">
               <td class="td-course">{{ course.courseName }}</td>
               <td
                   v-for="ind in indicators"
@@ -201,7 +187,6 @@ import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import {
   getSupportMatrixApi,
-  listAcademicTermsApi,
   listCoursesApi,
   listIndicatorPointsForMatrixApi,
   listMajorsForMatrixApi,
@@ -214,18 +199,13 @@ const router = useRouter()
 const filters = reactive({
   majorId: null,
   courseId: null,
-  termId: null,
 })
 
 const majorOptions = ref([])
 const courseOptions = ref([])
-const termOptions = ref([])
 
 async function loadOptions() {
-  const [majors, terms] = await Promise.all([listMajorsForMatrixApi(), listAcademicTermsApi()])
-  majorOptions.value = majors
-  termOptions.value = terms
-  if (terms.length) filters.termId = terms[0].termId
+  majorOptions.value = await listMajorsForMatrixApi()
 }
 
 async function onMajorChange(majorId) {
@@ -238,7 +218,6 @@ async function onMajorChange(majorId) {
 function resetFilters() {
   filters.majorId = null
   filters.courseId = null
-  filters.termId = termOptions.value[0]?.termId ?? null
   courseOptions.value = []
   courses.value = []
   indicators.value = []
@@ -255,6 +234,12 @@ const indicators = ref([])    // [{ ipId, ipCode, ipDescription }]
 const matrixData = ref({})
 // 初始快照，用于重置
 let matrixSnapshot = {}
+const visibleCourses = computed(() => {
+  if (!filters.courseId) {
+    return courses.value
+  }
+  return courses.value.filter((course) => course.courseId === filters.courseId)
+})
 
 // 按毕业要求分组指标点，用于表头渲染
 // 返回 [{ grId, grCode, indicators: [...] }, ...]
@@ -338,7 +323,7 @@ async function loadMatrix() {
     const [courseList, indicatorList, matrixRows] = await Promise.all([
       listCoursesApi({ majorId: filters.majorId }),
       listIndicatorPointsForMatrixApi({ majorId: filters.majorId }),
-      getSupportMatrixApi({ majorId: filters.majorId, termId: filters.termId }),
+      getSupportMatrixApi({ majorId: filters.majorId }),
     ])
     courses.value = courseList
     indicators.value = indicatorList
@@ -375,7 +360,6 @@ async function handleSave() {
   try {
     await saveSupportMatrixApi({
       majorId: filters.majorId,
-      termId: filters.termId,
       rows,
     })
     ElMessage.success('保存成功')
@@ -444,11 +428,10 @@ onMounted(async () => {
   margin-bottom: 28px;
 }
 
-/* 滚动容器：overflow-x + 确定宽度，sticky 才生效 */
 .matrix-scroll {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 560px;
+  max-height: 760px;
   width: 100%;
   position: relative;
   border: 1px solid #e4e7ed;
@@ -482,27 +465,7 @@ onMounted(async () => {
   border-spacing: 0;
   font-size: 14px;
   white-space: nowrap;
-}
-
-.matrix-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-}
-
-/* 毕业要求分组行（第二行）—— 低于 corner，高于 body */
-.th-gr-group {
-  z-index: 2 !important;
-}
-
-/* 指标点列头（第三行）—— 低于 corner，高于 body */
-.th-indicator {
-  z-index: 2 !important;
-}
-
-/* 第一行合并表头 —— 低于 corner */
-.th-group {
-  z-index: 3 !important;
+  min-width: max-content;
 }
 
 .matrix-table th,
@@ -548,6 +511,9 @@ onMounted(async () => {
 
 /* ===== 合并表头（第一行）===== */
 .th-group {
+  position: sticky;
+  top: 0;
+  z-index: 8;
   text-align: center;
   padding: 14px 20px;
   background: #eef2ff;
@@ -559,6 +525,9 @@ onMounted(async () => {
 
 /* ===== 毕业要求分组行（第二行）===== */
 .th-gr-group {
+  position: sticky;
+  top: 48px;
+  z-index: 7;
   text-align: center;
   padding: 10px 20px;
   background: #e8edff;
@@ -601,6 +570,9 @@ onMounted(async () => {
 
 /* ===== 指标点列头（第三行）===== */
 .th-indicator {
+  position: sticky;
+  top: 126px;
+  z-index: 6;
   min-width: 220px;
   padding: 14px 20px 16px;
   background: #f8f9ff;
@@ -650,18 +622,6 @@ onMounted(async () => {
   vertical-align: middle;
   text-align: center;
   min-width: 160px;
-}
-
-/* 数据行斑马纹 */
-.matrix-table tbody tr:nth-child(even) .td-course,
-.matrix-table tbody tr:nth-child(even) .td-cell {
-  background: #fafbff;
-}
-
-.matrix-table tbody tr:hover .td-course,
-.matrix-table tbody tr:hover .td-cell {
-  background: #f0f4ff;
-  transition: background 0.15s;
 }
 
 /* ===== 数据单元格 ===== */
