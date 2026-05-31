@@ -71,28 +71,22 @@
         <div v-else class="matrix-scroll">
           <table class="matrix-table" border="0" cellspacing="0" cellpadding="0">
             <thead>
-            <!-- 第一行：左上角（rowspan=3）+ 毕业要求指标点总标题 -->
+            <!-- 第一行：左上角（rowspan=2）+ 毕业要求分组 -->
             <tr>
-              <th class="th-corner" rowspan="3">
+              <th class="th-corner" rowspan="2">
                 <div class="corner-inner">
                   <div class="corner-diagonal"></div>
                   <div class="corner-title corner-title-top">毕业要求</div>
+                  <div class="corner-stats corner-stats-top">
+                    <span>共 {{ graduationRequirementCount }} 条毕业要求</span>
+                    <span>共 {{ indicators.length }} 个指标点</span>
+                  </div>
                   <div class="corner-title corner-title-bottom">课程要求</div>
                   <div class="corner-meta">
                     <span>显示 {{ visibleCourses.length }} / 共 {{ courses.length }} 门</span>
                   </div>
                 </div>
               </th>
-              <th :colspan="indicators.length" class="th-group">
-                <div class="group-header">
-                  <span class="group-header-title">毕业要求指标点</span>
-                  <span class="group-header-meta">共 {{ graduationRequirementCount }} 条毕业要求</span>
-                  <span class="group-header-meta">共 {{ indicators.length }} 个指标点</span>
-                </div>
-              </th>
-            </tr>
-            <!-- 第二行：毕业要求分组，按 grCode 合并列 -->
-            <tr>
               <th
                   v-for="group in indicatorGroups"
                   :key="group.grId"
@@ -105,7 +99,7 @@
                 </el-tooltip>
               </th>
             </tr>
-            <!-- 第三行：各指标点 -->
+            <!-- 第二行：各指标点 -->
             <tr>
               <th
                   v-for="ind in indicators"
@@ -151,6 +145,9 @@
             </tr>
 
             <!-- 列权重合计行 -->
+            <tr class="tr-sum-spacer" aria-hidden="true">
+              <td :colspan="indicators.length + 1"></td>
+            </tr>
             <tr class="tr-sum">
               <td class="td-sum-label">列权重合计（Σ）</td>
               <td
@@ -438,7 +435,7 @@ onMounted(async () => {
 .matrix-scroll {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 760px;
+  max-height: 860px;
   width: 100%;
   position: relative;
   border: 1px solid #e4e7ed;
@@ -496,7 +493,7 @@ onMounted(async () => {
 
 .corner-inner {
   position: relative;
-  min-height: 166px;
+  min-height: 148px;
   padding: 0;
   background: linear-gradient(180deg, #eef2ff 0%, #edf2ff 100%);
 }
@@ -524,15 +521,33 @@ onMounted(async () => {
 }
 
 .corner-title-top {
-  top: 26px;
-  right: 20px;
+  top: 18px;
+  right: 18px;
   font-size: 18px;
 }
 
 .corner-title-bottom {
   left: 18px;
-  bottom: 46px;
+  bottom: 40px;
   font-size: 18px;
+}
+
+.corner-stats {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.corner-stats-top {
+  top: 48px;
+  right: 18px;
+  text-align: right;
 }
 
 .corner-meta {
@@ -548,46 +563,11 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* ===== 合并表头（第一行）===== */
-.th-group {
+/* ===== 毕业要求分组行（第一行）===== */
+.th-gr-group {
   position: sticky;
   top: 0;
   z-index: 8;
-  text-align: center;
-  padding: 12px 18px;
-  background: #eef2ff;
-  font-weight: 700;
-  font-size: 14px;
-  color: #2563eb;
-  letter-spacing: 0.02em;
-  border-bottom: 1px solid #d6def7;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  min-height: 44px;
-}
-
-.group-header-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1d4ed8;
-}
-
-.group-header-meta {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-/* ===== 毕业要求分组行（第二行）===== */
-.th-gr-group {
-  position: sticky;
-  top: 45px;
-  z-index: 7;
   text-align: center;
   padding: 8px 18px;
   background: #e8edff;
@@ -630,11 +610,11 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-/* ===== 指标点列头（第三行）===== */
+/* ===== 指标点列头（第二行）===== */
 .th-indicator {
   position: sticky;
-  top: 106px;
-  z-index: 6;
+  top: 61px;
+  z-index: 7;
   min-width: 220px;
   padding: 10px 18px 12px;
   background: #f8f9ff;
@@ -704,11 +684,22 @@ onMounted(async () => {
   gap: 10px;
 }
 
+.tr-sum-spacer td {
+  height: 62px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 /* ===== 列权重合计行 ===== */
 .tr-sum td {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
   background: #f0f4ff !important;
   font-weight: 700;
   border-top: 2px solid #dbe4ff;
+  box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.08);
 }
 
 .td-sum-label {
@@ -718,8 +709,9 @@ onMounted(async () => {
   color: #374151;
   font-size: 13px;
   position: sticky;
+  bottom: 0;
   left: 0;
-  z-index: 2;
+  z-index: 5;
   white-space: nowrap;
   background: #e8edff !important;
   box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.08);
