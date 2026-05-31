@@ -659,6 +659,7 @@ onMounted(async () => {
   vertical-align: top;
   text-align: center;
   border-top: none;
+  white-space: normal;
 }
 
 .indicator-name {
@@ -675,13 +676,15 @@ onMounted(async () => {
   font-size: 12px;
   color: #6b7280;
   line-height: 1.5;
-  white-space: normal;
+  white-space: normal !important;
   word-break: break-word;
+  overflow-wrap: anywhere;
   display: block;
   overflow: visible;
   cursor: default;
   min-height: 0;
   text-align: center;
+  max-width: 100%;
 }
 
 .td-course {
