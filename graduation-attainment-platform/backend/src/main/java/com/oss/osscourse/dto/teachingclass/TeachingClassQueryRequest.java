@@ -7,7 +7,10 @@ import lombok.Data;
 @Schema(description = "教学班查询请求")
 public class TeachingClassQueryRequest {
 
-    @Schema(description = "班级名称，模糊查询")
+    @Schema(description = "教学班编号，模糊查询")
+    private String classCode;
+
+    @Schema(description = "教学班名称，模糊查询")
     private String className;
 
     @Schema(description = "所属课程ID")

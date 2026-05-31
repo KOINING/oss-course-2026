@@ -4,12 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.teachingclass.StudentClassImportResult;
 import com.oss.osscourse.entity.Major;
+import com.oss.osscourse.entity.Student;
 import com.oss.osscourse.entity.StudentClass;
-import com.oss.osscourse.entity.SysUser;
 import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.mapper.StudentClassMapper;
-import com.oss.osscourse.mapper.SysUserMapper;
+import com.oss.osscourse.mapper.StudentMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
 import com.oss.osscourse.service.StudentClassService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ import java.util.Set;
 public class StudentClassServiceImpl implements StudentClassService {
 
     private final StudentClassMapper studentClassMapper;
-    private final SysUserMapper sysUserMapper;
+    private final StudentMapper studentMapper;
     private final MajorMapper majorMapper;
     private final TeachingClassMapper teachingClassMapper;
 
@@ -56,21 +56,21 @@ public class StudentClassServiceImpl implements StudentClassService {
                     continue;
                 }
                 totalCount++;
-                int excelRowNum = i + 1;
+                int rowNumber = i + 1;
 
                 try {
                     String error = validateAndImportRow(row, processedRecords);
-                    if (error != null) {
+                    if (error == null) {
+                        successCount++;
+                    } else {
                         failedItems.add(StudentClassImportResult.FailedItem.builder()
-                                .rowNumber(excelRowNum)
+                                .rowNumber(rowNumber)
                                 .reason(error)
                                 .build());
-                    } else {
-                        successCount++;
                     }
                 } catch (Exception e) {
                     failedItems.add(StudentClassImportResult.FailedItem.builder()
-                            .rowNumber(excelRowNum)
+                            .rowNumber(rowNumber)
                             .reason("系统错误: " + e.getMessage())
                             .build());
                 }
@@ -96,85 +96,75 @@ public class StudentClassServiceImpl implements StudentClassService {
         String enrollmentYear = getCellStringValue(row.getCell(3));
         String teachingClassCode = getCellStringValue(row.getCell(4));
 
-        // 学号不能为空
-        if (studentNo == null || studentNo.isEmpty()) {
+        if (!hasText(studentNo)) {
             return "学号不能为空";
         }
-
-        // 姓名不能为空
-        if (studentName == null || studentName.isEmpty()) {
+        if (!hasText(studentName)) {
             return "姓名不能为空";
         }
-
-        // 入学年份必须为合法年份
-        if (enrollmentYear == null || enrollmentYear.isEmpty()) {
+        if (!hasText(majorCode)) {
+            return "专业代码不能为空";
+        }
+        if (!hasText(enrollmentYear)) {
             return "入学年份不能为空";
         }
-        int year;
+        if (!hasText(teachingClassCode)) {
+            return "教学班编号不能为空";
+        }
+
+        int parsedEnrollmentYear;
         try {
-            year = Integer.parseInt(enrollmentYear);
-            if (year < 2000 || year > 2100) {
-                return "入学年份不合法: " + enrollmentYear;
-            }
+            parsedEnrollmentYear = Integer.parseInt(enrollmentYear);
         } catch (NumberFormatException e) {
             return "入学年份必须为合法数值: " + enrollmentYear;
         }
+        if (parsedEnrollmentYear < 2000 || parsedEnrollmentYear > 2100) {
+            return "入学年份不合法: " + enrollmentYear;
+        }
 
-        // 查找学生
-        SysUser student = sysUserMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getUsername, studentNo));
+        Student student = studentMapper.selectOne(new LambdaQueryWrapper<Student>()
+                .eq(Student::getStudentNo, studentNo));
         if (student == null) {
             return "学号不存在: " + studentNo;
         }
-
-        // 专业代码必须已存在
-        if (majorCode == null || majorCode.isEmpty()) {
-            return "专业代码不能为空";
+        if (!studentName.equals(student.getStudentName())) {
+            return "学生姓名与学号不匹配: " + studentNo;
         }
-        Major major = majorMapper.selectOne(
-                new LambdaQueryWrapper<Major>()
-                        .eq(Major::getMajorCode, majorCode));
+        if (!parsedEnrollmentYearEquals(student, parsedEnrollmentYear)) {
+            return "入学年份与学生记录不匹配: " + studentNo;
+        }
+
+        Major major = majorMapper.selectOne(new LambdaQueryWrapper<Major>()
+                .eq(Major::getMajorCode, majorCode));
         if (major == null) {
             return "专业代码不存在: " + majorCode;
         }
+        if (!major.getMajorId().equals(student.getMajorId())) {
+            return "学生专业与导入专业代码不匹配: " + studentNo;
+        }
 
-        // 教学班编号必须存在并能唯一定位教学班
-        if (teachingClassCode == null || teachingClassCode.isEmpty()) {
-            return "教学班编号不能为空";
-        }
-        Long classId;
-        try {
-            classId = Long.parseLong(teachingClassCode);
-        } catch (NumberFormatException e) {
-            return "教学班编号必须为合法数值: " + teachingClassCode;
-        }
-        TeachingClass teachingClass = teachingClassMapper.selectById(classId);
+        TeachingClass teachingClass = teachingClassMapper.selectOne(new LambdaQueryWrapper<TeachingClass>()
+                .eq(TeachingClass::getClassCode, teachingClassCode));
         if (teachingClass == null) {
             return "教学班编号不存在: " + teachingClassCode;
         }
 
-        // 同一学生不能重复导入到同一教学班
-        String duplicateKey = student.getId() + "-" + teachingClass.getClassId();
+        String duplicateKey = student.getStudentId() + "-" + teachingClass.getClassId();
         if (!processedRecords.add(duplicateKey)) {
             return "学生 " + studentNo + " 在同一批次中重复导入到教学班 " + teachingClassCode;
         }
 
-        // 检查是否已存在该关联
-        Long existingCount = studentClassMapper.selectCount(
-                new LambdaQueryWrapper<StudentClass>()
-                        .eq(StudentClass::getStudentId, student.getId())
-                        .eq(StudentClass::getClassId, teachingClass.getClassId()));
+        Long existingCount = studentClassMapper.selectCount(new LambdaQueryWrapper<StudentClass>()
+                .eq(StudentClass::getStudentId, student.getStudentId())
+                .eq(StudentClass::getClassId, teachingClass.getClassId()));
         if (existingCount != null && existingCount > 0) {
             return "学生 " + studentNo + " 已存在于教学班 " + teachingClassCode + " 中";
         }
 
-        // 创建关联
-        StudentClass sc = new StudentClass();
-        sc.setStudentId(student.getId());
-        sc.setClassId(teachingClass.getClassId());
-        studentClassMapper.insert(sc);
-
+        StudentClass studentClass = new StudentClass();
+        studentClass.setStudentId(student.getStudentId());
+        studentClass.setClassId(teachingClass.getClassId());
+        studentClassMapper.insert(studentClass);
         return null;
     }
 
@@ -183,10 +173,9 @@ public class StudentClassServiceImpl implements StudentClassService {
         if (teachingClassId == null) {
             throw new BusinessException(400, "教学班ID不能为空");
         }
-        return studentClassMapper.selectList(
-                new LambdaQueryWrapper<StudentClass>()
-                        .eq(StudentClass::getClassId, teachingClassId)
-                        .orderByAsc(StudentClass::getScId));
+        return studentClassMapper.selectList(new LambdaQueryWrapper<StudentClass>()
+                .eq(StudentClass::getClassId, teachingClassId)
+                .orderByAsc(StudentClass::getScId));
     }
 
     @Override
@@ -194,10 +183,9 @@ public class StudentClassServiceImpl implements StudentClassService {
         if (studentId == null) {
             throw new BusinessException(400, "学生ID不能为空");
         }
-        return studentClassMapper.selectList(
-                new LambdaQueryWrapper<StudentClass>()
-                        .eq(StudentClass::getStudentId, studentId)
-                        .orderByAsc(StudentClass::getScId));
+        return studentClassMapper.selectList(new LambdaQueryWrapper<StudentClass>()
+                .eq(StudentClass::getStudentId, studentId)
+                .orderByAsc(StudentClass::getScId));
     }
 
     @Override
@@ -206,8 +194,8 @@ public class StudentClassServiceImpl implements StudentClassService {
         if (scId == null) {
             throw new BusinessException(400, "关联ID不能为空");
         }
-        StudentClass sc = studentClassMapper.selectById(scId);
-        if (sc == null) {
+        StudentClass studentClass = studentClassMapper.selectById(scId);
+        if (studentClass == null) {
             throw new BusinessException(404, "学生-教学班关联不存在");
         }
         studentClassMapper.deleteById(scId);
@@ -218,24 +206,34 @@ public class StudentClassServiceImpl implements StudentClassService {
             return null;
         }
         if (cell.getCellType() == CellType.NUMERIC) {
-            double val = cell.getNumericCellValue();
-            if (val == Math.floor(val) && !Double.isInfinite(val)) {
-                return String.valueOf((long) val);
+            double numericValue = cell.getNumericCellValue();
+            if (numericValue == Math.floor(numericValue) && !Double.isInfinite(numericValue)) {
+                return String.valueOf((long) numericValue);
             }
-            return String.valueOf(val);
+            return String.valueOf(numericValue);
         }
-        String value = cell.getStringCellValue();
-        return value != null ? value.trim() : null;
+        if (cell.getCellType() == CellType.STRING) {
+            return cell.getStringCellValue() == null ? null : cell.getStringCellValue().trim();
+        }
+        cell.setCellType(CellType.STRING);
+        return cell.getStringCellValue() == null ? null : cell.getStringCellValue().trim();
     }
 
     private boolean isRowEmpty(Row row) {
-        for (int c = 0; c < row.getLastCellNum(); c++) {
-            Cell cell = row.getCell(c);
-            if (cell != null && cell.getCellType() != CellType.BLANK
-                    && getCellStringValue(cell) != null && !getCellStringValue(cell).isEmpty()) {
+        for (int index = 0; index < row.getLastCellNum(); index++) {
+            String value = getCellStringValue(row.getCell(index));
+            if (hasText(value)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private boolean parsedEnrollmentYearEquals(Student student, int parsedEnrollmentYear) {
+        return student.getEnrollmentYear() != null && student.getEnrollmentYear() == parsedEnrollmentYear;
     }
 }

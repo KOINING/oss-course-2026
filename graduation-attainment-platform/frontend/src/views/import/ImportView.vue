@@ -1,70 +1,67 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { UploadFilled, Download } from '@element-plus/icons-vue'
+import { Download, UploadFilled } from '@element-plus/icons-vue'
 import ImportResultPreview from '@/components/import/ImportResultPreview.vue'
 import { importCoursesApi, importStudentClassesApi } from '@/api/import'
 
+const route = useRoute()
 const activeTab = ref('course')
 
-// ---- Template definitions ----
-const courseTemplateHeaders = ['所属专业代码', '课程代码', '课程名称', '学分', '状态']
-const courseTemplateSample = [
+const COURSE_TEMPLATE_HEADERS = ['所属专业代码', '课程代码', '课程名称', '学分', '状态']
+const COURSE_TEMPLATE_SAMPLE = [
   ['080901', 'CS201', '数据结构', '4.0', '1'],
   ['080901', 'CS301', '操作系统', '3.0', '1'],
 ]
 
-const studentTemplateHeaders = ['学号', '姓名', '专业代码', '入学年份', '教学班编号']
-const studentTemplateSample = [
+const STUDENT_CLASS_TEMPLATE_HEADERS = ['学号', '姓名', '专业代码', '入学年份', '教学班编号']
+const STUDENT_CLASS_TEMPLATE_SAMPLE = [
   ['20220101001', '张三', '080901', '2022', 'TC2024CS01'],
   ['20220101002', '李四', '080901', '2022', 'TC2024CS01'],
 ]
 
-// ---- Common error descriptions ----
-const commonCourseErrors = [
-  { rowNumber: '示例', reason: '课程代码不能为空' },
-  { rowNumber: '示例', reason: '课程代码在导入模板中重复: CS201' },
-  { rowNumber: '示例', reason: '所属专业代码不存在: BIO' },
-  { rowNumber: '示例', reason: '学分必须为合法数值: abc' },
-  { rowNumber: '示例', reason: '状态值必须为0或1: 2' },
-]
-
-const commonStudentErrors = [
-  { rowNumber: '示例', reason: '学号不能为空' },
-  { rowNumber: '示例', reason: '姓名不能为空' },
-  { rowNumber: '示例', reason: '专业代码不存在: BIO' },
-  { rowNumber: '示例', reason: '入学年份不合法: 1899' },
-  { rowNumber: '示例', reason: '教学班编号不存在: TC999' },
-  { rowNumber: '示例', reason: '学生 2024001 在同一批次中重复导入到教学班 TC2024CS01' },
-  { rowNumber: '示例', reason: '学生 2021005 已存在于教学班 TC2024CS01 中' },
-]
-
-// ---- Course import state ----
 const courseFile = ref(null)
 const courseImporting = ref(false)
 const courseResult = reactive({
   summary: { totalCount: 0, successCount: 0, failureCount: 0 },
   failedItems: [],
 })
-const courseFinished = ref(false)
-const courseError = ref('')
 
-// ---- Student import state ----
-const studentFile = ref(null)
-const studentImporting = ref(false)
-const studentResult = reactive({
+const studentClassFile = ref(null)
+const studentClassImporting = ref(false)
+const studentClassResult = reactive({
   summary: { totalCount: 0, successCount: 0, failureCount: 0 },
   failedItems: [],
 })
-const studentFinished = ref(false)
-const studentError = ref('')
 
-function downloadTemplate(headers, sampleRows, filename) {
-  const BOM = '﻿'
-  const headerLine = headers.join(',')
-  const sampleLines = sampleRows.map((row) => row.join(',')).join('\n')
-  const csv = BOM + headerLine + '\n' + sampleLines + '\n'
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+function syncTabWithRoute() {
+  activeTab.value = route.query.type === 'student-classes' ? 'student-classes' : 'course'
+}
+
+watch(() => route.query.type, syncTabWithRoute, { immediate: true })
+
+function resetResult(resultState) {
+  resultState.summary = { totalCount: 0, successCount: 0, failureCount: 0 }
+  resultState.failedItems = []
+}
+
+function beforeUpload(file) {
+  const isSupported =
+    file.name.endsWith('.xlsx') ||
+    file.name.endsWith('.xls') ||
+    file.name.endsWith('.csv')
+  if (!isSupported) {
+    ElMessage.error('仅支持 .xlsx、.xls、.csv 格式')
+    return false
+  }
+  return false
+}
+
+function downloadTemplate(headers, rows, filename) {
+  const bom = '\uFEFF'
+  const content = `${headers.join(',')}\n${rows.map((row) => row.join(',')).join('\n')}\n`
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -77,42 +74,22 @@ function downloadTemplate(headers, sampleRows, filename) {
 
 function handleCourseFileChange(file) {
   courseFile.value = file
-  courseFinished.value = false
-  courseError.value = ''
+  resetResult(courseResult)
 }
 
-function handleStudentFileChange(file) {
-  studentFile.value = file
-  studentFinished.value = false
-  studentError.value = ''
+function handleStudentClassFileChange(file) {
+  studentClassFile.value = file
+  resetResult(studentClassResult)
 }
 
-function resetCourseState() {
-  courseFile.value = null
-  courseResult.summary = { totalCount: 0, successCount: 0, failureCount: 0 }
-  courseResult.failedItems = []
-  courseFinished.value = false
-  courseError.value = ''
-}
-
-function resetStudentState() {
-  studentFile.value = null
-  studentResult.summary = { totalCount: 0, successCount: 0, failureCount: 0 }
-  studentResult.failedItems = []
-  studentFinished.value = false
-  studentError.value = ''
-}
-
-async function handleCourseImport() {
+async function submitCourseImport() {
   if (!courseFile.value) {
-    ElMessage.warning('请先选择要导入的 Excel 文件')
+    ElMessage.warning('请先选择课程清单文件')
     return
   }
   const formData = new FormData()
   formData.append('file', courseFile.value.raw)
   courseImporting.value = true
-  courseFinished.value = false
-  courseError.value = ''
   try {
     const data = await importCoursesApi(formData)
     courseResult.summary = {
@@ -121,55 +98,43 @@ async function handleCourseImport() {
       failureCount: data.failureCount ?? 0,
     }
     courseResult.failedItems = data.failedItems ?? []
-    courseFinished.value = true
     ElMessage.success('课程清单导入完成')
-  } catch (e) {
-    courseError.value = e.message || '导入请求失败'
-    courseFinished.value = true
+  } catch (error) {
+    ElMessage.error(error.message || '课程清单导入失败')
   } finally {
     courseImporting.value = false
   }
 }
 
-async function handleStudentImport() {
-  if (!studentFile.value) {
-    ElMessage.warning('请先选择要导入的 Excel 文件')
+async function submitStudentClassImport() {
+  if (!studentClassFile.value) {
+    ElMessage.warning('请先选择教学班学生名单文件')
     return
   }
   const formData = new FormData()
-  formData.append('file', studentFile.value.raw)
-  studentImporting.value = true
-  studentFinished.value = false
-  studentError.value = ''
+  formData.append('file', studentClassFile.value.raw)
+  studentClassImporting.value = true
   try {
     const data = await importStudentClassesApi(formData)
-    studentResult.summary = {
+    studentClassResult.summary = {
       totalCount: data.totalCount ?? 0,
       successCount: data.successCount ?? 0,
       failureCount: data.failureCount ?? 0,
     }
-    studentResult.failedItems = data.failedItems ?? []
-    studentFinished.value = true
-    ElMessage.success('学生名单导入完成')
-  } catch (e) {
-    studentError.value = e.message || '导入请求失败'
-    studentFinished.value = true
+    studentClassResult.failedItems = data.failedItems ?? []
+    ElMessage.success('教学班学生名单导入完成')
+  } catch (error) {
+    ElMessage.error(error.message || '教学班学生名单导入失败')
   } finally {
-    studentImporting.value = false
+    studentClassImporting.value = false
   }
 }
 
-function beforeUpload(file) {
-  const isExcel =
-    file.name.endsWith('.xlsx') ||
-    file.name.endsWith('.xls') ||
-    file.name.endsWith('.csv')
-  if (!isExcel) {
-    ElMessage.error('仅支持 .xlsx、.xls 或 .csv 格式的文件')
-    return false
-  }
-  return false
-}
+const headerMeta = computed(() => ({
+  title: route.meta.title || '数据导入',
+  summary: route.meta.summary || '通过 Excel 模板导入课程清单和教学班学生名单，并在页面内查看结果预览。',
+  moduleTitle: route.meta.moduleTitle || '模块 A',
+}))
 </script>
 
 <template>
@@ -178,75 +143,64 @@ function beforeUpload(file) {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A / 教务管理</p>
-            <h1>数据导入</h1>
-            <p class="page-summary">
-              通过 Excel 模板批量导入全专业课程清单和教学班学生名单，导入完成后下方预览区展示校验结果。
-            </p>
+            <p class="page-section">{{ headerMeta.moduleTitle }}</p>
+            <h1>{{ headerMeta.title }}</h1>
+            <p class="page-summary">{{ headerMeta.summary }}</p>
           </div>
         </div>
       </template>
 
       <el-tabs v-model="activeTab">
-        <!-- ==================== 全专业课程清单导入 ==================== -->
-        <el-tab-pane label="全专业课程清单导入" name="course">
+        <el-tab-pane label="课程清单导入" name="course">
           <div class="tab-layout">
-            <!-- 上部：上传区 -->
             <section class="upload-section">
               <div class="section-header">
-                <h3>步骤一：上传课程清单 Excel 文件</h3>
-                <el-button type="primary" plain :icon="Download" @click="downloadTemplate(courseTemplateHeaders, courseTemplateSample, '课程清单导入模板.csv')">
-                  下载导入模板
+                <h3>上传课程清单 Excel 文件</h3>
+                <el-button
+                  type="primary"
+                  plain
+                  :icon="Download"
+                  @click="downloadTemplate(COURSE_TEMPLATE_HEADERS, COURSE_TEMPLATE_SAMPLE, '课程清单导入模板.csv')"
+                >
+                  下载模板
                 </el-button>
               </div>
-
-              <div class="template-hints">
-                <span class="hint-label">模板字段：</span>
-                <el-tag v-for="f in courseTemplateHeaders" :key="f" size="small" effect="plain">{{ f }}</el-tag>
-                <el-popover placement="bottom" :width="340" trigger="hover">
-                  <template #reference>
-                    <el-button link type="primary" size="small">常见错误提示示例</el-button>
-                  </template>
-                  <div v-for="e in commonCourseErrors" :key="e.reason" style="margin-bottom:6px;font-size:12px;color:#dc2626">
-                    {{ e.rowNumber }}: {{ e.reason }}
-                  </div>
-                </el-popover>
+              <div class="template-tags">
+                <el-tag
+                  v-for="header in COURSE_TEMPLATE_HEADERS"
+                  :key="header"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ header }}
+                </el-tag>
               </div>
-
               <el-upload
                 drag
+                class="upload-box"
                 :auto-upload="false"
                 :before-upload="beforeUpload"
                 :on-change="handleCourseFileChange"
                 :limit="1"
                 accept=".xlsx,.xls,.csv"
-                class="upload-box"
               >
-                <el-icon class="upload-box__icon"><UploadFilled /></el-icon>
-                <div class="upload-box__text">
-                  <em>点击选择</em> 或将 Excel 文件拖拽到此区域
-                </div>
+                <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                <div class="upload-text"><em>点击选择</em> 或拖拽文件到此处</div>
                 <template #tip>
-                  <div class="upload-box__tip">支持 .xlsx、.xls、.csv 格式，单次不超过 500 条</div>
+                  <div class="upload-tip">支持 .xlsx、.xls、.csv</div>
                 </template>
               </el-upload>
-
               <div class="upload-actions">
-                <el-button type="primary" size="large" :loading="courseImporting" :disabled="!courseFile" @click="handleCourseImport">
-                  <el-icon><UploadFilled /></el-icon> 开始导入
+                <el-button type="primary" :loading="courseImporting" :disabled="!courseFile" @click="submitCourseImport">
+                  开始导入
                 </el-button>
-                <el-button v-if="courseFinished || courseFile" size="large" @click="resetCourseState">重置</el-button>
+                <el-button @click="courseFile = null; resetResult(courseResult)">重置</el-button>
               </div>
             </section>
 
-            <!-- 下部：导入结果预览区（始终可见） -->
             <section class="result-section">
-              <div class="section-header">
-                <h3>步骤二：查看导入结果预览</h3>
-              </div>
-
               <ImportResultPreview
-                title="全专业课程清单导入结果"
+                title="课程清单导入结果"
                 :summary="courseResult.summary"
                 :failed-items="courseResult.failedItems"
                 :loading="courseImporting"
@@ -255,68 +209,64 @@ function beforeUpload(file) {
           </div>
         </el-tab-pane>
 
-        <!-- ==================== 教学班学生名单导入 ==================== -->
-        <el-tab-pane label="教学班学生名单导入" name="student">
+        <el-tab-pane label="教学班学生名单导入" name="student-classes">
           <div class="tab-layout">
-            <!-- 上部：上传区 -->
             <section class="upload-section">
               <div class="section-header">
-                <h3>步骤一：上传学生名单 Excel 文件</h3>
-                <el-button type="primary" plain :icon="Download" @click="downloadTemplate(studentTemplateHeaders, studentTemplateSample, '学生名单导入模板.csv')">
-                  下载导入模板
+                <h3>上传教学班学生名单 Excel 文件</h3>
+                <el-button
+                  type="primary"
+                  plain
+                  :icon="Download"
+                  @click="downloadTemplate(STUDENT_CLASS_TEMPLATE_HEADERS, STUDENT_CLASS_TEMPLATE_SAMPLE, '教学班学生名单导入模板.csv')"
+                >
+                  下载模板
                 </el-button>
               </div>
-
-              <div class="template-hints">
-                <span class="hint-label">模板字段：</span>
-                <el-tag v-for="f in studentTemplateHeaders" :key="f" size="small" effect="plain">{{ f }}</el-tag>
-                <el-popover placement="bottom" :width="360" trigger="hover">
-                  <template #reference>
-                    <el-button link type="primary" size="small">常见错误提示示例</el-button>
-                  </template>
-                  <div v-for="e in commonStudentErrors" :key="e.reason" style="margin-bottom:6px;font-size:12px;color:#dc2626">
-                    {{ e.rowNumber }}: {{ e.reason }}
-                  </div>
-                </el-popover>
+              <div class="template-tags">
+                <el-tag
+                  v-for="header in STUDENT_CLASS_TEMPLATE_HEADERS"
+                  :key="header"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ header }}
+                </el-tag>
               </div>
-
               <el-upload
                 drag
+                class="upload-box"
                 :auto-upload="false"
                 :before-upload="beforeUpload"
-                :on-change="handleStudentFileChange"
+                :on-change="handleStudentClassFileChange"
                 :limit="1"
                 accept=".xlsx,.xls,.csv"
-                class="upload-box"
               >
-                <el-icon class="upload-box__icon"><UploadFilled /></el-icon>
-                <div class="upload-box__text">
-                  <em>点击选择</em> 或将 Excel 文件拖拽到此区域
-                </div>
+                <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                <div class="upload-text"><em>点击选择</em> 或拖拽文件到此处</div>
                 <template #tip>
-                  <div class="upload-box__tip">支持 .xlsx、.xls、.csv 格式，单次不超过 500 条</div>
+                  <div class="upload-tip">支持 .xlsx、.xls、.csv</div>
                 </template>
               </el-upload>
-
               <div class="upload-actions">
-                <el-button type="primary" size="large" :loading="studentImporting" :disabled="!studentFile" @click="handleStudentImport">
-                  <el-icon><UploadFilled /></el-icon> 开始导入
+                <el-button
+                  type="primary"
+                  :loading="studentClassImporting"
+                  :disabled="!studentClassFile"
+                  @click="submitStudentClassImport"
+                >
+                  开始导入
                 </el-button>
-                <el-button v-if="studentFinished || studentFile" size="large" @click="resetStudentState">重置</el-button>
+                <el-button @click="studentClassFile = null; resetResult(studentClassResult)">重置</el-button>
               </div>
             </section>
 
-            <!-- 下部：导入结果预览区（始终可见） -->
             <section class="result-section">
-              <div class="section-header">
-                <h3>步骤二：查看导入结果预览</h3>
-              </div>
-
               <ImportResultPreview
                 title="教学班学生名单导入结果"
-                :summary="studentResult.summary"
-                :failed-items="studentResult.failedItems"
-                :loading="studentImporting"
+                :summary="studentClassResult.summary"
+                :failed-items="studentClassResult.failedItems"
+                :loading="studentClassImporting"
               />
             </section>
           </div>
@@ -352,16 +302,15 @@ function beforeUpload(file) {
 
 .page-summary {
   margin: 0;
-  max-width: 720px;
+  max-width: 760px;
   color: #64748b;
   line-height: 1.75;
 }
 
 .tab-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 8px 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(420px, 1fr);
+  gap: 20px;
 }
 
 .upload-section,
@@ -375,69 +324,46 @@ function beforeUpload(file) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .section-header h3 {
   margin: 0;
   color: #1f2937;
   font-size: 16px;
-  font-weight: 600;
 }
 
-.template-hints {
+.template-tags {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-}
-
-.hint-label {
-  color: #475569;
-  font-size: 13px;
-  font-weight: 600;
-  margin-right: 4px;
 }
 
 .upload-box {
   width: 100%;
 }
 
-.upload-box__icon {
-  font-size: 48px;
+.upload-icon {
+  font-size: 44px;
   color: #94a3b8;
 }
 
-.upload-box__text {
-  margin-top: 8px;
-  color: #64748b;
-  font-size: 14px;
+.upload-text {
+  color: #475569;
 }
 
-.upload-box__text em {
-  color: #2563eb;
-  font-style: normal;
-  cursor: pointer;
-}
-
-.upload-box__tip {
-  margin-top: 6px;
+.upload-tip {
   color: #94a3b8;
-  font-size: 12px;
 }
 
 .upload-actions {
   display: flex;
-  align-items: center;
   gap: 12px;
 }
 
-.result-section {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 24px;
+@media (max-width: 1100px) {
+  .tab-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
