@@ -21,6 +21,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.COURSE_MANAGEMENT) {
+    return () => import('@/views/basic/CourseManagementView.vue')
+  }
+
   if (item.routeName === ROUTE_NAMES.TEACHING_CLASS) {
     return () => import('@/views/basic/TeachingClassView.vue')
   }

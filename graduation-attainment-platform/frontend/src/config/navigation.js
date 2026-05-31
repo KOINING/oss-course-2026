@@ -53,11 +53,22 @@ export const NAVIGATION_SECTIONS = [
         label: '基础数据',
         path: '/basic-data',
         routeName: ROUTE_NAMES.BASIC_DATA,
-        roles: ['academic_affairs'],
+        roles: ['admin', 'academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
           '维护学年学期、学院、专业、课程等基础主数据，为毕业要求配置和后续计算流程提供统一数据底座。',
-        entities: ['College', 'Major', 'AcademicTerm', 'Course'],
+        entities: ['College', 'Major', 'AcademicTerm'],
+      },
+      {
+        key: 'course-management',
+        label: '课程管理',
+        path: '/course-management',
+        routeName: ROUTE_NAMES.COURSE_MANAGEMENT,
+        roles: ['academic_affairs'],
+        moduleTitle: '模块 A：基础与宏观数据管理',
+        summary:
+          '管理课程代码、课程名称、学分及课程与专业的关联关系，并承接课程清单导入业务。',
+        entities: ['Course'],
       },
       {
         key: 'teaching-class',
@@ -75,7 +86,7 @@ export const NAVIGATION_SECTIONS = [
         label: '学生名单管理',
         path: '/student-list',
         routeName: ROUTE_NAMES.STUDENT_LIST,
-        roles: ['admin', 'academic_affairs'],
+        roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
           '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。',
