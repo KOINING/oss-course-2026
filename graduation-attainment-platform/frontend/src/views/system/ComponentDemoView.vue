@@ -81,7 +81,7 @@ function handleRetry() {
             <p class="demo-section">开发工具</p>
             <h1>页面组 C 组件预览</h1>
             <p class="demo-summary">
-              全专业课程清单导入结果预览、教学班学生名单导入结果预览、错误提示、宏观支撑矩阵权重校验提示、页面空状态。
+              全专业课程清单导入结果预览、教学班学生关联导入结果预览、错误提示、宏观支撑矩阵权重校验提示、页面空状态。
             </p>
           </div>
           <el-tag type="warning" effect="plain">开发期间临时页面</el-tag>
@@ -123,7 +123,7 @@ function handleRetry() {
             </div>
 
             <ImportResultPreview
-              title="教学班学生名单导入结果"
+              title="教学班学生关联导入结果"
               :summary="studentSummaryMap[studentResultMode]"
               :failed-items="studentResultMode === 'partial' || studentResultMode === 'allFailure' ? mockStudentFailedItems : []"
             />

@@ -52,7 +52,7 @@ const formRules = {
   studentName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   majorId: [{ required: true, message: '请选择专业', trigger: 'change' }],
   enrollmentYear: [{ required: true, message: '请输入入学年份', trigger: 'blur' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+  status: [{ required: true, message: '请选择学籍状态', trigger: 'change' }],
 }
 
 const dialogTitle = computed(() => (dialogMode.value === 'create' ? '新增学生' : '编辑学生'))
@@ -85,7 +85,7 @@ function normalizeFilters() {
 }
 
 async function loadOptions() {
-  majorOptions.value = await listMajorsForSelectApi()
+  majorOptions.value = (await listMajorsForSelectApi()) || []
 }
 
 async function loadRows() {
@@ -137,6 +137,7 @@ async function handleSubmit() {
       enrollmentYear: Number(form.enrollmentYear),
       status: Number(form.status),
     }
+
     if (dialogMode.value === 'create') {
       await addStudentApi(payload)
       ElMessage.success('学生创建成功')
@@ -144,6 +145,7 @@ async function handleSubmit() {
       await updateStudentApi(payload)
       ElMessage.success('学生更新成功')
     }
+
     dialogVisible.value = false
     await loadRows()
   } finally {
@@ -159,12 +161,20 @@ async function handleDelete(row) {
 
 async function handleUpdateStatus(row, status) {
   await updateStudentStatusApi({ studentId: row.studentId, status })
-  ElMessage.success('学生状态已更新')
+  ElMessage.success('学生学籍状态已更新')
   await loadRows()
 }
 
-function goToImportPage() {
+function goToStudentImport() {
+  router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'students' } })
+}
+
+function goToStudentRelationImport() {
   router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'student-classes' } })
+}
+
+function formatStatus(status) {
+  return statusOptions.find((item) => item.value === status)?.label || '-'
 }
 
 onMounted(async () => {
@@ -186,6 +196,12 @@ onMounted(async () => {
         </div>
       </template>
 
+      <el-alert type="info" :closable="false" class="page-tip" show-icon>
+        <template #title>
+          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班与学生的关联关系请通过“教学班学生关联导入”或教学班管理中的“查看名单”维护。
+        </template>
+      </el-alert>
+
       <el-form :inline="true" :model="filters" class="filter-form">
         <el-form-item label="学号">
           <el-input v-model.trim="filters.studentNo" placeholder="请输入学号" clearable />
@@ -194,7 +210,7 @@ onMounted(async () => {
           <el-input v-model.trim="filters.studentName" placeholder="请输入姓名" clearable />
         </el-form-item>
         <el-form-item label="专业">
-          <el-select v-model="filters.majorId" placeholder="全部专业" clearable filterable style="width: 180px">
+          <el-select v-model="filters.majorId" placeholder="全部专业" clearable filterable style="width: 200px">
             <el-option
               v-for="major in majorOptions"
               :key="major.majorId"
@@ -206,8 +222,8 @@ onMounted(async () => {
         <el-form-item label="入学年份">
           <el-input-number v-model="filters.enrollmentYear" :min="2000" :max="2100" controls-position="right" />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 140px">
+        <el-form-item label="学籍状态">
+          <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 160px">
             <el-option
               v-for="status in statusOptions"
               :key="status.value"
@@ -224,7 +240,8 @@ onMounted(async () => {
 
       <div class="table-toolbar">
         <el-button type="primary" @click="openCreateDialog">新增学生</el-button>
-        <el-button type="success" plain @click="goToImportPage">前往导入教学班学生名单</el-button>
+        <el-button type="success" plain @click="goToStudentImport">前往批量导入学生基础信息</el-button>
+        <el-button type="warning" plain @click="goToStudentRelationImport">前往导入教学班学生名单</el-button>
       </div>
 
       <el-table v-loading="tableLoading" :data="rows" border stripe>
@@ -232,15 +249,13 @@ onMounted(async () => {
         <el-table-column prop="studentName" label="姓名" min-width="120" />
         <el-table-column prop="majorCode" label="专业代码" min-width="120" />
         <el-table-column prop="majorName" label="专业名称" min-width="180" />
-        <el-table-column prop="enrollmentYear" label="入学年份" min-width="100" />
-        <el-table-column label="状态" min-width="100">
+        <el-table-column prop="enrollmentYear" label="入学年份" min-width="110" />
+        <el-table-column label="学籍状态" min-width="110">
           <template #default="{ row }">
-            <el-tag effect="plain">
-              {{ row.statusText || statusOptions.find((item) => item.value === row.status)?.label }}
-            </el-tag>
+            <el-tag effect="plain">{{ row.statusText || formatStatus(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
@@ -269,7 +284,7 @@ onMounted(async () => {
       </el-table>
 
       <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close>
-        <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
+        <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
           <el-form-item label="学号" prop="studentNo">
             <el-input v-model.trim="form.studentNo" maxlength="20" />
           </el-form-item>
@@ -295,8 +310,8 @@ onMounted(async () => {
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
+          <el-form-item label="学籍状态" prop="status">
+            <el-select v-model="form.status" placeholder="请选择学籍状态" style="width: 100%">
               <el-option
                 v-for="status in statusOptions"
                 :key="status.value"
@@ -343,6 +358,10 @@ onMounted(async () => {
   margin: 0;
   color: #64748b;
   line-height: 1.7;
+}
+
+.page-tip {
+  margin-bottom: 16px;
 }
 
 .filter-form {

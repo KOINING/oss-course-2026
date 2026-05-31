@@ -4,6 +4,7 @@ import com.oss.osscourse.common.AcademicAffairsAccessGuard;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.student.StudentDeleteRequest;
 import com.oss.osscourse.dto.student.StudentGetRequest;
+import com.oss.osscourse.dto.student.StudentImportResult;
 import com.oss.osscourse.dto.student.StudentQueryRequest;
 import com.oss.osscourse.dto.student.StudentResponse;
 import com.oss.osscourse.dto.student.StudentSaveRequest;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -57,6 +60,16 @@ public class StudentController {
             @RequestAttribute(value = "roles", required = false) List<String> roles) {
         accessGuard.assertAcademicAffairs(roles);
         return Result.ok(studentService.listStudentsForSelect());
+    }
+
+    @PostMapping("/importStudents")
+    @Operation(summary = "导入学生基础信息", description = "上传 Excel 批量导入学生主数据")
+    public Result<StudentImportResult> importStudents(
+            @Parameter(description = "学生基础信息 Excel 文件", required = true)
+            @RequestParam("file") MultipartFile file,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentService.importStudents(file));
     }
 
     @PostMapping("/saveStudent")

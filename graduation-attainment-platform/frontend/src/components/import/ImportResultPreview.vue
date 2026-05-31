@@ -9,7 +9,6 @@ defineProps({
   failedItems: {
     type: Array,
     default: () => [],
-    // Each: { rowNumber: Number, reason: String }
   },
   loading: {
     type: Boolean,
@@ -24,13 +23,11 @@ defineProps({
 
 <template>
   <div class="import-result-preview">
-    <!-- Title -->
     <div class="preview-header">
       <h3 class="preview-title">{{ title }}</h3>
       <slot name="header-actions" />
     </div>
 
-    <!-- Summary stat cards -->
     <el-row :gutter="16" class="preview-stats">
       <el-col :span="8">
         <div class="stat-card stat-card--total">
@@ -52,7 +49,6 @@ defineProps({
       </el-col>
     </el-row>
 
-    <!-- Warning alert when there are failures -->
     <el-alert
       v-if="summary.failureCount > 0"
       type="warning"
@@ -61,11 +57,10 @@ defineProps({
       class="preview-alert"
     >
       <template #title>
-        导入完成：成功 {{ summary.successCount }} 条，失败 {{ summary.failureCount }} 条，请修正后重新导入
+        导入完成：成功 {{ summary.successCount }} 条，失败 {{ summary.failureCount }} 条，请修正后重新导入。
       </template>
     </el-alert>
 
-    <!-- Success alert when all pass -->
     <el-alert
       v-else-if="summary.totalCount > 0 && summary.failureCount === 0"
       type="success"
@@ -74,24 +69,15 @@ defineProps({
       class="preview-alert"
     >
       <template #title>
-        全部 {{ summary.totalCount }} 条记录导入成功
+        全部 {{ summary.totalCount }} 条记录导入成功。
       </template>
     </el-alert>
 
-    <!-- Error detail table -->
     <div v-if="failedItems.length > 0" class="preview-errors">
-      <ImportErrorTable
-        :failed-items="failedItems"
-        :loading="loading"
-      />
+      <ImportErrorTable :failed-items="failedItems" :loading="loading" />
     </div>
 
-    <!-- Empty state when no data at all -->
-    <el-result
-      v-if="!loading && summary.totalCount === 0"
-      icon="info"
-      sub-title="未检测到任何数据"
-    />
+    <el-result v-if="!loading && summary.totalCount === 0" icon="info" sub-title="未检测到任何数据" />
   </div>
 </template>
 

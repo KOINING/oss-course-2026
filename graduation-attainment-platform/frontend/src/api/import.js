@@ -1,15 +1,21 @@
 import request from './request'
 
-export function importCoursesApi(formData) {
-  return request.post('/admin/importCourses', formData, {
+function postMultipart(url, formData) {
+  return request.post(url, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
+export function importCoursesApi(formData) {
+  return postMultipart('/admin/importCourses', formData)
+}
+
+export function importStudentsApi(formData) {
+  return postMultipart('/admin/importStudents', formData)
+}
+
 export function importStudentClassesApi(formData) {
-  return request.post('/admin/importStudentClasses', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  return postMultipart('/admin/importStudentClasses', formData)
 }
 
 export function listStudentsByTeachingClassApi(teachingClassId) {

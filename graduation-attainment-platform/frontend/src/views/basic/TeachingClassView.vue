@@ -12,6 +12,8 @@ import {
 import { listCoursesApi } from '@/api/course'
 import { listAcademicTermsApi } from '@/api/academicTerm'
 import { listTeachersForSelectApi } from '@/api/teacher'
+import { listStudentsApi } from '@/api/student'
+import { listStudentsByTeachingClassApi, removeStudentFromClassApi } from '@/api/import'
 import { ROUTE_NAMES } from '@/utils/constants'
 
 const route = useRoute()
@@ -19,14 +21,22 @@ const router = useRouter()
 
 const tableLoading = ref(false)
 const submitLoading = ref(false)
+const relationLoading = ref(false)
+const relationRemoving = ref(false)
 const dialogVisible = ref(false)
+const relationDrawerVisible = ref(false)
 const dialogMode = ref('create')
 const rows = ref([])
+const relationRows = ref([])
 const formRef = ref(null)
+const autoOpenHandled = ref(false)
 
 const courseOptions = ref([])
 const termOptions = ref([])
 const teacherOptions = ref([])
+const studentDirectory = ref([])
+
+const currentTeachingClass = ref(null)
 
 const calcStatusOptions = [
   { value: 'unsubmitted', label: '未提交' },
@@ -62,6 +72,10 @@ const formRules = {
 }
 
 const dialogTitle = computed(() => (dialogMode.value === 'create' ? '新增教学班' : '编辑教学班'))
+const relationTitle = computed(() => {
+  if (!currentTeachingClass.value) return '教学班名单关联'
+  return `${currentTeachingClass.value.className}（${currentTeachingClass.value.classCode}）名单关联`
+})
 
 function resetFilters() {
   filters.classCode = ''
@@ -92,6 +106,31 @@ function normalizeFilters() {
   }
 }
 
+function formatCalcStatus(value) {
+  return calcStatusOptions.find((option) => option.value === value)?.label || value || '未设置'
+}
+
+function getStudentById(studentId) {
+  return studentDirectory.value.find((student) => student.studentId === studentId)
+}
+
+function mapRelationRows(records = []) {
+  return records.map((record) => {
+    const student = getStudentById(record.studentId)
+    return {
+      scId: record.scId,
+      studentId: record.studentId,
+      classId: record.classId,
+      studentNo: student?.studentNo || '-',
+      studentName: student?.studentName || '-',
+      majorCode: student?.majorCode || '-',
+      majorName: student?.majorName || '-',
+      enrollmentYear: student?.enrollmentYear || '-',
+      statusText: student?.statusText || '-',
+    }
+  })
+}
+
 async function loadOptions() {
   const [courses, terms, teachers] = await Promise.all([
     listCoursesApi({ status: 1 }),
@@ -103,10 +142,31 @@ async function loadOptions() {
   teacherOptions.value = teachers || []
 }
 
+async function loadStudentDirectory() {
+  studentDirectory.value = (await listStudentsApi()) || []
+}
+
+async function tryAutoOpenRelationDrawer() {
+  const openClassId = Number(route.query.openClassId || route.query.teachingClassId)
+  if (!openClassId || autoOpenHandled.value) return
+
+  const row = rows.value.find((item) => item.classId === openClassId)
+  autoOpenHandled.value = true
+
+  if (!row) {
+    ElMessage.warning('未找到要查看名单关联的教学班')
+    return
+  }
+
+  await openRelationDrawer(row)
+  router.replace({ name: ROUTE_NAMES.TEACHING_CLASS, query: {} })
+}
+
 async function loadRows() {
   tableLoading.value = true
   try {
     rows.value = (await listTeachingClassesApi(normalizeFilters())) || []
+    await tryAutoOpenRelationDrawer()
   } finally {
     tableLoading.value = false
   }
@@ -178,16 +238,53 @@ async function handleUpdateStatus(row, calcStatus) {
   await loadRows()
 }
 
-function formatCalcStatus(value) {
-  return calcStatusOptions.find((option) => option.value === value)?.label || value || '未设置'
-}
-
 function goToStudentClassImport() {
   router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'student-classes' } })
 }
 
+function goToStudentClassImportForRow(row) {
+  router.push({
+    name: ROUTE_NAMES.DATA_IMPORT,
+    query: {
+      type: 'student-classes',
+      teachingClassId: row.classId,
+      teachingClassCode: row.classCode,
+      teachingClassName: row.className,
+    },
+  })
+}
+
+async function openRelationDrawer(row) {
+  currentTeachingClass.value = row
+  relationDrawerVisible.value = true
+  relationLoading.value = true
+  try {
+    if (!studentDirectory.value.length) {
+      await loadStudentDirectory()
+    }
+    const records = await listStudentsByTeachingClassApi(row.classId)
+    relationRows.value = mapRelationRows(records || [])
+  } finally {
+    relationLoading.value = false
+  }
+}
+
+async function handleRemoveRelation(row) {
+  relationRemoving.value = true
+  try {
+    await removeStudentFromClassApi(row.scId)
+    ElMessage.success('学生与教学班的关联已移除')
+    if (currentTeachingClass.value) {
+      const records = await listStudentsByTeachingClassApi(currentTeachingClass.value.classId)
+      relationRows.value = mapRelationRows(records || [])
+    }
+  } finally {
+    relationRemoving.value = false
+  }
+}
+
 onMounted(async () => {
-  await loadOptions()
+  await Promise.all([loadOptions(), loadStudentDirectory()])
   await loadRows()
 })
 </script>
@@ -205,6 +302,12 @@ onMounted(async () => {
         </div>
       </template>
 
+      <el-alert type="info" :closable="false" class="page-tip" show-icon>
+        <template #title>
+          本页负责教学班主数据和教学班名单关联查看。新增关联以“教学班学生关联导入”为主，手工加入学生不在本轮范围内。
+        </template>
+      </el-alert>
+
       <el-form :inline="true" :model="filters" class="filter-form">
         <el-form-item label="教学班编号">
           <el-input v-model.trim="filters.classCode" placeholder="请输入教学班编号" clearable />
@@ -213,7 +316,7 @@ onMounted(async () => {
           <el-input v-model.trim="filters.className" placeholder="请输入教学班名称" clearable />
         </el-form-item>
         <el-form-item label="课程">
-          <el-select v-model="filters.courseId" placeholder="全部课程" clearable filterable style="width: 180px">
+          <el-select v-model="filters.courseId" placeholder="全部课程" clearable filterable style="width: 200px">
             <el-option
               v-for="course in courseOptions"
               :key="course.courseId"
@@ -233,7 +336,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item label="教师">
-          <el-select v-model="filters.teacherId" placeholder="全部教师" clearable filterable style="width: 160px">
+          <el-select v-model="filters.teacherId" placeholder="全部教师" clearable filterable style="width: 180px">
             <el-option
               v-for="teacher in teacherOptions"
               :key="teacher.id"
@@ -243,7 +346,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item label="计算状态">
-          <el-select v-model="filters.calcStatus" placeholder="全部状态" clearable style="width: 150px">
+          <el-select v-model="filters.calcStatus" placeholder="全部状态" clearable style="width: 160px">
             <el-option
               v-for="status in calcStatusOptions"
               :key="status.value"
@@ -260,7 +363,7 @@ onMounted(async () => {
 
       <div class="table-toolbar">
         <el-button type="primary" @click="openCreateDialog">新增教学班</el-button>
-        <el-button type="success" plain @click="goToStudentClassImport">前往导入教学班学生名单</el-button>
+        <el-button type="success" plain @click="goToStudentClassImport">前往教学班学生关联导入</el-button>
       </div>
 
       <el-table v-loading="tableLoading" :data="rows" border stripe>
@@ -275,9 +378,11 @@ onMounted(async () => {
             <el-tag effect="plain">{{ formatCalcStatus(row.calcStatus) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="360" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
+              <el-button link type="primary" @click="openRelationDrawer(row)">查看名单</el-button>
+              <el-button link type="success" @click="goToStudentClassImportForRow(row)">关联导入</el-button>
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-dropdown @command="(command) => handleUpdateStatus(row, command)">
                 <el-button link type="warning">更新状态</el-button>
@@ -348,6 +453,45 @@ onMounted(async () => {
         </template>
       </el-dialog>
     </el-card>
+
+    <el-drawer v-model="relationDrawerVisible" :title="relationTitle" size="720px" destroy-on-close>
+      <div class="relation-drawer">
+        <div class="relation-drawer__header">
+          <div>
+            <p class="relation-drawer__meta">
+              {{ currentTeachingClass?.courseName || '-' }} / {{ currentTeachingClass?.termCode || '-' }}
+            </p>
+            <h3>教学班学生关联</h3>
+          </div>
+          <el-button
+            type="primary"
+            plain
+            @click="currentTeachingClass && goToStudentClassImportForRow(currentTeachingClass)"
+          >
+            前往教学班学生关联导入
+          </el-button>
+        </div>
+
+        <el-table v-loading="relationLoading" :data="relationRows" border stripe>
+          <el-table-column prop="studentNo" label="学号" min-width="140" />
+          <el-table-column prop="studentName" label="姓名" min-width="120" />
+          <el-table-column prop="majorCode" label="专业代码" min-width="120" />
+          <el-table-column prop="majorName" label="专业名称" min-width="180" />
+          <el-table-column prop="enrollmentYear" label="入学年份" min-width="110" />
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-popconfirm title="确认移除该学生与教学班的关联吗？" @confirm="handleRemoveRelation(row)">
+                <template #reference>
+                  <el-button link type="danger" :loading="relationRemoving">移除关联</el-button>
+                </template>
+              </el-popconfirm>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-empty v-if="!relationLoading && relationRows.length === 0" description="当前教学班暂无学生关联" :image-size="88" />
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -381,6 +525,10 @@ onMounted(async () => {
   line-height: 1.7;
 }
 
+.page-tip {
+  margin-bottom: 16px;
+}
+
 .filter-form {
   margin-bottom: 16px;
 }
@@ -395,6 +543,32 @@ onMounted(async () => {
 .table-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.relation-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.relation-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.relation-drawer__header h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.relation-drawer__meta {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
 }
 </style>
