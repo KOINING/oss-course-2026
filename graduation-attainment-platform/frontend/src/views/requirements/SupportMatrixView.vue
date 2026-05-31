@@ -1,136 +1,157 @@
-<template>
+﻿<template>
   <div class="support-matrix-page">
     <el-card class="page-card">
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A：基础与宏观数据管理</p>
+            <p class="page-section">模块 A：基础数据与宏观支撑配置</p>
             <h1>支撑矩阵配置</h1>
             <p class="page-summary">
-              配置课程与指标点之间的宏观支撑关系及总支撑权重，保证专业级达成度汇总链路完整可追踪。
+              配置课程与毕业要求指标点之间的宏观支撑关系和支撑权重，确保专业级达成度汇总链路完整可追踪。
             </p>
           </div>
         </div>
       </template>
 
-      <!-- 筛选栏 -->
       <el-form :inline="true" :model="filters" class="filter-form">
         <el-form-item label="专业">
           <el-select
-              v-model="filters.majorId"
-              placeholder="请选择专业"
-              clearable
-              style="width: 200px"
-              @change="onMajorChange"
+            v-model="filters.majorId"
+            placeholder="请选择专业"
+            clearable
+            style="width: 200px"
+            @change="onMajorChange"
           >
             <el-option
-                v-for="m in majorOptions"
-                :key="m.majorId"
-                :label="m.majorName"
-                :value="m.majorId"
+              v-for="major in majorOptions"
+              :key="major.majorId"
+              :label="major.majorName"
+              :value="major.majorId"
             />
           </el-select>
         </el-form-item>
+
         <el-form-item label="课程">
           <el-select
-              v-model="filters.courseId"
-              placeholder="请选择课程"
-              clearable
-              style="width: 200px"
+            v-model="filters.courseId"
+            placeholder="请选择课程"
+            clearable
+            style="width: 200px"
           >
             <el-option
-                v-for="c in courseOptions"
-                :key="c.courseId"
-                :label="c.courseName"
-                :value="c.courseId"
+              v-for="course in courseOptions"
+              :key="course.courseId"
+              :label="course.courseName"
+              :value="course.courseId"
             />
           </el-select>
         </el-form-item>
+
         <el-form-item>
           <el-button type="primary" :loading="tableLoading" @click="loadMatrix">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
 
-      <!-- 说明提示 -->
-      <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          class="notice-alert"
-      >
+      <el-alert type="info" :closable="false" show-icon class="notice-alert">
         <template #default>
-          说明：请为每门课程选择支撑的毕业要求指标点，并填写支撑权重；课程筛选仅影响当前展示行，每列权重之和仍按当前专业下全部课程计算，且必须等于 1.00。
+          说明：请为每门课程选择支撑的毕业要求指标点，并填写支撑权重；课程筛选仅影响当前展示行，
+          每列权重之和仍按当前专业下全部课程计算，并且必须等于 1.00。
         </template>
       </el-alert>
 
-      <!-- 矩阵表格 -->
       <div v-loading="tableLoading" class="matrix-wrap">
-        <el-empty v-if="!tableLoading && indicators.length === 0" description="暂无指标点数据，请先选择专业并查询" />
+        <el-empty
+          v-if="!tableLoading && indicators.length === 0"
+          description="暂无指标点数据，请先选择专业并查询"
+        />
 
         <div v-else class="matrix-scroll">
           <table class="matrix-table" border="0" cellspacing="0" cellpadding="0">
             <thead>
-            <!-- 第一行：左上角（rowspan=2）+ 毕业要求分组 -->
-            <tr>
-              <th class="th-corner" rowspan="2">
-                <div class="corner-inner">
-                  <div class="corner-diagonal"></div>
-                  <div class="corner-title corner-title-top">毕业要求</div>
-                  <div class="corner-stats corner-stats-top">
-                    <span>共 {{ graduationRequirementCount }} 条毕业要求</span>
-                    <span>共 {{ indicators.length }} 个指标点</span>
+              <tr>
+                <th class="th-corner" rowspan="2">
+                  <div class="corner-inner">
+                    <div class="corner-diagonal"></div>
+
+                    <div class="corner-title corner-title-top">毕业要求</div>
+                    <el-tooltip placement="top" :show-after="200">
+                      <template #content>
+                        <div class="corner-tip-content">
+                          <span>共 {{ graduationRequirementCount }} 条毕业要求</span>
+                          <span>共 {{ indicators.length }} 个指标点</span>
+                        </div>
+                      </template>
+                      <button
+                        type="button"
+                        class="corner-info-trigger corner-info-trigger-top"
+                        aria-label="毕业要求统计"
+                      >
+                        <el-icon><InfoFilled /></el-icon>
+                      </button>
+                    </el-tooltip>
+
+                    <div class="corner-title corner-title-bottom">课程要求</div>
+                    <el-tooltip placement="top" :show-after="200">
+                      <template #content>
+                        <div class="corner-tip-content">
+                          <span>共 {{ courses.length }} 门</span>
+                        </div>
+                      </template>
+                      <button
+                        type="button"
+                        class="corner-info-trigger corner-info-trigger-bottom"
+                        aria-label="课程统计"
+                      >
+                        <el-icon><InfoFilled /></el-icon>
+                      </button>
+                    </el-tooltip>
                   </div>
-                  <div class="corner-title corner-title-bottom">课程要求</div>
-                  <div class="corner-meta">
-                    <span>显示 {{ visibleCourses.length }} / 共 {{ courses.length }} 门</span>
-                  </div>
-                </div>
-              </th>
-              <th
+                </th>
+
+                <th
                   v-for="group in indicatorGroups"
                   :key="group.grId"
                   :colspan="group.indicators.length"
                   class="th-gr-group"
-              >
-                <div class="gr-name">{{ group.grCode }}</div>
-                <el-tooltip :content="group.grDescription" placement="top" :show-after="300">
-                  <div class="gr-desc">{{ group.grDescription }}</div>
-                </el-tooltip>
-              </th>
-            </tr>
-            <!-- 第二行：各指标点 -->
-            <tr>
-              <th
-                  v-for="ind in indicators"
-                  :key="ind.ipId"
+                >
+                  <div class="gr-name">{{ group.grCode }}</div>
+                  <el-tooltip :content="group.grDescription" placement="top" :show-after="300">
+                    <div class="gr-desc">{{ group.grDescription }}</div>
+                  </el-tooltip>
+                </th>
+              </tr>
+
+              <tr>
+                <th
+                  v-for="indicator in indicators"
+                  :key="indicator.ipId"
                   class="th-indicator"
-              >
-                <div class="indicator-name">{{ ind.ipCode }}</div>
-                <el-tooltip :content="ind.ipDescription" placement="top" :show-after="300">
-                  <div class="indicator-desc">{{ ind.ipDescription }}</div>
-                </el-tooltip>
-              </th>
-            </tr>
+                >
+                  <div class="indicator-name">{{ indicator.ipCode }}</div>
+                  <el-tooltip :content="indicator.ipDescription" placement="top" :show-after="300">
+                    <div class="indicator-desc">{{ indicator.ipDescription }}</div>
+                  </el-tooltip>
+                </th>
+              </tr>
             </thead>
 
             <tbody>
-            <!-- 每门课程一行 -->
-            <tr v-for="course in visibleCourses" :key="course.courseId">
-              <td class="td-course">{{ course.courseName }}</td>
-              <td
-                  v-for="ind in indicators"
-                  :key="ind.ipId"
+              <tr v-for="course in visibleCourses" :key="course.courseId">
+                <td class="td-course">{{ course.courseName }}</td>
+                <td
+                  v-for="indicator in indicators"
+                  :key="indicator.ipId"
                   class="td-cell"
-              >
-                <div class="cell-inner">
-                  <el-checkbox
-                      :model-value="isChecked(course.courseId, ind.ipId)"
-                      @change="(val) => onCheckChange(course.courseId, ind.ipId, val)"
-                  />
-                  <el-input-number
-                      :model-value="getWeight(course.courseId, ind.ipId)"
-                      :disabled="!isChecked(course.courseId, ind.ipId)"
+                >
+                  <div class="cell-inner">
+                    <el-checkbox
+                      :model-value="isChecked(course.courseId, indicator.ipId)"
+                      @change="(value) => onCheckChange(course.courseId, indicator.ipId, value)"
+                    />
+                    <el-input-number
+                      :model-value="getWeight(course.courseId, indicator.ipId)"
+                      :disabled="!isChecked(course.courseId, indicator.ipId)"
                       :min="0"
                       :max="1"
                       :step="0.05"
@@ -138,46 +159,44 @@
                       controls-position="right"
                       size="small"
                       style="width: 96px"
-                      @change="(val) => onWeightChange(course.courseId, ind.ipId, val)"
-                  />
-                </div>
-              </td>
-            </tr>
+                      @change="(value) => onWeightChange(course.courseId, indicator.ipId, value)"
+                    />
+                  </div>
+                </td>
+              </tr>
 
-            <!-- 列权重合计行 -->
-            <tr class="tr-sum-spacer" aria-hidden="true">
-              <td :colspan="indicators.length + 1"></td>
-            </tr>
-            <tr class="tr-sum">
-              <td class="td-sum-label">列权重合计（Σ）</td>
-              <td
-                  v-for="ind in indicators"
-                  :key="ind.ipId"
+              <tr class="tr-sum-spacer" aria-hidden="true">
+                <td :colspan="indicators.length + 1"></td>
+              </tr>
+
+              <tr class="tr-sum">
+                <td class="td-sum-label">列权重合计（Σ）</td>
+                <td
+                  v-for="indicator in indicators"
+                  :key="indicator.ipId"
                   class="td-sum"
-              >
-                <div class="sum-inner">
-                    <span :class="isColumnValid(ind.ipId) ? 'sum-valid' : 'sum-invalid'">
-                      {{ getColumnSum(ind.ipId).toFixed(2) }}
+                >
+                  <div class="sum-inner">
+                    <span :class="isColumnValid(indicator.ipId) ? 'sum-valid' : 'sum-invalid'">
+                      {{ getColumnSum(indicator.ipId).toFixed(2) }}
                     </span>
-                  <el-icon v-if="isColumnValid(ind.ipId)" color="#67c23a" size="15">
-                    <CircleCheck />
-                  </el-icon>
-                  <el-icon v-else color="#f56c6c" size="15">
-                    <CircleClose />
-                  </el-icon>
-                </div>
-              </td>
-            </tr>
+                    <el-icon v-if="isColumnValid(indicator.ipId)" color="#67c23a" size="15">
+                      <CircleCheck />
+                    </el-icon>
+                    <el-icon v-else color="#f56c6c" size="15">
+                      <CircleClose />
+                    </el-icon>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- 底部操作 -->
       <div class="bottom-actions">
         <el-button type="primary" :loading="saveLoading" @click="handleSave">保存矩阵</el-button>
         <el-button @click="handleFormReset">重置</el-button>
-        <el-button @click="router.go(-1)">返回</el-button>
       </div>
     </el-card>
   </div>
@@ -186,7 +205,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, InfoFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import {
   getSupportMatrixApi,
@@ -198,7 +217,6 @@ import {
 
 const router = useRouter()
 
-// ========== 筛选 ==========
 const filters = reactive({
   majorId: null,
   courseId: null,
@@ -206,6 +224,13 @@ const filters = reactive({
 
 const majorOptions = ref([])
 const courseOptions = ref([])
+const tableLoading = ref(false)
+const saveLoading = ref(false)
+const courses = ref([])
+const indicators = ref([])
+const matrixData = ref({})
+
+let matrixSnapshot = {}
 
 async function loadOptions() {
   majorOptions.value = await listMajorsForMatrixApi()
@@ -214,7 +239,9 @@ async function loadOptions() {
 async function onMajorChange(majorId) {
   filters.courseId = null
   courseOptions.value = []
+
   if (!majorId) return
+
   courseOptions.value = await listCoursesApi({ majorId })
 }
 
@@ -225,18 +252,9 @@ function resetFilters() {
   courses.value = []
   indicators.value = []
   matrixData.value = {}
+  matrixSnapshot = {}
 }
 
-// ========== 矩阵数据 ==========
-const tableLoading = ref(false)
-const saveLoading = ref(false)
-
-const courses = ref([])       // [{ courseId, courseName }]
-const indicators = ref([])    // [{ ipId, ipCode, ipDescription }]
-// matrixData: { `${courseId}_${ipId}`: { checked: bool, weight: number } }
-const matrixData = ref({})
-// 初始快照，用于重置
-let matrixSnapshot = {}
 const visibleCourses = computed(() => {
   if (!filters.courseId) {
     return courses.value
@@ -244,19 +262,25 @@ const visibleCourses = computed(() => {
   return courses.value.filter((course) => course.courseId === filters.courseId)
 })
 
-// 按毕业要求分组指标点，用于表头渲染
-// 返回 [{ grId, grCode, indicators: [...] }, ...]
 const indicatorGroups = computed(() => {
   const map = new Map()
-  indicators.value.forEach((ind) => {
-    const key = ind.grId ?? 'other'
+
+  indicators.value.forEach((indicator) => {
+    const key = indicator.grId ?? 'other'
     if (!map.has(key)) {
-      map.set(key, { grId: ind.grId, grCode: ind.grCode ?? '其他', grDescription: ind.grDescription ?? '', indicators: [] })
+      map.set(key, {
+        grId: indicator.grId,
+        grCode: indicator.grCode ?? '其他',
+        grDescription: indicator.grDescription ?? '',
+        indicators: [],
+      })
     }
-    map.get(key).indicators.push(ind)
+    map.get(key).indicators.push(indicator)
   })
+
   return Array.from(map.values())
 })
+
 const graduationRequirementCount = computed(() => indicatorGroups.value.length)
 
 function cellKey(courseId, ipId) {
@@ -271,26 +295,32 @@ function getWeight(courseId, ipId) {
   return matrixData.value[cellKey(courseId, ipId)]?.weight ?? 0
 }
 
-function onCheckChange(courseId, ipId, val) {
-  const k = cellKey(courseId, ipId)
-  if (!matrixData.value[k]) {
-    matrixData.value[k] = { checked: false, weight: 0 }
+function onCheckChange(courseId, ipId, value) {
+  const key = cellKey(courseId, ipId)
+
+  if (!matrixData.value[key]) {
+    matrixData.value[key] = { checked: false, weight: 0 }
   }
-  matrixData.value[k].checked = val
-  if (!val) matrixData.value[k].weight = 0
+
+  matrixData.value[key].checked = value
+  if (!value) {
+    matrixData.value[key].weight = 0
+  }
 }
 
-function onWeightChange(courseId, ipId, val) {
-  const k = cellKey(courseId, ipId)
-  if (!matrixData.value[k]) return
-  matrixData.value[k].weight = val ?? 0
+function onWeightChange(courseId, ipId, value) {
+  const key = cellKey(courseId, ipId)
+  if (!matrixData.value[key]) return
+  matrixData.value[key].weight = value ?? 0
 }
 
 function getColumnSum(ipId) {
   let total = 0
-  courses.value.forEach((c) => {
-    const cell = matrixData.value[cellKey(c.courseId, ipId)]
-    if (cell?.checked) total += cell.weight ?? 0
+  courses.value.forEach((course) => {
+    const cell = matrixData.value[cellKey(course.courseId, ipId)]
+    if (cell?.checked) {
+      total += cell.weight ?? 0
+    }
   })
   return Math.round(total * 100) / 100
 }
@@ -299,21 +329,22 @@ function isColumnValid(ipId) {
   return getColumnSum(ipId) === 1.0
 }
 
-// 从后端数据构建 matrixData
 function buildMatrixData(serverRows) {
-  // serverRows: [{ courseId, ipId, weight }]
   const data = {}
-  courses.value.forEach((c) => {
-    indicators.value.forEach((ind) => {
-      data[cellKey(c.courseId, ind.ipId)] = { checked: false, weight: 0 }
+
+  courses.value.forEach((course) => {
+    indicators.value.forEach((indicator) => {
+      data[cellKey(course.courseId, indicator.ipId)] = { checked: false, weight: 0 }
     })
   })
+
   serverRows.forEach((row) => {
-    const k = cellKey(row.courseId, row.ipId)
-    if (data[k] !== undefined) {
-      data[k] = { checked: true, weight: row.weight ?? 0 }
+    const key = cellKey(row.courseId, row.ipId)
+    if (data[key] !== undefined) {
+      data[key] = { checked: true, weight: row.weight ?? 0 }
     }
   })
+
   return data
 }
 
@@ -322,6 +353,7 @@ async function loadMatrix() {
     ElMessage.warning('请先选择专业')
     return
   }
+
   tableLoading.value = true
   try {
     const [courseList, indicatorList, matrixRows] = await Promise.all([
@@ -329,8 +361,10 @@ async function loadMatrix() {
       listIndicatorPointsForMatrixApi({ majorId: filters.majorId }),
       getSupportMatrixApi({ majorId: filters.majorId }),
     ])
+
     courses.value = courseList
     indicators.value = indicatorList
+
     const built = buildMatrixData(matrixRows)
     matrixData.value = built
     matrixSnapshot = JSON.parse(JSON.stringify(built))
@@ -339,23 +373,25 @@ async function loadMatrix() {
   }
 }
 
-// ========== 保存 / 重置 ==========
 async function handleSave() {
-  const invalidCols = indicators.value.filter((ind) => !isColumnValid(ind.ipId))
-  if (invalidCols.length) {
+  const invalidColumns = indicators.value.filter((indicator) => !isColumnValid(indicator.ipId))
+  if (invalidColumns.length) {
     ElMessage.warning(
-        `以下指标点列权重之和不等于 1.00：${invalidCols.map((i) => i.ipCode).join('、')}`,
+      `以下指标点列权重之和不等于 1.00：${invalidColumns.map((item) => item.ipCode).join('、')}`,
     )
     return
   }
 
-  // 整理成后端需要的格式：只提交 checked=true 的单元格
   const rows = []
-  courses.value.forEach((c) => {
-    indicators.value.forEach((ind) => {
-      const cell = matrixData.value[cellKey(c.courseId, ind.ipId)]
+  courses.value.forEach((course) => {
+    indicators.value.forEach((indicator) => {
+      const cell = matrixData.value[cellKey(course.courseId, indicator.ipId)]
       if (cell?.checked) {
-        rows.push({ courseId: c.courseId, ipId: ind.ipId, weight: cell.weight })
+        rows.push({
+          courseId: course.courseId,
+          ipId: indicator.ipId,
+          weight: cell.weight,
+        })
       }
     })
   })
@@ -373,13 +409,13 @@ async function handleSave() {
   }
 }
 
-async function handleFormReset() {
+function handleFormReset() {
   if (!Object.keys(matrixSnapshot).length) return
+
   matrixData.value = JSON.parse(JSON.stringify(matrixSnapshot))
   ElMessage.info('已重置为上次保存状态')
 }
 
-// ========== 初始化 ==========
 onMounted(async () => {
   await loadOptions()
 })
@@ -416,17 +452,14 @@ onMounted(async () => {
   line-height: 1.75;
 }
 
-/* 筛选栏 */
 .filter-form {
   margin-bottom: 16px;
 }
 
-/* 提示 */
 .notice-alert {
   margin-bottom: 24px;
 }
 
-/* 矩阵容器 */
 .matrix-wrap {
   min-height: 160px;
   margin-bottom: 28px;
@@ -443,27 +476,29 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* 自定义滚动条样式（横向 + 纵向） */
 .matrix-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 .matrix-scroll::-webkit-scrollbar-track {
   background: #f5f7fa;
   border-radius: 4px;
 }
+
 .matrix-scroll::-webkit-scrollbar-thumb {
   background: #c0c4cc;
   border-radius: 4px;
 }
+
 .matrix-scroll::-webkit-scrollbar-thumb:hover {
   background: #909399;
 }
+
 .matrix-scroll::-webkit-scrollbar-corner {
   background: #f5f7fa;
 }
 
-/* 矩阵表格 */
 .matrix-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -479,7 +514,6 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* ===== 左上角：横向纵向双固定，层级最高 ===== */
 .th-corner {
   min-width: 160px;
   background: #eef2ff;
@@ -487,7 +521,7 @@ onMounted(async () => {
   top: 0;
   left: 0;
   z-index: 10;
-  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.10);
+  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.1);
   transform: translateZ(0);
 }
 
@@ -501,14 +535,13 @@ onMounted(async () => {
 .corner-diagonal {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      36deg,
-      transparent calc(50% - 1px),
-      #64748b calc(50% - 1px),
-      #64748b calc(50% + 1px),
-      transparent calc(50% + 1px)
-    );
+  background: linear-gradient(
+    36deg,
+    transparent calc(50% - 1px),
+    #64748b calc(50% - 1px),
+    #64748b calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
   pointer-events: none;
 }
 
@@ -528,48 +561,53 @@ onMounted(async () => {
 
 .corner-title-bottom {
   left: 18px;
-  bottom: 40px;
+  bottom: 24px;
   font-size: 18px;
 }
 
-.corner-stats {
-  position: absolute;
-  z-index: 1;
+.corner-tip-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-.corner-stats-top {
-  top: 48px;
-  right: 18px;
-  text-align: right;
-}
-
-.corner-meta {
+.corner-info-trigger {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: #64748b;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
-/* ===== 毕业要求分组行（第一行）===== */
+.corner-info-trigger:hover {
+  color: #2563eb;
+}
+
+.corner-info-trigger-top {
+  top: 14px;
+  right: 0;
+}
+
+.corner-info-trigger-bottom {
+  left: 0;
+  bottom: 32px;
+}
+
 .th-gr-group {
   position: sticky;
   top: 0;
   z-index: 8;
   text-align: center;
   padding: 8px 18px;
+  height: 96px;
   background: #e8edff;
   font-weight: 700;
   font-size: 13px;
@@ -580,6 +618,7 @@ onMounted(async () => {
   border-top: none;
   border-bottom: 1px solid #d6def7;
 }
+
 .th-gr-group:first-of-type {
   border-left: none;
 }
@@ -610,10 +649,9 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-/* ===== 指标点列头（第二行）===== */
 .th-indicator {
   position: sticky;
-  top: 61px;
+  top: 96px;
   z-index: 7;
   min-width: 220px;
   padding: 10px 18px 12px;
@@ -648,7 +686,6 @@ onMounted(async () => {
   text-align: center;
 }
 
-/* ===== 课程名列（左侧固定）===== */
 .td-course {
   padding: 0 24px;
   font-weight: 600;
@@ -666,7 +703,6 @@ onMounted(async () => {
   min-width: 160px;
 }
 
-/* ===== 数据单元格 ===== */
 .td-cell {
   padding: 12px 16px;
   text-align: center;
@@ -691,7 +727,6 @@ onMounted(async () => {
   background: transparent;
 }
 
-/* ===== 列权重合计行 ===== */
 .tr-sum td {
   position: sticky;
   bottom: 0;
@@ -741,7 +776,6 @@ onMounted(async () => {
   color: #dc2626;
 }
 
-/* ===== 底部操作 ===== */
 .bottom-actions {
   display: flex;
   justify-content: center;
