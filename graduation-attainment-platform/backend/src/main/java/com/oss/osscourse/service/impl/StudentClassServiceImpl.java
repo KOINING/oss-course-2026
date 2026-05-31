@@ -12,13 +12,8 @@ import com.oss.osscourse.mapper.StudentClassMapper;
 import com.oss.osscourse.mapper.StudentMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
 import com.oss.osscourse.service.StudentClassService;
+import com.oss.osscourse.util.ImportSheetReader;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,41 +39,29 @@ public class StudentClassServiceImpl implements StudentClassService {
         int totalCount = 0;
         Set<String> processedRecords = new HashSet<>();
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet.getLastRowNum() < 1) {
-                throw new BusinessException(400, "Excel文件无数据行");
+        List<ImportSheetReader.ImportRowData> rows = ImportSheetReader.readDataRows(file);
+        for (ImportSheetReader.ImportRowData row : rows) {
+            if (row.isEmpty()) {
+                continue;
             }
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null || isRowEmpty(row)) {
-                    continue;
-                }
-                totalCount++;
-                int rowNumber = i + 1;
-
-                try {
-                    String error = validateAndImportRow(row, processedRecords);
-                    if (error == null) {
-                        successCount++;
-                    } else {
-                        failedItems.add(StudentClassImportResult.FailedItem.builder()
-                                .rowNumber(rowNumber)
-                                .reason(error)
-                                .build());
-                    }
-                } catch (Exception e) {
+            totalCount++;
+            try {
+                String error = validateAndImportRow(row, processedRecords);
+                if (error == null) {
+                    successCount++;
+                } else {
                     failedItems.add(StudentClassImportResult.FailedItem.builder()
-                            .rowNumber(rowNumber)
-                            .reason("系统错误: " + e.getMessage())
+                            .rowNumber(row.getRowNumber())
+                            .reason(error)
                             .build());
                 }
+            } catch (Exception e) {
+                failedItems.add(StudentClassImportResult.FailedItem.builder()
+                        .rowNumber(row.getRowNumber())
+                        .reason("系统错误: " + e.getMessage())
+                        .build());
             }
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException(400, "Excel文件解析失败: " + e.getMessage());
         }
 
         return StudentClassImportResult.builder()
@@ -89,12 +72,12 @@ public class StudentClassServiceImpl implements StudentClassService {
                 .build();
     }
 
-    private String validateAndImportRow(Row row, Set<String> processedRecords) {
-        String studentNo = getCellStringValue(row.getCell(0));
-        String studentName = getCellStringValue(row.getCell(1));
-        String majorCode = getCellStringValue(row.getCell(2));
-        String enrollmentYear = getCellStringValue(row.getCell(3));
-        String teachingClassCode = getCellStringValue(row.getCell(4));
+    private String validateAndImportRow(ImportSheetReader.ImportRowData row, Set<String> processedRecords) {
+        String studentNo = row.getCell(0);
+        String studentName = row.getCell(1);
+        String majorCode = row.getCell(2);
+        String enrollmentYear = row.getCell(3);
+        String teachingClassCode = row.getCell(4);
 
         if (!hasText(studentNo)) {
             return "学号不能为空";
@@ -199,34 +182,6 @@ public class StudentClassServiceImpl implements StudentClassService {
             throw new BusinessException(404, "学生-教学班关联不存在");
         }
         studentClassMapper.deleteById(scId);
-    }
-
-    private String getCellStringValue(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-        if (cell.getCellType() == CellType.NUMERIC) {
-            double numericValue = cell.getNumericCellValue();
-            if (numericValue == Math.floor(numericValue) && !Double.isInfinite(numericValue)) {
-                return String.valueOf((long) numericValue);
-            }
-            return String.valueOf(numericValue);
-        }
-        if (cell.getCellType() == CellType.STRING) {
-            return cell.getStringCellValue() == null ? null : cell.getStringCellValue().trim();
-        }
-        cell.setCellType(CellType.STRING);
-        return cell.getStringCellValue() == null ? null : cell.getStringCellValue().trim();
-    }
-
-    private boolean isRowEmpty(Row row) {
-        for (int index = 0; index < row.getLastCellNum(); index++) {
-            String value = getCellStringValue(row.getCell(index));
-            if (hasText(value)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private boolean hasText(String value) {
