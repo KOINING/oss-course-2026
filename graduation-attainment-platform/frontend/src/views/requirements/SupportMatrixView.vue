@@ -75,14 +75,20 @@
             <tr>
               <th class="th-corner" rowspan="3">
                 <div class="corner-inner">
-                  <div class="corner-label">
-                    <span>课程</span>
+                  <div class="corner-diagonal"></div>
+                  <div class="corner-title corner-title-top">毕业要求</div>
+                  <div class="corner-title corner-title-bottom">课程要求</div>
+                  <div class="corner-meta">
                     <span>显示 {{ visibleCourses.length }} / 共 {{ courses.length }} 门</span>
                   </div>
                 </div>
               </th>
               <th :colspan="indicators.length" class="th-group">
-                毕业要求指标点（共 {{ indicators.length }} 个）
+                <div class="group-header">
+                  <span class="group-header-title">毕业要求指标点</span>
+                  <span class="group-header-meta">共 {{ graduationRequirementCount }} 条毕业要求</span>
+                  <span class="group-header-meta">共 {{ indicators.length }} 个指标点</span>
+                </div>
               </th>
             </tr>
             <!-- 第二行：毕业要求分组，按 grCode 合并列 -->
@@ -254,6 +260,7 @@ const indicatorGroups = computed(() => {
   })
   return Array.from(map.values())
 })
+const graduationRequirementCount = computed(() => indicatorGroups.value.length)
 
 function cellKey(courseId, ipId) {
   return `${courseId}_${ipId}`
@@ -488,25 +495,57 @@ onMounted(async () => {
 }
 
 .corner-inner {
+  position: relative;
+  min-height: 166px;
+  padding: 0;
+  background: linear-gradient(180deg, #eef2ff 0%, #edf2ff 100%);
+}
+
+.corner-diagonal {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      36deg,
+      transparent calc(50% - 1px),
+      #64748b calc(50% - 1px),
+      #64748b calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  pointer-events: none;
+}
+
+.corner-title {
+  position: absolute;
+  z-index: 1;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 0.02em;
+}
+
+.corner-title-top {
+  top: 26px;
+  right: 20px;
+  font-size: 18px;
+}
+
+.corner-title-bottom {
+  left: 18px;
+  bottom: 46px;
+  font-size: 18px;
+}
+
+.corner-meta {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px 20px;
   gap: 6px;
-  min-height: 140px;
-}
-
-.corner-label {
   font-size: 12px;
-  color: #909399;
-  line-height: 1.6;
-  text-align: center;
-  width: 100%;
-}
-
-.corner-label span {
-  display: block;
+  color: #64748b;
+  font-weight: 600;
 }
 
 /* ===== 合并表头（第一行）===== */
@@ -515,21 +554,42 @@ onMounted(async () => {
   top: 0;
   z-index: 8;
   text-align: center;
-  padding: 14px 20px;
+  padding: 12px 18px;
   background: #eef2ff;
   font-weight: 700;
   font-size: 14px;
   color: #2563eb;
   letter-spacing: 0.02em;
+  border-bottom: 1px solid #d6def7;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 44px;
+}
+
+.group-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.group-header-meta {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
 }
 
 /* ===== 毕业要求分组行（第二行）===== */
 .th-gr-group {
   position: sticky;
-  top: 48px;
+  top: 45px;
   z-index: 7;
   text-align: center;
-  padding: 10px 20px;
+  padding: 8px 18px;
   background: #e8edff;
   font-weight: 700;
   font-size: 13px;
@@ -537,6 +597,8 @@ onMounted(async () => {
   border-left: 2px solid #c7d7ff;
   letter-spacing: 0.02em;
   vertical-align: top;
+  border-top: none;
+  border-bottom: 1px solid #d6def7;
 }
 .th-gr-group:first-of-type {
   border-left: none;
@@ -546,8 +608,8 @@ onMounted(async () => {
   font-weight: 700;
   color: #1f2937;
   font-size: 14px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
   border-bottom: 1px dashed #dbe4ff;
   text-align: center;
 }
@@ -555,7 +617,7 @@ onMounted(async () => {
 .gr-desc {
   font-size: 12px;
   color: #6b7280;
-  line-height: 1.65;
+  line-height: 1.5;
   white-space: normal;
   word-break: break-all;
   display: -webkit-box;
@@ -571,22 +633,22 @@ onMounted(async () => {
 /* ===== 指标点列头（第三行）===== */
 .th-indicator {
   position: sticky;
-  top: 126px;
+  top: 106px;
   z-index: 6;
   min-width: 220px;
-  padding: 14px 20px 16px;
+  padding: 10px 18px 12px;
   background: #f8f9ff;
   vertical-align: top;
   text-align: center;
-  border-top: 2px solid #dbe4ff;
+  border-top: none;
 }
 
 .indicator-name {
   font-weight: 700;
   color: #1f2937;
   font-size: 13px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
   border-bottom: 1px dashed #dbe4ff;
   text-align: center;
 }
@@ -594,7 +656,7 @@ onMounted(async () => {
 .indicator-desc {
   font-size: 12px;
   color: #6b7280;
-  line-height: 1.65;
+  line-height: 1.5;
   white-space: normal;
   word-break: break-all;
   display: -webkit-box;
