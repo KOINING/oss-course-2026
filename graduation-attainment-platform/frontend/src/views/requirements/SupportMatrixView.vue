@@ -606,8 +606,8 @@ onMounted(async () => {
   top: 0;
   z-index: 8;
   text-align: center;
-  padding: 8px 18px;
-  height: 96px;
+  padding: 6px 14px 8px;
+  height: 76px;
   background: #e8edff;
   font-weight: 700;
   font-size: 13px;
@@ -627,8 +627,8 @@ onMounted(async () => {
   font-weight: 700;
   color: #1f2937;
   font-size: 14px;
-  margin-bottom: 6px;
-  padding-bottom: 4px;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
   border-bottom: 1px dashed #dbe4ff;
   text-align: center;
 }
@@ -636,25 +636,25 @@ onMounted(async () => {
 .gr-desc {
   font-size: 12px;
   color: #6b7280;
-  line-height: 1.5;
+  line-height: 1.35;
   white-space: normal;
-  word-break: break-all;
+  word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   cursor: default;
-  min-height: 36px;
+  min-height: 16px;
   text-align: center;
   font-weight: 400;
 }
 
 .th-indicator {
   position: sticky;
-  top: 96px;
+  top: 76px;
   z-index: 7;
-  min-width: 220px;
-  padding: 10px 18px 12px;
+  min-width: 180px;
+  padding: 8px 10px 10px;
   background: #f8f9ff;
   vertical-align: top;
   text-align: center;
@@ -676,13 +676,11 @@ onMounted(async () => {
   color: #6b7280;
   line-height: 1.5;
   white-space: normal;
-  word-break: break-all;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  word-break: break-word;
+  display: block;
+  overflow: visible;
   cursor: default;
-  min-height: 36px;
+  min-height: 0;
   text-align: center;
 }
 
@@ -721,7 +719,7 @@ onMounted(async () => {
 }
 
 .tr-sum-spacer td {
-  height: 62px;
+  height: 16px;
   padding: 0;
   border: none;
   background: transparent;
