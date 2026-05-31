@@ -195,7 +195,12 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="专业">
           <el-select v-model="filters.majorId" placeholder="全部专业" clearable filterable style="width: 180px">
-            <el-option v-for="major in majorOptions" :key="major.majorId" :label="major.majorName" :value="major.majorId" />
+            <el-option
+              v-for="major in majorOptions"
+              :key="major.majorId"
+              :label="major.majorName"
+              :value="major.majorId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="入学年份">
@@ -203,7 +208,12 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 140px">
-            <el-option v-for="status in statusOptions" :key="status.value" :label="status.label" :value="status.value" />
+            <el-option
+              v-for="status in statusOptions"
+              :key="status.value"
+              :label="status.label"
+              :value="status.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -225,7 +235,9 @@ onMounted(async () => {
         <el-table-column prop="enrollmentYear" label="入学年份" min-width="100" />
         <el-table-column label="状态" min-width="100">
           <template #default="{ row }">
-            <el-tag effect="plain">{{ row.statusText || statusOptions.find((item) => item.value === row.status)?.label }}</el-tag>
+            <el-tag effect="plain">
+              {{ row.statusText || statusOptions.find((item) => item.value === row.status)?.label }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
@@ -266,15 +278,31 @@ onMounted(async () => {
           </el-form-item>
           <el-form-item label="专业" prop="majorId">
             <el-select v-model="form.majorId" placeholder="请选择专业" filterable style="width: 100%">
-              <el-option v-for="major in majorOptions" :key="major.majorId" :label="major.majorName" :value="major.majorId" />
+              <el-option
+                v-for="major in majorOptions"
+                :key="major.majorId"
+                :label="major.majorName"
+                :value="major.majorId"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="入学年份" prop="enrollmentYear">
-            <el-input-number v-model="form.enrollmentYear" :min="2000" :max="2100" controls-position="right" style="width: 100%" />
+            <el-input-number
+              v-model="form.enrollmentYear"
+              :min="2000"
+              :max="2100"
+              controls-position="right"
+              style="width: 100%"
+            />
           </el-form-item>
           <el-form-item label="状态" prop="status">
             <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
-              <el-option v-for="status in statusOptions" :key="status.value" :label="status.label" :value="status.value" />
+              <el-option
+                v-for="status in statusOptions"
+                :key="status.value"
+                :label="status.label"
+                :value="status.value"
+              />
             </el-select>
           </el-form-item>
         </el-form>
@@ -298,23 +326,23 @@ onMounted(async () => {
 }
 
 .page-header h1 {
-  margin: 4px 0 8px;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 8px 0 6px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
-  color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
   margin: 0;
   color: #64748b;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .filter-form {
@@ -323,7 +351,7 @@ onMounted(async () => {
 
 .table-toolbar {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -331,6 +359,6 @@ onMounted(async () => {
 .table-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 </style>

@@ -214,22 +214,42 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="课程">
           <el-select v-model="filters.courseId" placeholder="全部课程" clearable filterable style="width: 180px">
-            <el-option v-for="course in courseOptions" :key="course.courseId" :label="`${course.courseCode} - ${course.courseName}`" :value="course.courseId" />
+            <el-option
+              v-for="course in courseOptions"
+              :key="course.courseId"
+              :label="`${course.courseCode} - ${course.courseName}`"
+              :value="course.courseId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="学期">
           <el-select v-model="filters.termId" placeholder="全部学期" clearable style="width: 180px">
-            <el-option v-for="term in termOptions" :key="term.termId" :label="term.termCode" :value="term.termId" />
+            <el-option
+              v-for="term in termOptions"
+              :key="term.termId"
+              :label="term.termCode"
+              :value="term.termId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="教师">
           <el-select v-model="filters.teacherId" placeholder="全部教师" clearable filterable style="width: 160px">
-            <el-option v-for="teacher in teacherOptions" :key="teacher.id" :label="teacher.teacherName" :value="teacher.id" />
+            <el-option
+              v-for="teacher in teacherOptions"
+              :key="teacher.id"
+              :label="teacher.teacherName"
+              :value="teacher.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="计算状态">
           <el-select v-model="filters.calcStatus" placeholder="全部状态" clearable style="width: 150px">
-            <el-option v-for="status in calcStatusOptions" :key="status.value" :label="status.label" :value="status.value" />
+            <el-option
+              v-for="status in calcStatusOptions"
+              :key="status.value"
+              :label="status.label"
+              :value="status.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -260,9 +280,7 @@ onMounted(async () => {
             <div class="table-actions">
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-dropdown @command="(command) => handleUpdateStatus(row, command)">
-                <el-button link type="warning">
-                  更新状态
-                </el-button>
+                <el-button link type="warning">更新状态</el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item
@@ -295,17 +313,32 @@ onMounted(async () => {
           </el-form-item>
           <el-form-item label="课程" prop="courseId">
             <el-select v-model="form.courseId" placeholder="请选择课程" filterable style="width: 100%">
-              <el-option v-for="course in courseOptions" :key="course.courseId" :label="`${course.courseCode} - ${course.courseName}`" :value="course.courseId" />
+              <el-option
+                v-for="course in courseOptions"
+                :key="course.courseId"
+                :label="`${course.courseCode} - ${course.courseName}`"
+                :value="course.courseId"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="学期" prop="termId">
             <el-select v-model="form.termId" placeholder="请选择学期" style="width: 100%">
-              <el-option v-for="term in termOptions" :key="term.termId" :label="term.termCode" :value="term.termId" />
+              <el-option
+                v-for="term in termOptions"
+                :key="term.termId"
+                :label="term.termCode"
+                :value="term.termId"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="主讲教师" prop="teacherId">
             <el-select v-model="form.teacherId" placeholder="请选择教师" filterable style="width: 100%">
-              <el-option v-for="teacher in teacherOptions" :key="teacher.id" :label="teacher.teacherName" :value="teacher.id" />
+              <el-option
+                v-for="teacher in teacherOptions"
+                :key="teacher.id"
+                :label="teacher.teacherName"
+                :value="teacher.id"
+              />
             </el-select>
           </el-form-item>
         </el-form>
@@ -329,23 +362,23 @@ onMounted(async () => {
 }
 
 .page-header h1 {
-  margin: 4px 0 8px;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 8px 0 6px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
-  color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
   margin: 0;
   color: #64748b;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .filter-form {
@@ -354,13 +387,14 @@ onMounted(async () => {
 
 .table-toolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
 .table-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 </style>

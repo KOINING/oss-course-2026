@@ -48,6 +48,7 @@ const protectedChildren = getProtectedRoutes().map((item) => ({
     entities: item.entities,
     moduleTitle: item.moduleTitle,
     sectionLabel: item.sectionLabel,
+    allowedRoles: item.roles,
   },
 }))
 
@@ -99,6 +100,14 @@ router.beforeEach(async (to) => {
       if (!getToken()) {
         return { name: ROUTE_NAMES.LOGIN, query: { redirect: to.fullPath } }
       }
+    }
+  }
+
+  const allowedRoles = Array.isArray(to.meta.allowedRoles) ? to.meta.allowedRoles : []
+  if (!isPublic && allowedRoles.length > 0) {
+    const hasAccess = allowedRoles.some((roleCode) => userStore.roleCodes.includes(roleCode))
+    if (!hasAccess) {
+      return DEFAULT_HOME_PATH
     }
   }
 

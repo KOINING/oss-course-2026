@@ -27,6 +27,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const isAcademicAffairs = computed(() => userStore.roleCodes.includes('academic_affairs'))
+const canManageCourses = computed(() => isAcademicAffairs.value)
 const activeTab = ref('academic-term')
 
 const collegeOptions = ref([])
@@ -129,6 +130,10 @@ async function loadMajors() {
 }
 
 async function loadCourses() {
+  if (!canManageCourses.value) {
+    courses.value = []
+    return
+  }
   courseLoading.value = true
   try {
     courses.value = await listCoursesApi(normalizeCourseFilters())
@@ -274,7 +279,10 @@ function goToCourseImport() {
 
 onMounted(async () => {
   await loadSharedOptions()
-  await Promise.all([loadMajors(), loadCourses()])
+  await loadMajors()
+  if (canManageCourses.value) {
+    await loadCourses()
+  }
 })
 </script>
 
@@ -311,7 +319,12 @@ onMounted(async () => {
               </el-form-item>
               <el-form-item label="所属学院">
                 <el-select v-model="majorFilters.collegeId" placeholder="全部学院" clearable style="width: 160px">
-                  <el-option v-for="college in collegeOptions" :key="college.collegeId" :label="college.collegeName" :value="college.collegeId" />
+                  <el-option
+                    v-for="college in collegeOptions"
+                    :key="college.collegeId"
+                    :label="college.collegeName"
+                    :value="college.collegeId"
+                  />
                 </el-select>
               </el-form-item>
               <el-form-item label="状态">
@@ -363,7 +376,7 @@ onMounted(async () => {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="课程管理" name="course">
+        <el-tab-pane v-if="canManageCourses" label="课程管理" name="course">
           <div class="tab-content">
             <el-form :inline="true" :model="courseFilters" class="filter-form">
               <el-form-item label="课程代码">
@@ -374,7 +387,12 @@ onMounted(async () => {
               </el-form-item>
               <el-form-item label="所属专业">
                 <el-select v-model="courseFilters.majorId" placeholder="全部专业" clearable filterable style="width: 180px">
-                  <el-option v-for="major in majorOptions" :key="major.majorId" :label="major.majorName" :value="major.majorId" />
+                  <el-option
+                    v-for="major in majorOptions"
+                    :key="major.majorId"
+                    :label="major.majorName"
+                    :value="major.majorId"
+                  />
                 </el-select>
               </el-form-item>
               <el-form-item label="状态">
@@ -394,9 +412,7 @@ onMounted(async () => {
                 <el-icon><Plus /></el-icon>
                 新增课程
               </el-button>
-              <el-button v-if="isAcademicAffairs" type="success" plain @click="goToCourseImport">
-                前往数据导入
-              </el-button>
+              <el-button type="success" plain @click="goToCourseImport">前往数据导入</el-button>
             </div>
 
             <el-table v-loading="courseLoading" :data="courses" border stripe>
@@ -445,24 +461,29 @@ onMounted(async () => {
       </el-tabs>
     </el-card>
 
-    <el-dialog v-model="majorDialogVisible" :title="majorDialogMode === 'create' ? '新增专业' : '编辑专业'" width="500px" destroy-on-close>
-      <el-form ref="majorFormRef" :model="majorForm" :rules="majorFormRules" label-width="90px">
+    <el-dialog v-model="majorDialogVisible" :title="majorDialogMode === 'create' ? '新增专业' : '编辑专业'" width="520px" destroy-on-close>
+      <el-form ref="majorFormRef" :model="majorForm" :rules="majorFormRules" label-width="100px">
         <el-form-item label="专业代码" prop="majorCode">
-          <el-input v-model.trim="majorForm.majorCode" maxlength="20" :disabled="majorDialogMode === 'edit'" />
+          <el-input v-model.trim="majorForm.majorCode" maxlength="32" />
         </el-form-item>
         <el-form-item label="专业名称" prop="majorName">
-          <el-input v-model.trim="majorForm.majorName" maxlength="100" />
+          <el-input v-model.trim="majorForm.majorName" maxlength="50" />
         </el-form-item>
         <el-form-item label="所属学院" prop="collegeId">
-          <el-select v-model="majorForm.collegeId" placeholder="请选择所属学院" style="width: 100%">
-            <el-option v-for="college in collegeOptions" :key="college.collegeId" :label="college.collegeName" :value="college.collegeId" />
+          <el-select v-model="majorForm.collegeId" placeholder="请选择学院" style="width: 100%">
+            <el-option
+              v-for="college in collegeOptions"
+              :key="college.collegeId"
+              :label="college.collegeName"
+              :value="college.collegeId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="majorForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
+          <el-select v-model="majorForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option :value="1" label="启用" />
+            <el-option :value="0" label="停用" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -472,26 +493,31 @@ onMounted(async () => {
     </el-dialog>
 
     <el-dialog v-model="courseDialogVisible" :title="courseDialogMode === 'create' ? '新增课程' : '编辑课程'" width="560px" destroy-on-close>
-      <el-form ref="courseFormRef" :model="courseForm" :rules="courseFormRules" label-width="90px">
+      <el-form ref="courseFormRef" :model="courseForm" :rules="courseFormRules" label-width="100px">
         <el-form-item label="课程代码" prop="courseCode">
-          <el-input v-model.trim="courseForm.courseCode" maxlength="20" :disabled="courseDialogMode === 'edit'" />
+          <el-input v-model.trim="courseForm.courseCode" maxlength="32" />
         </el-form-item>
         <el-form-item label="课程名称" prop="courseName">
-          <el-input v-model.trim="courseForm.courseName" maxlength="100" />
+          <el-input v-model.trim="courseForm.courseName" maxlength="50" />
         </el-form-item>
         <el-form-item label="学分" prop="credit">
-          <el-input-number v-model="courseForm.credit" :min="0" :max="20" :precision="1" controls-position="right" style="width: 100%" />
+          <el-input-number v-model="courseForm.credit" :min="0" :step="0.5" controls-position="right" style="width: 100%" />
         </el-form-item>
         <el-form-item label="所属专业" prop="majorIds">
-          <el-select v-model="courseForm.majorIds" multiple filterable placeholder="请选择所属专业" style="width: 100%">
-            <el-option v-for="major in majorOptions" :key="major.majorId" :label="major.majorName" :value="major.majorId" />
+          <el-select v-model="courseForm.majorIds" placeholder="请选择专业" multiple filterable style="width: 100%">
+            <el-option
+              v-for="major in majorOptions"
+              :key="major.majorId"
+              :label="major.majorName"
+              :value="major.majorId"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="courseForm.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
+          <el-select v-model="courseForm.status" placeholder="请选择状态" style="width: 100%">
+            <el-option :value="1" label="启用" />
+            <el-option :value="0" label="停用" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -513,50 +539,54 @@ onMounted(async () => {
 }
 
 .page-header h1 {
-  margin: 4px 0 8px;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 8px 0 6px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
-  color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
   margin: 0;
-  max-width: 720px;
   color: #64748b;
-  line-height: 1.75;
+  line-height: 1.7;
+}
+
+.data-tabs :deep(.el-tabs__header) {
+  margin-bottom: 20px;
 }
 
 .tab-content {
-  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .filter-form {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .table-toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
 }
 
 .table-actions {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
 }
 
 .major-tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 </style>

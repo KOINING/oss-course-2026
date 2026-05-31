@@ -53,7 +53,7 @@ export const NAVIGATION_SECTIONS = [
         label: '基础数据',
         path: '/basic-data',
         routeName: ROUTE_NAMES.BASIC_DATA,
-        roles: ['admin', 'academic_affairs'],
+        roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
           '维护学年学期、学院、专业、课程等基础主数据，为毕业要求配置和后续计算流程提供统一数据底座。',
@@ -64,7 +64,7 @@ export const NAVIGATION_SECTIONS = [
         label: '教学班管理',
         path: '/teaching-class',
         routeName: ROUTE_NAMES.TEACHING_CLASS,
-        roles: ['admin', 'academic_affairs'],
+        roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
           '管理课程的教学班信息，包括班级编号、授课教师、班级容量等。',
