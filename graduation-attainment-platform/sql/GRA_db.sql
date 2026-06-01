@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS course_major (
 
 CREATE TABLE IF NOT EXISTS teaching_class (
     class_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    class_code VARCHAR(32) NOT NULL UNIQUE COMMENT '教学班编号，业务唯一标识',
     class_name VARCHAR(50) NOT NULL,
     course_id BIGINT NOT NULL,
     term_id BIGINT NOT NULL,
@@ -549,14 +550,14 @@ INSERT INTO academic_term (term_code, academic_year, semester, start_date, end_d
 -- D. 系统用户（8 条）
 -- ================================================================
 INSERT INTO sys_user (username, password, real_name, email, phone, status) VALUES
-('admin',          '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '赵管理员', 'admin@university.edu.cn', '13800000001', 1),
-('teacher_zhang',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '张教授',   'zhang@university.edu.cn',  '13800000002', 1),
-('teacher_li',     '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '李副教授', 'li@university.edu.cn',    '13800000003', 1),
-('teacher_wang',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '王讲师',   'wang@university.edu.cn',  '13800000004', 1),
-('director_chen',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '陈主任',   'chen@university.edu.cn',  '13800000005', 1),
-('academic_wu',    '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '吴老师',   'wu@university.edu.cn',    '13800000006', 1),
-('student_zhou',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '周一帆',   'zhou@university.edu.cn',   '13800000007', 1),
-('student_chen',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '陈思远',   'chen2@university.edu.cn',  '13800000008', 1);
+('admin',          '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '赵管理员', 'admin@university.edu.cn', '13800000001', 1),
+('teacher_zhang',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '张教授',   'zhang@university.edu.cn',  '13800000002', 1),
+('teacher_li',     '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '李副教授', 'li@university.edu.cn',    '13800000003', 1),
+('teacher_wang',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '王讲师',   'wang@university.edu.cn',  '13800000004', 1),
+('director_chen',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '陈主任',   'chen@university.edu.cn',  '13800000005', 1),
+('academic_wu',    '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '吴老师',   'wu@university.edu.cn',    '13800000006', 1),
+('student_zhou',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '周一帆',   'zhou@university.edu.cn',   '13800000007', 1),
+('student_chen',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '陈思远',   'chen2@university.edu.cn',  '13800000008', 1);
 
 -- ================================================================
 -- E. 教师（3 条，与 sys_user 中教师账号对应）
@@ -679,10 +680,10 @@ INSERT INTO course_major (course_id, major_id) VALUES
 -- ================================================================
 -- N. 教学班级（3 个）
 -- ================================================================
-INSERT INTO teaching_class (class_name, course_id, term_id, teacher_id) VALUES
-('数据结构2024-2025-1班', 1, 1, 1),
-('操作系统2024-2025-1班', 2, 1, 2),
-('计算机网络2024-2025-1班', 3, 1, 3);
+INSERT INTO teaching_class (class_code, class_name, course_id, term_id, teacher_id) VALUES
+('TC2024CS01', '数据结构2024-2025-1班', 1, 1, 1),
+('TC2024CS02', '操作系统2024-2025-1班', 2, 1, 2),
+('TC2024CS03', '计算机网络2024-2025-1班', 3, 1, 3);
 
 -- ================================================================
 -- O. 学生（10 名，计算机科学与技术 2022 级）

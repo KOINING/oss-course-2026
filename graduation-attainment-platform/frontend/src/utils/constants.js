@@ -4,13 +4,18 @@ export const ROUTE_NAMES = {
   LOGIN: 'Login',
   HOME: 'Home',
   BASIC_DATA: 'BasicData',
+  COURSE_MANAGEMENT: 'CourseManagement',
+  TEACHING_CLASS: 'TeachingClass',
+  STUDENT_LIST: 'StudentList',
   ACCOUNT_ROLE_MANAGEMENT: 'AccountRoleManagement',
   REQUIREMENTS: 'Requirements',
   SUPPORT_MATRIX: 'SupportMatrix',
+  DATA_IMPORT: 'DataImport',
   COURSE_OBJECTIVES: 'CourseObjectives',
   ASSESSMENT: 'Assessment',
   REPORTS: 'Reports',
   NOT_FOUND: 'NotFound',
+  COMPONENT_DEMO: 'ComponentDemo',
 }
 
 export const DEFAULT_HOME_PATH = '/home'
