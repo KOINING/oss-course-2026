@@ -169,10 +169,6 @@ function goToStudentImport() {
   router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'students' } })
 }
 
-function goToStudentRelationImport() {
-  router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'student-classes' } })
-}
-
 function formatStatus(status) {
   return statusOptions.find((item) => item.value === status)?.label || '-'
 }
@@ -198,7 +194,7 @@ onMounted(async () => {
 
       <el-alert type="info" :closable="false" class="page-tip" show-icon>
         <template #title>
-          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班与学生的关联关系请通过“教学班学生关联导入”或教学班管理中的“查看名单”维护。
+          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班学生关联请在教学班管理或数据导入页维护。
         </template>
       </el-alert>
 
@@ -241,7 +237,6 @@ onMounted(async () => {
       <div class="table-toolbar">
         <el-button type="primary" @click="openCreateDialog">新增学生</el-button>
         <el-button type="success" plain @click="goToStudentImport">前往批量导入学生基础信息</el-button>
-        <el-button type="warning" plain @click="goToStudentRelationImport">前往导入教学班学生名单</el-button>
       </div>
 
       <el-table v-loading="tableLoading" :data="rows" border stripe>

@@ -110,6 +110,25 @@ function formatCalcStatus(value) {
   return calcStatusOptions.find((option) => option.value === value)?.label || value || '未设置'
 }
 
+function getCalcStatusTagType(value) {
+  switch (value) {
+    case 'unsubmitted':
+      return 'info'
+    case 'score_imported':
+      return 'warning'
+    case 'calculating':
+      return 'primary'
+    case 'locked':
+      return 'success'
+    default:
+      return 'info'
+  }
+}
+
+function getCalcStatusTagClass(value) {
+  return `calc-status-tag calc-status-tag--${value || 'default'}`
+}
+
 function getStudentById(studentId) {
   return studentDirectory.value.find((student) => student.studentId === studentId)
 }
@@ -375,14 +394,19 @@ onMounted(async () => {
         <el-table-column prop="teacherName" label="主讲教师" min-width="120" />
         <el-table-column label="计算状态" min-width="120">
           <template #default="{ row }">
-            <el-tag effect="plain">{{ formatCalcStatus(row.calcStatus) }}</el-tag>
+            <el-tag
+              effect="plain"
+              :type="getCalcStatusTagType(row.calcStatus)"
+              :class="getCalcStatusTagClass(row.calcStatus)"
+            >
+              {{ formatCalcStatus(row.calcStatus) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button link type="primary" @click="openRelationDrawer(row)">查看名单</el-button>
-              <el-button link type="success" @click="goToStudentClassImportForRow(row)">关联导入</el-button>
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-dropdown @command="(command) => handleUpdateStatus(row, command)">
                 <el-button link type="warning">更新状态</el-button>
@@ -545,6 +569,34 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+:deep(.calc-status-tag) {
+  font-weight: 600;
+}
+
+:deep(.calc-status-tag--unsubmitted) {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+:deep(.calc-status-tag--score_imported) {
+  background-color: #fff7ed;
+  border-color: #fdba74;
+  color: #ea580c;
+}
+
+:deep(.calc-status-tag--calculating) {
+  background-color: #eef2ff;
+  border-color: #a5b4fc;
+  color: #4f46e5;
+}
+
+:deep(.calc-status-tag--locked) {
+  background-color: #ecfdf5;
+  border-color: #86efac;
+  color: #15803d;
 }
 
 .relation-drawer {

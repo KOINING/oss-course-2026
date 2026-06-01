@@ -11,6 +11,10 @@ const route = useRoute()
 const router = useRouter()
 const activeTab = ref('course')
 
+const courseUploadRef = ref(null)
+const studentUploadRef = ref(null)
+const studentClassUploadRef = ref(null)
+
 const COURSE_TEMPLATE_HEADERS = ['所属专业代码', '课程代码', '课程名称', '学分', '状态']
 const COURSE_TEMPLATE_SAMPLE = [
   ['080901', 'CS201', '数据结构', '4.0', '1'],
@@ -121,6 +125,24 @@ function handleStudentClassFileChange(file) {
   resetResult(studentClassResult)
 }
 
+function resetCourseImport() {
+  courseFile.value = null
+  resetResult(courseResult)
+  courseUploadRef.value?.clearFiles()
+}
+
+function resetStudentImport() {
+  studentFile.value = null
+  resetResult(studentResult)
+  studentUploadRef.value?.clearFiles()
+}
+
+function resetStudentClassImport() {
+  studentClassFile.value = null
+  resetResult(studentClassResult)
+  studentClassUploadRef.value?.clearFiles()
+}
+
 async function submitCourseImport() {
   if (!courseFile.value) {
     ElMessage.warning('请先选择课程清单文件')
@@ -215,7 +237,7 @@ const headerMeta = computed(() => ({
   title: route.meta.title || '数据导入',
   summary:
     route.meta.summary ||
-    '通过 Excel 模板批量导入课程清单、学生基础信息和教学班学生关联，并在页面内查看逐行校验结果。',
+    '通过 Excel 模板批量导入课程清单、学生基础信息和教学班学生关联，支持逐行校验、错误定位与结果预览。',
   moduleTitle: route.meta.moduleTitle || '模块 A',
 }))
 </script>
@@ -254,6 +276,7 @@ const headerMeta = computed(() => ({
                 </el-tag>
               </div>
               <el-upload
+                ref="courseUploadRef"
                 drag
                 class="upload-box"
                 :auto-upload="false"
@@ -272,7 +295,7 @@ const headerMeta = computed(() => ({
                 <el-button type="primary" :loading="courseImporting" :disabled="!courseFile" @click="submitCourseImport">
                   开始导入
                 </el-button>
-                <el-button @click="courseFile = null; resetResult(courseResult)">重置</el-button>
+                <el-button @click="resetCourseImport">重置</el-button>
               </div>
             </section>
 
@@ -307,6 +330,7 @@ const headerMeta = computed(() => ({
                 </el-tag>
               </div>
               <el-upload
+                ref="studentUploadRef"
                 drag
                 class="upload-box"
                 :auto-upload="false"
@@ -325,7 +349,7 @@ const headerMeta = computed(() => ({
                 <el-button type="primary" :loading="studentImporting" :disabled="!studentFile" @click="submitStudentImport">
                   开始导入
                 </el-button>
-                <el-button @click="studentFile = null; resetResult(studentResult)">重置</el-button>
+                <el-button @click="resetStudentImport">重置</el-button>
               </div>
             </section>
 
@@ -384,6 +408,7 @@ const headerMeta = computed(() => ({
                 </el-tag>
               </div>
               <el-upload
+                ref="studentClassUploadRef"
                 drag
                 class="upload-box"
                 :auto-upload="false"
@@ -407,7 +432,7 @@ const headerMeta = computed(() => ({
                 >
                   开始导入
                 </el-button>
-                <el-button @click="studentClassFile = null; resetResult(studentClassResult)">重置</el-button>
+                <el-button @click="resetStudentClassImport">重置</el-button>
               </div>
             </section>
 
@@ -463,7 +488,8 @@ const headerMeta = computed(() => ({
 
 .page-summary {
   margin: 0;
-  max-width: 760px;
+  width: 100%;
+  max-width: none;
   color: #64748b;
   line-height: 1.75;
 }
