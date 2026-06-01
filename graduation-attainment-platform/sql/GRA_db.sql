@@ -550,14 +550,14 @@ INSERT INTO academic_term (term_code, academic_year, semester, start_date, end_d
 -- D. 系统用户（8 条）
 -- ================================================================
 INSERT INTO sys_user (username, password, real_name, email, phone, status) VALUES
-('admin',          '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '赵管理员', 'admin@university.edu.cn', '13800000001', 1),
-('teacher_zhang',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '张教授',   'zhang@university.edu.cn',  '13800000002', 1),
-('teacher_li',     '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '李副教授', 'li@university.edu.cn',    '13800000003', 1),
-('teacher_wang',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '王讲师',   'wang@university.edu.cn',  '13800000004', 1),
-('director_chen',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '陈主任',   'chen@university.edu.cn',  '13800000005', 1),
-('academic_wu',    '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '吴老师',   'wu@university.edu.cn',    '13800000006', 1),
-('student_zhou',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '周一帆',   'zhou@university.edu.cn',   '13800000007', 1),
-('student_chen',   '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '陈思远',   'chen2@university.edu.cn',  '13800000008', 1);
+('admin',          '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '赵管理员', 'admin@university.edu.cn', '13800000001', 1),
+('teacher_zhang',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '张教授',   'zhang@university.edu.cn',  '13800000002', 1),
+('teacher_li',     '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '李副教授', 'li@university.edu.cn',    '13800000003', 1),
+('teacher_wang',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '王讲师',   'wang@university.edu.cn',  '13800000004', 1),
+('director_chen',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '陈主任',   'chen@university.edu.cn',  '13800000005', 1),
+('academic_wu',    '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '吴老师',   'wu@university.edu.cn',    '13800000006', 1),
+('student_zhou',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '周一帆',   'zhou@university.edu.cn',   '13800000007', 1),
+('student_chen',   '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '陈思远',   'chen2@university.edu.cn',  '13800000008', 1);
 
 -- ================================================================
 -- E. 教师（3 条，与 sys_user 中教师账号对应）

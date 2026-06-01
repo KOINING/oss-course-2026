@@ -7,19 +7,19 @@ export const ROLE_META = {
       '负责系统初始化配置、维护全局基础字典，并管理其他业务角色的账号与基础权限。',
   },
   academic_affairs: {
-    label: '教务管理员',
+    label: '教务管理人员',
     summary:
-      '负责导入课程与班级名单、跟踪全专业计算进度，并导出认证归档所需的报表与底稿。',
+      '负责课程、教学班和学生主数据维护，执行课程清单与教学班学生关联导入，并跟踪教学业务数据准备进度。',
   },
   program_director: {
     label: '专业负责人',
     summary:
-      '负责维护毕业要求与指标点、配置课程支撑矩阵，并统一触发专业级达成度汇总计算。',
+      '负责维护毕业要求与指标点，配置课程支撑矩阵，并触发专业级达成度汇总计算。',
   },
   instructor: {
     label: '课程主讲教师',
     summary:
-      '负责维护课程目标和考核点、导入原始成绩，并完成课程级达成度计算与自查。',
+      '负责维护课程目标与考核点，导入原始成绩，并完成课程级达成度计算与自查。',
   },
 }
 
@@ -56,29 +56,40 @@ export const NAVIGATION_SECTIONS = [
         roles: ['admin', 'academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '维护学年学期、学院、专业、课程等基础主数据，为毕业要求配置和后续计算流程提供统一数据底座。',
-        entities: ['College', 'Major', 'AcademicTerm', 'Course'],
+          '维护学年学期、学院、专业等基础主数据，为毕业要求配置和后续计算流程提供统一数据底座。',
+        entities: ['College', 'Major', 'AcademicTerm'],
+      },
+      {
+        key: 'course-management',
+        label: '课程管理',
+        path: '/course-management',
+        routeName: ROUTE_NAMES.COURSE_MANAGEMENT,
+        roles: ['academic_affairs'],
+        moduleTitle: '模块 A：基础与宏观数据管理',
+        summary:
+          '管理课程代码、课程名称、学分及课程与专业的关联关系，并承接课程清单导入业务。',
+        entities: ['Course'],
       },
       {
         key: 'teaching-class',
         label: '教学班管理',
         path: '/teaching-class',
         routeName: ROUTE_NAMES.TEACHING_CLASS,
-        roles: ['admin', 'academic_affairs'],
+        roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '管理课程的教学班信息，包括班级编号、授课教师、班级容量等。',
-        entities: ['TeachingClass'],
+          '管理课程对应的教学班信息，并承接教学班学生关联查看、移除与批量导入。',
+        entities: ['TeachingClass', 'StudentClass'],
       },
       {
         key: 'student-list',
-        label: '学生名单管理',
+        label: '学生基础信息管理',
         path: '/student-list',
         routeName: ROUTE_NAMES.STUDENT_LIST,
-        roles: ['admin', 'academic_affairs'],
+        roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。',
+          '维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态，不直接维护教学班学生关联。',
         entities: ['Student'],
       },
       {
@@ -100,8 +111,8 @@ export const NAVIGATION_SECTIONS = [
         roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '通过 Excel 模板批量导入全专业课程清单和教学班学生名单，支持逐行校验与错误定位。',
-        entities: ['Course', 'TeachingClass', 'Student', 'StudentClass'],
+          '通过 Excel 模板批量导入课程清单、学生基础信息和教学班学生关联，支持逐行校验、错误定位与结果预览。',
+        entities: ['Course', 'Student', 'StudentClass'],
       },
       {
         key: 'support-matrix',
@@ -147,7 +158,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['admin'],
         moduleTitle: '系统管理',
         summary:
-          '系统管理员用于管理教务管理员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
+          '用于管理教务管理人员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
         entities: ['sys_user', 'sys_role', 'sys_user_role', 'sys_role_permission'],
         componentKey: 'account-role-management',
       },
@@ -158,8 +169,7 @@ export const NAVIGATION_SECTIONS = [
         routeName: ROUTE_NAMES.COMPONENT_DEMO,
         roles: ['admin'],
         moduleTitle: '系统管理',
-        summary:
-          '页面组 C 前端组件预览与调试页面（开发期间使用，上线前移除）。',
+        summary: '页面组件预览与调试页面，仅供开发期验证交互与样式。',
         entities: [],
       },
     ],
@@ -203,7 +213,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['academic_affairs', 'program_director', 'instructor'],
         moduleTitle: '模块 D：报表生成与底稿导出',
         summary:
-          '聚合课程级和专业级的计算结果，生成课程评价表、专业分析报表以及可用于归档与抽查的穿透式底稿。',
+          '聚合课程级和专业级的计算结果，生成课程评价表、专业分析报表以及可用于归档与抽查的底稿。',
         entities: [
           'CourseObjectiveAchievement',
           'CourseIndicatorAchievement',

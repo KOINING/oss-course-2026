@@ -2,16 +2,29 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
-import com.oss.osscourse.dto.teachingclass.*;
-import com.oss.osscourse.entity.*;
-import com.oss.osscourse.mapper.*;
+import com.oss.osscourse.dto.teachingclass.TeachingClassQueryRequest;
+import com.oss.osscourse.dto.teachingclass.TeachingClassResponse;
+import com.oss.osscourse.dto.teachingclass.TeachingClassSaveRequest;
+import com.oss.osscourse.dto.teachingclass.TeachingClassStatusRequest;
+import com.oss.osscourse.entity.AcademicTerm;
+import com.oss.osscourse.entity.Course;
+import com.oss.osscourse.entity.StudentClass;
+import com.oss.osscourse.entity.Teacher;
+import com.oss.osscourse.entity.TeachingClass;
+import com.oss.osscourse.mapper.AcademicTermMapper;
+import com.oss.osscourse.mapper.CourseMapper;
+import com.oss.osscourse.mapper.StudentClassMapper;
+import com.oss.osscourse.mapper.TeacherMapper;
+import com.oss.osscourse.mapper.TeachingClassMapper;
 import com.oss.osscourse.service.TeachingClassService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +42,10 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<>();
 
         if (request != null) {
-            if (request.getClassName() != null && !request.getClassName().trim().isEmpty()) {
+            if (hasText(request.getClassCode())) {
+                wrapper.like(TeachingClass::getClassCode, request.getClassCode().trim());
+            }
+            if (hasText(request.getClassName())) {
                 wrapper.like(TeachingClass::getClassName, request.getClassName().trim());
             }
             if (request.getCourseId() != null) {
@@ -41,24 +57,22 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             if (request.getTeacherId() != null) {
                 wrapper.eq(TeachingClass::getTeacherId, request.getTeacherId());
             }
-            if (request.getCalcStatus() != null && !request.getCalcStatus().trim().isEmpty()) {
+            if (hasText(request.getCalcStatus())) {
                 wrapper.eq(TeachingClass::getCalcStatus, request.getCalcStatus().trim());
             }
         }
 
-        wrapper.orderByDesc(TeachingClass::getCreatedAt);
-
-        List<TeachingClass> classes = teachingClassMapper.selectList(wrapper);
-        return toResponseList(classes);
+        wrapper.orderByAsc(TeachingClass::getClassCode)
+                .orderByDesc(TeachingClass::getCreatedAt);
+        return toResponseList(teachingClassMapper.selectList(wrapper));
     }
 
     @Override
     public List<TeachingClassResponse> listTeachingClassesForSelect() {
         LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<>();
         wrapper.ne(TeachingClass::getCalcStatus, "locked")
-               .orderByDesc(TeachingClass::getCreatedAt);
-        List<TeachingClass> classes = teachingClassMapper.selectList(wrapper);
-        return toResponseList(classes);
+                .orderByAsc(TeachingClass::getClassCode);
+        return toResponseList(teachingClassMapper.selectList(wrapper));
     }
 
     @Override
@@ -66,62 +80,49 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         if (classId == null) {
             throw new BusinessException(400, "教学班ID不能为空");
         }
-
         TeachingClass teachingClass = teachingClassMapper.selectById(classId);
         if (teachingClass == null) {
             throw new BusinessException(404, "教学班不存在");
         }
-
         return toResponse(teachingClass);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveTeachingClass(TeachingClassSaveRequest request) {
-        // 验证课程是否存在
         Course course = courseMapper.selectById(request.getCourseId());
         if (course == null) {
             throw new BusinessException(400, "所选课程不存在");
         }
 
-        // 验证学期是否存在
         AcademicTerm term = academicTermMapper.selectById(request.getTermId());
         if (term == null) {
             throw new BusinessException(400, "所选学期不存在");
         }
 
-        // 验证教师是否存在
         Teacher teacher = teacherMapper.selectById(request.getTeacherId());
         if (teacher == null) {
             throw new BusinessException(400, "所选教师不存在");
         }
 
         if (request.getClassId() == null) {
-            // 新增
             createTeachingClass(request);
-        } else {
-            // 更新
-            updateTeachingClass(request);
+            return;
         }
+        updateTeachingClass(request);
     }
 
     private void createTeachingClass(TeachingClassSaveRequest request) {
-        // 检查同一课程同一学期内班级名称是否重复
-        TeachingClass existing = teachingClassMapper.selectOne(new LambdaQueryWrapper<TeachingClass>()
-                .eq(TeachingClass::getCourseId, request.getCourseId())
-                .eq(TeachingClass::getTermId, request.getTermId())
-                .eq(TeachingClass::getClassName, request.getClassName()));
-        if (existing != null) {
-            throw new BusinessException(400, "同一课程同一学期内班级名称已存在");
-        }
+        validateClassCodeUnique(request.getClassCode().trim(), null);
+        validateClassNameUnique(request.getCourseId(), request.getTermId(), request.getClassName().trim(), null);
 
         TeachingClass teachingClass = new TeachingClass();
-        teachingClass.setClassName(request.getClassName());
+        teachingClass.setClassCode(request.getClassCode().trim());
+        teachingClass.setClassName(request.getClassName().trim());
         teachingClass.setCourseId(request.getCourseId());
         teachingClass.setTermId(request.getTermId());
         teachingClass.setTeacherId(request.getTeacherId());
         teachingClass.setCalcStatus("unsubmitted");
-
         teachingClassMapper.insert(teachingClass);
     }
 
@@ -131,32 +132,23 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             throw new BusinessException(404, "教学班不存在");
         }
 
-        // 检查是否有关联的学生
         Long studentCount = studentClassMapper.selectCount(
                 new LambdaQueryWrapper<StudentClass>().eq(StudentClass::getClassId, request.getClassId()));
         if (studentCount != null && studentCount > 0) {
-            // 如果有学生关联，不允许修改课程和学期
-            if (!teachingClass.getCourseId().equals(request.getCourseId()) ||
-                !teachingClass.getTermId().equals(request.getTermId())) {
-                throw new BusinessException(400, "该教学班已有关联学生，不允许修改所属课程或学期");
+            if (!teachingClass.getCourseId().equals(request.getCourseId())
+                    || !teachingClass.getTermId().equals(request.getTermId())) {
+                throw new BusinessException(400, "该教学班已有学生关联，不允许修改所属课程或学期");
             }
         }
 
-        // 检查班级名称是否重复（排除自身）
-        TeachingClass existing = teachingClassMapper.selectOne(new LambdaQueryWrapper<TeachingClass>()
-                .eq(TeachingClass::getCourseId, request.getCourseId())
-                .eq(TeachingClass::getTermId, request.getTermId())
-                .eq(TeachingClass::getClassName, request.getClassName())
-                .ne(TeachingClass::getClassId, request.getClassId()));
-        if (existing != null) {
-            throw new BusinessException(400, "同一课程同一学期内班级名称已存在");
-        }
+        validateClassCodeUnique(request.getClassCode().trim(), request.getClassId());
+        validateClassNameUnique(request.getCourseId(), request.getTermId(), request.getClassName().trim(), request.getClassId());
 
-        teachingClass.setClassName(request.getClassName());
+        teachingClass.setClassCode(request.getClassCode().trim());
+        teachingClass.setClassName(request.getClassName().trim());
         teachingClass.setCourseId(request.getCourseId());
         teachingClass.setTermId(request.getTermId());
         teachingClass.setTeacherId(request.getTeacherId());
-
         teachingClassMapper.updateById(teachingClass);
     }
 
@@ -167,7 +159,6 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         if (teachingClass == null) {
             throw new BusinessException(404, "教学班不存在");
         }
-
         teachingClass.setCalcStatus(request.getCalcStatus());
         teachingClassMapper.updateById(teachingClass);
     }
@@ -184,7 +175,6 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             throw new BusinessException(404, "教学班不存在");
         }
 
-        // 检查是否有关联的学生
         Long studentCount = studentClassMapper.selectCount(
                 new LambdaQueryWrapper<StudentClass>().eq(StudentClass::getClassId, classId));
         if (studentCount != null && studentCount > 0) {
@@ -198,48 +188,70 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         }
     }
 
+    private void validateClassCodeUnique(String classCode, Long currentClassId) {
+        LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<TeachingClass>()
+                .eq(TeachingClass::getClassCode, classCode);
+        if (currentClassId != null) {
+            wrapper.ne(TeachingClass::getClassId, currentClassId);
+        }
+        if (teachingClassMapper.selectOne(wrapper) != null) {
+            throw new BusinessException(400, "教学班编号已存在");
+        }
+    }
+
+    private void validateClassNameUnique(Long courseId, Long termId, String className, Long currentClassId) {
+        LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<TeachingClass>()
+                .eq(TeachingClass::getCourseId, courseId)
+                .eq(TeachingClass::getTermId, termId)
+                .eq(TeachingClass::getClassName, className);
+        if (currentClassId != null) {
+            wrapper.ne(TeachingClass::getClassId, currentClassId);
+        }
+        if (teachingClassMapper.selectOne(wrapper) != null) {
+            throw new BusinessException(400, "同一课程同一学期内教学班名称已存在");
+        }
+    }
+
     private List<TeachingClassResponse> toResponseList(List<TeachingClass> classes) {
         if (classes.isEmpty()) {
             return List.of();
         }
 
-        // 批量查询关联数据
         Set<Long> courseIds = classes.stream().map(TeachingClass::getCourseId).collect(Collectors.toSet());
         Set<Long> termIds = classes.stream().map(TeachingClass::getTermId).collect(Collectors.toSet());
         Set<Long> teacherIds = classes.stream().map(TeachingClass::getTeacherId).collect(Collectors.toSet());
 
         Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
-                .collect(Collectors.toMap(Course::getCourseId, c -> c));
+                .collect(Collectors.toMap(Course::getCourseId, course -> course));
         Map<Long, AcademicTerm> termMap = academicTermMapper.selectBatchIds(termIds).stream()
-                .collect(Collectors.toMap(AcademicTerm::getTermId, t -> t));
+                .collect(Collectors.toMap(AcademicTerm::getTermId, term -> term));
         Map<Long, Teacher> teacherMap = teacherMapper.selectBatchIds(teacherIds).stream()
-                .collect(Collectors.toMap(Teacher::getId, t -> t));
+                .collect(Collectors.toMap(Teacher::getId, teacher -> teacher));
 
         return classes.stream()
-                .map(tc -> {
-                    Course course = courseMap.get(tc.getCourseId());
-                    AcademicTerm term = termMap.get(tc.getTermId());
-                    Teacher teacher = teacherMap.get(tc.getTeacherId());
-
-                    return TeachingClassResponse.builder()
-                            .classId(tc.getClassId())
-                            .className(tc.getClassName())
-                            .courseId(tc.getCourseId())
-                            .courseName(course != null ? course.getCourseName() : null)
-                            .courseCode(course != null ? course.getCourseCode() : null)
-                            .termId(tc.getTermId())
-                            .termCode(term != null ? term.getTermCode() : null)
-                            .teacherId(tc.getTeacherId())
-                            .teacherName(teacher != null ? teacher.getTeacherName() : null)
-                            .calcStatus(tc.getCalcStatus())
-                            .createdAt(tc.getCreatedAt())
-                            .updatedAt(tc.getUpdatedAt())
-                            .build();
-                })
-                .collect(Collectors.toList());
+                .map(item -> TeachingClassResponse.builder()
+                        .classId(item.getClassId())
+                        .classCode(item.getClassCode())
+                        .className(item.getClassName())
+                        .courseId(item.getCourseId())
+                        .courseName(courseMap.get(item.getCourseId()) != null ? courseMap.get(item.getCourseId()).getCourseName() : null)
+                        .courseCode(courseMap.get(item.getCourseId()) != null ? courseMap.get(item.getCourseId()).getCourseCode() : null)
+                        .termId(item.getTermId())
+                        .termCode(termMap.get(item.getTermId()) != null ? termMap.get(item.getTermId()).getTermCode() : null)
+                        .teacherId(item.getTeacherId())
+                        .teacherName(teacherMap.get(item.getTeacherId()) != null ? teacherMap.get(item.getTeacherId()).getTeacherName() : null)
+                        .calcStatus(item.getCalcStatus())
+                        .createdAt(item.getCreatedAt())
+                        .updatedAt(item.getUpdatedAt())
+                        .build())
+                .toList();
     }
 
     private TeachingClassResponse toResponse(TeachingClass teachingClass) {
         return toResponseList(List.of(teachingClass)).get(0);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

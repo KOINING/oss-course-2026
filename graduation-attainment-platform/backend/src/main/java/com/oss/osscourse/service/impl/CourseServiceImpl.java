@@ -16,13 +16,8 @@ import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.CourseService;
+import com.oss.osscourse.util.ImportSheetReader;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -242,41 +237,29 @@ public class CourseServiceImpl implements CourseService {
         int totalCount = 0;
         Set<String> courseCodesInBatch = new HashSet<>();
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet.getLastRowNum() < 1) {
-                throw new BusinessException(400, "Excel文件无数据行");
+        List<ImportSheetReader.ImportRowData> rows = ImportSheetReader.readDataRows(file);
+        for (ImportSheetReader.ImportRowData row : rows) {
+            if (row.isEmpty()) {
+                continue;
             }
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null || isRowEmpty(row)) {
-                    continue;
-                }
-                totalCount++;
-                int excelRowNum = i + 1;
-
-                try {
-                    String error = validateAndImportCourseRow(row, courseCodesInBatch);
-                    if (error != null) {
-                        failedItems.add(CourseImportResult.FailedItem.builder()
-                                .rowNumber(excelRowNum)
-                                .reason(error)
-                                .build());
-                    } else {
-                        successCount++;
-                    }
-                } catch (Exception e) {
+            totalCount++;
+            try {
+                String error = validateAndImportCourseRow(row, courseCodesInBatch);
+                if (error != null) {
                     failedItems.add(CourseImportResult.FailedItem.builder()
-                            .rowNumber(excelRowNum)
-                            .reason("系统错误: " + e.getMessage())
+                            .rowNumber(row.getRowNumber())
+                            .reason(error)
                             .build());
+                } else {
+                    successCount++;
                 }
+            } catch (Exception e) {
+                failedItems.add(CourseImportResult.FailedItem.builder()
+                        .rowNumber(row.getRowNumber())
+                        .reason("系统错误: " + e.getMessage())
+                        .build());
             }
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException(400, "Excel文件解析失败: " + e.getMessage());
         }
 
         return CourseImportResult.builder()
@@ -287,12 +270,12 @@ public class CourseServiceImpl implements CourseService {
                 .build();
     }
 
-    private String validateAndImportCourseRow(Row row, Set<String> courseCodesInBatch) {
-        String majorCode = getCellStringValue(row.getCell(0));
-        String courseCode = getCellStringValue(row.getCell(1));
-        String courseName = getCellStringValue(row.getCell(2));
-        String creditStr = getCellStringValue(row.getCell(3));
-        String statusStr = getCellStringValue(row.getCell(4));
+    private String validateAndImportCourseRow(ImportSheetReader.ImportRowData row, Set<String> courseCodesInBatch) {
+        String majorCode = row.getCell(0);
+        String courseCode = row.getCell(1);
+        String courseName = row.getCell(2);
+        String creditStr = row.getCell(3);
+        String statusStr = row.getCell(4);
 
         // 所属专业代码必须已存在
         if (majorCode == null || majorCode.isEmpty()) {
@@ -370,32 +353,6 @@ public class CourseServiceImpl implements CourseService {
         courseMajorMapper.insert(relation);
 
         return null;
-    }
-
-    private String getCellStringValue(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-        if (cell.getCellType() == CellType.NUMERIC) {
-            double val = cell.getNumericCellValue();
-            if (val == Math.floor(val) && !Double.isInfinite(val)) {
-                return String.valueOf((long) val);
-            }
-            return String.valueOf(val);
-        }
-        String value = cell.getStringCellValue();
-        return value != null ? value.trim() : null;
-    }
-
-    private boolean isRowEmpty(Row row) {
-        for (int c = 0; c < row.getLastCellNum(); c++) {
-            Cell cell = row.getCell(c);
-            if (cell != null && cell.getCellType() != CellType.BLANK
-                    && getCellStringValue(cell) != null && !getCellStringValue(cell).isEmpty()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private List<CourseResponse> buildCourseResponses(List<Course> courses) {
