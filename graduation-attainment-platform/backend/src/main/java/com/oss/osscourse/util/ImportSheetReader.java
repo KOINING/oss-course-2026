@@ -10,9 +10,13 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,8 +69,8 @@ public final class ImportSheetReader {
 
     private static List<ImportRowData> readCsvRows(MultipartFile file) throws IOException {
         List<ImportRowData> rows = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+        String content = decodeCsvContent(file.getBytes());
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new StringReader(content))) {
             String line;
             int rowNumber = 0;
             while ((line = reader.readLine()) != null) {
@@ -82,6 +86,28 @@ public final class ImportSheetReader {
             throw new BusinessException(400, "Excel文件无数据行");
         }
         return rows;
+    }
+
+    private static String decodeCsvContent(byte[] bytes) throws CharacterCodingException {
+        if (startsWithUtf8Bom(bytes)) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+
+        CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            return utf8Decoder.decode(ByteBuffer.wrap(bytes)).toString();
+        } catch (CharacterCodingException ignored) {
+            return Charset.forName("GBK").decode(ByteBuffer.wrap(bytes)).toString();
+        }
+    }
+
+    private static boolean startsWithUtf8Bom(byte[] bytes) {
+        return bytes.length >= 3
+                && bytes[0] == (byte) 0xEF
+                && bytes[1] == (byte) 0xBB
+                && bytes[2] == (byte) 0xBF;
     }
 
     private static List<String> extractWorkbookRowValues(Row row) {

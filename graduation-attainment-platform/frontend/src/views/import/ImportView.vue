@@ -16,22 +16,8 @@ const studentUploadRef = ref(null)
 const studentClassUploadRef = ref(null)
 
 const COURSE_TEMPLATE_HEADERS = ['所属专业代码', '课程代码', '课程名称', '学分', '状态']
-const COURSE_TEMPLATE_SAMPLE = [
-  ['080901', 'CS201', '数据结构', '4.0', '1'],
-  ['080901', 'CS301', '操作系统', '3.0', '1'],
-]
-
 const STUDENT_TEMPLATE_HEADERS = ['学号', '姓名', '专业代码', '入学年份', '学籍状态']
-const STUDENT_TEMPLATE_SAMPLE = [
-  ['20240101001', '张晓晨', '080901', '2024', '1'],
-  ['20240101002', '李思雨', '080901', '2024', '1'],
-]
-
 const STUDENT_CLASS_TEMPLATE_HEADERS = ['学号', '姓名', '专业代码', '入学年份', '教学班编号']
-const STUDENT_CLASS_TEMPLATE_SAMPLE = [
-  ['20220101001', '周一帆', '080901', '2022', 'TC2024CS01'],
-  ['20220101002', '陈思远', '080901', '2022', 'TC2024CS01'],
-]
 
 const courseFile = ref(null)
 const courseImporting = ref(false)
@@ -96,18 +82,14 @@ function beforeUpload(file) {
   return false
 }
 
-function downloadTemplate(headers, rows, filename) {
-  const bom = '\uFEFF'
-  const content = `${headers.join(',')}\n${rows.map((row) => row.join(',')).join('\n')}\n`
-  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
+function downloadTemplate(path, filename) {
+  const url = `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
   const link = document.createElement('a')
   link.href = url
   link.download = filename
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  URL.revokeObjectURL(url)
 }
 
 function handleCourseFileChange(file) {
@@ -265,7 +247,7 @@ const headerMeta = computed(() => ({
                   type="primary"
                   plain
                   :icon="Download"
-                  @click="downloadTemplate(COURSE_TEMPLATE_HEADERS, COURSE_TEMPLATE_SAMPLE, '课程清单导入模板.csv')"
+                  @click="downloadTemplate('/templates/course-import-template.xlsx', '课程清单导入模板.xlsx')"
                 >
                   下载模板
                 </el-button>
@@ -289,6 +271,7 @@ const headerMeta = computed(() => ({
                 <div class="upload-text"><em>点击选择</em> 或拖拽文件到此处</div>
                 <template #tip>
                   <div class="upload-tip">支持 .xlsx、.xls、.csv</div>
+                  <div class="upload-tip-note">推荐使用 .xlsx，可避免中文乱码和编码兼容问题</div>
                 </template>
               </el-upload>
               <div class="upload-actions">
@@ -319,7 +302,7 @@ const headerMeta = computed(() => ({
                   type="primary"
                   plain
                   :icon="Download"
-                  @click="downloadTemplate(STUDENT_TEMPLATE_HEADERS, STUDENT_TEMPLATE_SAMPLE, '学生基础信息导入模板.csv')"
+                  @click="downloadTemplate('/templates/student-import-template.xlsx', '学生基础信息导入模板.xlsx')"
                 >
                   下载模板
                 </el-button>
@@ -343,6 +326,7 @@ const headerMeta = computed(() => ({
                 <div class="upload-text"><em>点击选择</em> 或拖拽文件到此处</div>
                 <template #tip>
                   <div class="upload-tip">支持 .xlsx、.xls、.csv</div>
+                  <div class="upload-tip-note">推荐使用 .xlsx，可避免中文乱码和编码兼容问题</div>
                 </template>
               </el-upload>
               <div class="upload-actions">
@@ -392,11 +376,7 @@ const headerMeta = computed(() => ({
                   plain
                   :icon="Download"
                   @click="
-                    downloadTemplate(
-                      STUDENT_CLASS_TEMPLATE_HEADERS,
-                      STUDENT_CLASS_TEMPLATE_SAMPLE,
-                      '教学班学生关联导入模板.csv',
-                    )
+                    downloadTemplate('/templates/student-class-import-template.xlsx', '教学班学生关联导入模板.xlsx')
                   "
                 >
                   下载模板
@@ -421,6 +401,7 @@ const headerMeta = computed(() => ({
                 <div class="upload-text"><em>点击选择</em> 或拖拽文件到此处</div>
                 <template #tip>
                   <div class="upload-tip">支持 .xlsx、.xls、.csv</div>
+                  <div class="upload-tip-note">推荐使用 .xlsx，可避免中文乱码和编码兼容问题</div>
                 </template>
               </el-upload>
               <div class="upload-actions">
@@ -545,6 +526,11 @@ const headerMeta = computed(() => ({
 
 .upload-tip {
   color: #94a3b8;
+}
+
+.upload-tip-note {
+  margin-top: 4px;
+  color: #64748b;
 }
 
 .upload-actions {
