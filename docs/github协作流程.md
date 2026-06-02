@@ -1,4 +1,4 @@
-﻿# 课程小组 GitHub 协作开发规范
+# 课程小组 GitHub 协作开发规范
 
 本文档适用于课程小组使用 GitHub 协作开发的场景。  
 本仓库采用的协作方式不是“每个任务新建一个分支”，而是：
@@ -21,7 +21,7 @@
 5. 分支推送到 GitHub 后，由提交者本人创建 Pull Request。
 6. PR 创建者需要将自己设为 Assignee，并指定至少 1 名 Reviewer。
 7. Reviewer 不能是 PR 创建者本人。
-8. PR 通过 Review 后，默认使用 `Squash and merge` 合并到 `main`。
+8. PR 通过 Review 后，默认使用 `Create a merge commit` 合并到 `main`，保留个人分支上的完整提交历史。
 9. PR 合并后不删除个人分支，后续任务继续在该个人分支上开发。
 10. 所有任务都应加入 GitHub Project 看板，并根据进度在 `Todo`、`In progress`、`Review`、`Done` 四个状态之间流转。
 
@@ -237,8 +237,8 @@ base: main <- compare: member/zhangsan
 
 确认无误后，点击：
 
-```
-Create pull request 
+```text
+Create pull request
 ```
 
 创建 PR 后，进入当前 PR 页面，在当前页面继续完善以下信息。
@@ -285,16 +285,6 @@ Assignees 表示该 PR 的负责人。
 
 - Assignee 设置为提交者本人
 
-操作方式：
-
-1. 在右侧找到 Assignees
-2. 点击该区域
-3. 搜索并选择自己
-
-例如：
-
-- Assignee：李四
-
 ### 14.2 Reviewers
 
 Reviewers 表示负责审核该 PR 的组员。
@@ -303,16 +293,6 @@ Reviewers 表示负责审核该 PR 的组员。
 
 - 至少指定 1 名其他组员
 - Reviewer 不能是自己
-
-操作方式：
-
-1. 在右侧找到 Reviewers
-2. 点击该区域
-3. 搜索并选择其他组员
-
-例如：
-
-- Reviewer：张三
 
 ### 14.3 Labels
 
@@ -324,39 +304,6 @@ Labels 用于标记该 PR 的类型，方便分类和筛选。
 - bug：问题修复
 - enhancement：功能增强
 - feature：新功能开发
-
-操作方式：
-
-1. 在右侧找到 Labels
-2. 点击该区域
-3. 选择与本次任务相符的标签
-
-示例：
-
-- 修改 README：选择 documentation
-- 修复登录错误：选择 bug
-
-### 14.4 Projects
-
-Projects 用于把该 PR 加入 GitHub Project 看板，便于统一跟踪任务进度。
-
-操作方式：
-
-1. 在右侧找到 Projects
-2. 点击该区域
-3. 选择当前课程项目使用的 Project 看板
-4. 将该任务状态设置为：
-
-```
-Review 
-```
-
-这表示：
-
-- 该任务已经完成开发
-- 已经提交 PR
-- 当前正在等待组员审核
-
 
 ## 15. PR 创建后继续修改
 
@@ -391,32 +338,20 @@ Reviewer 检查完成后：
 合并时建议选择：
 
 ```text
-Squash and merge
+Create a merge commit
 ```
 
-合并提交信息建议保持简洁，例如：
+选择这个方式的原因是：
 
-```text
-docs: update README
-```
+- 保留个人分支上的完整提交历史
+- 能在 `main` 上看到每次任务开发过程中的多个 commit
+- 适合长期个人分支协作模式
 
 ## 17. 合并后的处理
 
-PR 合并后，不再删除个人分支。  
-因为个人分支是长期使用的固定分支，后续任务还要继续复用。
+PR 合并后无需额外本地操作；下次开始任务前按第 4 节开始即可。
 
-合并完成后，回到本地执行：
 
-```bash
-git checkout member/zhangsan
-git fetch --all
-git checkout main
-git pull origin main
-git merge member/zhangsan
-git push -u origin main
-```
-
-这样可以保证你的个人分支继续与最新 `main` 保持同步。
 
 ## 18. Project 看板四个状态的使用总结
 
@@ -562,7 +497,7 @@ Create Pull Request
 -> 指定 Assignee 和 Reviewer
 -> Create pull request
 -> Review
--> Squash and merge
+-> Create a merge commit
 -> 在 Project 看板中把任务改为 Done
 ```
 
@@ -592,6 +527,6 @@ Create Pull Request
 -> 在看板中改为 Review
 -> 指定 Reviewer
 -> Review
--> Squash and merge
+-> Create a merge commit
 -> 在看板中改为 Done
 ```
