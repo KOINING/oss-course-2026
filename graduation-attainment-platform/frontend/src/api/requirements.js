@@ -35,3 +35,7 @@ export function deleteIndicatorPointApi(data) {
 export function listMajorsApi() {
   return request.post('/requirements/listMajors')
 }
+
+export function listRequirementGradeYearsApi(data = {}) {
+  return request.post('/requirements/listGradeYears', data)
+}

@@ -1,8 +1,9 @@
 export const COURSE_IMPORT_TEMPLATE_FIELDS = [
   { key: 'majorCode', label: '所属专业代码', required: true },
+  { key: 'gradeYear', label: '适用年级', required: true },
   { key: 'courseCode', label: '课程代码', required: true },
   { key: 'courseName', label: '课程名称', required: true },
-  { key: 'credits', label: '学分', required: true },
+  { key: 'credit', label: '学分', required: true },
   { key: 'status', label: '状态', required: true },
 ]
 
@@ -25,15 +26,15 @@ export function formatStatus(status) {
 }
 
 export function downloadTemplate(filename, fields) {
-  const headers = fields.map((f) => f.label)
-  const csv = headers.join(',') + '\n'
+  const headers = fields.map((field) => field.label)
+  const csv = `\uFEFF${headers.join(',')}\n`
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', filename)
-  link.style.visibility = 'hidden'
+  link.href = url
+  link.download = filename
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }

@@ -6,6 +6,10 @@ export function listMajorsForMatrixApi() {
     return request.post('/supportMatrix/listMajors')
 }
 
+export function listGradeYearsForMatrixApi(data = {}) {
+    return request.post('/supportMatrix/listGradeYears', data)
+}
+
 export function listCoursesApi(data = {}) {
     return request.post('/supportMatrix/listCourses', data)
 }

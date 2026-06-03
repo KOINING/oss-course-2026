@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 @Service
 public class RequirementServiceImpl implements RequirementService {
@@ -48,7 +50,7 @@ public class RequirementServiceImpl implements RequirementService {
             List<String> permissions) {
         assertManagePermission(roles, permissions);
         GraduationRequirementQueryRequest query = request == null ? new GraduationRequirementQueryRequest() : request;
-        return grMapper.selectRequirementList(trimToNull(query.getGrCode()), query.getMajorId());
+        return grMapper.selectRequirementList(trimToNull(query.getGrCode()), query.getMajorId(), query.getGradeYear());
     }
 
     @Override
@@ -64,20 +66,24 @@ public class RequirementServiceImpl implements RequirementService {
         if (majorId == null) {
             throw new BusinessException(400, "所属专业不能为空");
         }
+        Integer gradeYear = request.getGradeYear();
+        validateGradeYear(gradeYear);
         if (majorMapper.selectById(majorId) == null) {
             throw new BusinessException(400, "所选专业不存在");
         }
 
         if (grMapper.selectOne(new LambdaQueryWrapper<GraduationRequirement>()
                 .eq(GraduationRequirement::getMajorId, majorId)
+                .eq(GraduationRequirement::getGradeYear, gradeYear)
                 .eq(GraduationRequirement::getGrCode, grCode)) != null) {
-            throw new BusinessException(400, "该专业下已存在相同编号的毕业要求");
+            throw new BusinessException(400, "该专业该年级下已存在相同编号的毕业要求");
         }
 
         GraduationRequirement entity = new GraduationRequirement();
         entity.setGrCode(grCode);
         entity.setGrDescription(grDescription);
         entity.setMajorId(majorId);
+        entity.setGradeYear(gradeYear);
         entity.setStatus(1);
         grMapper.insert(entity);
     }
@@ -99,6 +105,8 @@ public class RequirementServiceImpl implements RequirementService {
         if (majorId == null) {
             throw new BusinessException(400, "所属专业不能为空");
         }
+        Integer gradeYear = request.getGradeYear();
+        validateGradeYear(gradeYear);
 
         GraduationRequirement entity = grMapper.selectById(grId);
         if (entity == null) {
@@ -110,15 +118,17 @@ public class RequirementServiceImpl implements RequirementService {
 
         GraduationRequirement duplicate = grMapper.selectOne(new LambdaQueryWrapper<GraduationRequirement>()
                 .eq(GraduationRequirement::getMajorId, majorId)
+                .eq(GraduationRequirement::getGradeYear, gradeYear)
                 .eq(GraduationRequirement::getGrCode, grCode)
                 .ne(GraduationRequirement::getGrId, grId));
         if (duplicate != null) {
-            throw new BusinessException(400, "该专业下已存在相同编号的毕业要求");
+            throw new BusinessException(400, "该专业该年级下已存在相同编号的毕业要求");
         }
 
         entity.setGrCode(grCode);
         entity.setGrDescription(grDescription);
         entity.setMajorId(majorId);
+        entity.setGradeYear(gradeYear);
         grMapper.updateById(entity);
     }
 
@@ -154,7 +164,7 @@ public class RequirementServiceImpl implements RequirementService {
                                                             List<String> permissions) {
         assertManagePermission(roles, permissions);
         IndicatorPointQueryRequest query = request == null ? new IndicatorPointQueryRequest() : request;
-        return ipMapper.selectIndicatorPointList(trimToNull(query.getIpCode()), query.getGrId());
+        return ipMapper.selectIndicatorPointList(trimToNull(query.getIpCode()), query.getGrId(), query.getGradeYear());
     }
 
     @Override
@@ -255,6 +265,15 @@ public class RequirementServiceImpl implements RequirementService {
         return majorMapper.selectList(new LambdaQueryWrapper<Major>().orderByAsc(Major::getMajorId));
     }
 
+    @Override
+    public List<Integer> listGradeYears(Long majorId, List<String> roles, List<String> permissions) {
+        assertManagePermission(roles, permissions);
+        TreeSet<Integer> years = new TreeSet<>((a, b) -> Integer.compare(b, a));
+        years.addAll(grMapper.selectRequirementGradeYears(majorId));
+        years.add(2022);
+        return years.stream().filter(year -> year != null).collect(Collectors.toList());
+    }
+
     private void assertManagePermission(List<String> roles, List<String> permissions) {
         boolean hasRole = roles != null && roles.contains(MANAGE_ROLE);
         boolean hasPermission = permissions != null && permissions.contains(MANAGE_PERMISSION);
@@ -269,6 +288,15 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(400, message);
         }
         return trimmed;
+    }
+
+    private void validateGradeYear(Integer gradeYear) {
+        if (gradeYear == null) {
+            throw new BusinessException(400, "年级不能为空");
+        }
+        if (gradeYear < 2000 || gradeYear > 2100) {
+            throw new BusinessException(400, "年级必须在2000到2100之间");
+        }
     }
 
     private String trimToNull(String value) {

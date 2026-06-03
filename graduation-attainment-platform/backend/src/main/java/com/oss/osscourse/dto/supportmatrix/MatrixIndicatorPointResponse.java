@@ -24,6 +24,9 @@ public class MatrixIndicatorPointResponse {
     @Schema(description = "所属毕业要求描述")
     private String grDescription;
 
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
+
     @Schema(description = "指标点状态：1=启用，0=停用", example = "1")
     private Integer status;
 }

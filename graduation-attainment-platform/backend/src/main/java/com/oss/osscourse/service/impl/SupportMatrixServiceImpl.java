@@ -71,13 +71,23 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     }
 
     @Override
+    public List<Integer> listGradeYears(SupportMatrixMajorFilterRequest request,
+                                        List<String> roles,
+                                        List<String> permissions) {
+        assertManagePermission(roles, permissions);
+        Long majorId = request == null ? null : request.getMajorId();
+        return new ArrayList<>(courseIndicatorSupportMapper.selectGradeYears(majorId));
+    }
+
+    @Override
     public List<MatrixCourseOptionResponse> listCourses(SupportMatrixMajorFilterRequest request,
                                                         List<String> roles,
                                                         List<String> permissions) {
         assertManagePermission(roles, permissions);
         Long majorId = extractMajorId(request);
+        Integer gradeYear = extractGradeYear(request);
         assertMajorExists(majorId);
-        return courseIndicatorSupportMapper.selectCourseOptionsByMajor(majorId);
+        return courseIndicatorSupportMapper.selectCourseOptionsByMajor(majorId, gradeYear);
     }
 
     @Override
@@ -107,8 +117,9 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
                                                                                 List<String> permissions) {
         assertManagePermission(roles, permissions);
         Long majorId = extractMajorId(request);
+        Integer gradeYear = extractGradeYear(request);
         assertMajorExists(majorId);
-        return courseIndicatorSupportMapper.selectGraduationRequirementsByMajor(majorId);
+        return courseIndicatorSupportMapper.selectGraduationRequirementsByMajor(majorId, gradeYear);
     }
 
     @Override
@@ -117,8 +128,9 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
                                                                   List<String> permissions) {
         assertManagePermission(roles, permissions);
         Long majorId = extractMajorId(request);
+        Integer gradeYear = extractGradeYear(request);
         assertMajorExists(majorId);
-        return courseIndicatorSupportMapper.selectIndicatorPointsByMajor(majorId);
+        return courseIndicatorSupportMapper.selectIndicatorPointsByMajor(majorId, gradeYear);
     }
 
     @Override
@@ -127,7 +139,8 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
                                                          List<String> permissions) {
         assertManagePermission(roles, permissions);
         assertMajorExists(request.getMajorId());
-        return courseIndicatorSupportMapper.selectMatrixRelationsByMajor(request.getMajorId());
+        validateGradeYear(request.getGradeYear());
+        return courseIndicatorSupportMapper.selectMatrixRelationsByMajor(request.getMajorId(), request.getGradeYear());
     }
 
     @Override
@@ -140,7 +153,7 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
             assertMajorExists(query.getMajorId());
         }
         return courseIndicatorSupportMapper.selectCourseIndicatorSupports(
-                query.getMajorId(), query.getCourseId(), query.getIpId());
+                query.getMajorId(), query.getGradeYear(), query.getCourseId(), query.getIpId());
     }
 
     @Override
@@ -149,7 +162,7 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
                                           List<String> roles,
                                           List<String> permissions) {
         assertManagePermission(roles, permissions);
-        validateCourseAndIndicatorRelation(request.getCourseId(), request.getIpId());
+        validateCourseAndIndicatorRelation(request.getCourseId(), request.getIpId(), null, null);
         float weight = normalizeWeight(request.getTotalWeight());
 
         CourseIndicatorSupport duplicate = courseIndicatorSupportMapper.selectOne(
@@ -179,7 +192,7 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
             throw new BusinessException(404, "支撑关系不存在");
         }
 
-        validateCourseAndIndicatorRelation(request.getCourseId(), request.getIpId());
+        validateCourseAndIndicatorRelation(request.getCourseId(), request.getIpId(), null, null);
         float weight = normalizeWeight(request.getTotalWeight());
         CourseIndicatorSupport duplicate = courseIndicatorSupportMapper.selectOne(
                 new LambdaQueryWrapper<CourseIndicatorSupport>()
@@ -217,12 +230,14 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     public void saveSupportMatrix(SupportMatrixSaveRequest request, List<String> roles, List<String> permissions) {
         assertManagePermission(roles, permissions);
         Long majorId = request.getMajorId();
+        Integer gradeYear = request.getGradeYear();
+        validateGradeYear(gradeYear);
         assertMajorExists(majorId);
 
-        List<MatrixCourseOptionResponse> courses = courseIndicatorSupportMapper.selectCourseOptionsByMajor(majorId);
-        List<MatrixIndicatorPointResponse> indicatorPoints = courseIndicatorSupportMapper.selectIndicatorPointsByMajor(majorId);
+        List<MatrixCourseOptionResponse> courses = courseIndicatorSupportMapper.selectCourseOptionsByMajor(majorId, gradeYear);
+        List<MatrixIndicatorPointResponse> indicatorPoints = courseIndicatorSupportMapper.selectIndicatorPointsByMajor(majorId, gradeYear);
         if (indicatorPoints.isEmpty()) {
-            throw new BusinessException(400, "当前专业下没有可用的指标点，无法保存支撑矩阵");
+            throw new BusinessException(400, "当前专业当前年级下没有可用的指标点，无法保存支撑矩阵");
         }
 
         Set<Long> validCourseIds = courses.stream().map(MatrixCourseOptionResponse::getCourseId).collect(Collectors.toSet());
@@ -269,7 +284,7 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
             throw new BusinessException(400, String.join("；", invalidMessages));
         }
 
-        courseIndicatorSupportMapper.deleteByMajorId(majorId);
+        courseIndicatorSupportMapper.deleteByMajorId(majorId, gradeYear);
         for (SupportMatrixRowRequest row : request.getRows()) {
             CourseIndicatorSupport entity = new CourseIndicatorSupport();
             entity.setCourseId(row.getCourseId());
@@ -283,11 +298,12 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     @Transactional(rollbackFor = Exception.class)
     public void resetSupportMatrix(ResetSupportMatrixRequest request, List<String> roles, List<String> permissions) {
         assertManagePermission(roles, permissions);
+        validateGradeYear(request.getGradeYear());
         assertMajorExists(request.getMajorId());
-        courseIndicatorSupportMapper.deleteByMajorId(request.getMajorId());
+        courseIndicatorSupportMapper.deleteByMajorId(request.getMajorId(), request.getGradeYear());
     }
 
-    private void validateCourseAndIndicatorRelation(Long courseId, Long ipId) {
+    private void validateCourseAndIndicatorRelation(Long courseId, Long ipId, Long expectedMajorId, Integer expectedGradeYear) {
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new BusinessException(404, "课程不存在");
@@ -312,12 +328,20 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
             throw new BusinessException(400, "指标点所属毕业要求已停用，不能配置支撑关系");
         }
 
+        if (expectedMajorId != null && !expectedMajorId.equals(requirement.getMajorId())) {
+            throw new BusinessException(400, "指标点不属于当前所选专业");
+        }
+        if (expectedGradeYear != null && !expectedGradeYear.equals(requirement.getGradeYear())) {
+            throw new BusinessException(400, "指标点不属于当前所选年级");
+        }
+
         Long relationCount = courseMajorMapper.selectCount(
                 new LambdaQueryWrapper<CourseMajor>()
                         .eq(CourseMajor::getCourseId, courseId)
-                        .eq(CourseMajor::getMajorId, requirement.getMajorId()));
+                        .eq(CourseMajor::getMajorId, requirement.getMajorId())
+                        .eq(expectedGradeYear != null, CourseMajor::getGradeYear, expectedGradeYear != null ? expectedGradeYear : requirement.getGradeYear()));
         if (relationCount == null || relationCount == 0) {
-            throw new BusinessException(400, "课程与指标点不属于同一专业，无法建立支撑关系");
+            throw new BusinessException(400, "课程与指标点不属于同一专业同一年级，无法建立支撑关系");
         }
     }
 
@@ -348,6 +372,14 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
         return request.getMajorId();
     }
 
+    private Integer extractGradeYear(SupportMatrixMajorFilterRequest request) {
+        if (request == null || request.getGradeYear() == null) {
+            throw new BusinessException(400, "年级不能为空");
+        }
+        validateGradeYear(request.getGradeYear());
+        return request.getGradeYear();
+    }
+
     private void assertMajorExists(Long majorId) {
         Major major = majorMapper.selectById(majorId);
         if (major == null) {
@@ -366,6 +398,15 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
             throw new BusinessException(400, "totalWeight 必须在 0 到 1 之间");
         }
         return Math.round(weight * 10000f) / 10000f;
+    }
+
+    private void validateGradeYear(Integer gradeYear) {
+        if (gradeYear == null) {
+            throw new BusinessException(400, "年级不能为空");
+        }
+        if (gradeYear < 2000 || gradeYear > 2100) {
+            throw new BusinessException(400, "年级必须在2000到2100之间");
+        }
     }
 
     private String buildTermName(AcademicTerm term) {

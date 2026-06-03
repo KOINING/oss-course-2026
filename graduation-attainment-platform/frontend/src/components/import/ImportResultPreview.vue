@@ -4,7 +4,12 @@ import ImportErrorTable from './ImportErrorTable.vue'
 defineProps({
   summary: {
     type: Object,
-    default: () => ({ totalCount: 0, successCount: 0, failureCount: 0 }),
+    default: () => ({
+      totalCount: 0,
+      successCount: 0,
+      skippedCount: undefined,
+      failureCount: 0,
+    }),
   },
   failedItems: {
     type: Array,
@@ -29,19 +34,25 @@ defineProps({
     </div>
 
     <el-row :gutter="16" class="preview-stats">
-      <el-col :span="8">
+      <el-col :span="summary.skippedCount !== undefined ? 6 : 8">
         <div class="stat-card stat-card--total">
           <div class="stat-card__number">{{ summary.totalCount }}</div>
           <div class="stat-card__label">总记录数</div>
         </div>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="summary.skippedCount !== undefined ? 6 : 8">
         <div class="stat-card stat-card--success">
           <div class="stat-card__number">{{ summary.successCount }}</div>
           <div class="stat-card__label">导入成功</div>
         </div>
       </el-col>
-      <el-col :span="8">
+      <el-col v-if="summary.skippedCount !== undefined" :span="6">
+        <div class="stat-card stat-card--skipped">
+          <div class="stat-card__number">{{ summary.skippedCount }}</div>
+          <div class="stat-card__label">已存在跳过</div>
+        </div>
+      </el-col>
+      <el-col :span="summary.skippedCount !== undefined ? 6 : 8">
         <div class="stat-card stat-card--failure">
           <div class="stat-card__number">{{ summary.failureCount }}</div>
           <div class="stat-card__label">导入失败</div>
@@ -57,7 +68,7 @@ defineProps({
       class="preview-alert"
     >
       <template #title>
-        导入完成：成功 {{ summary.successCount }} 条，失败 {{ summary.failureCount }} 条，请修正后重新导入。
+        导入完成：成功 {{ summary.successCount }} 条<span v-if="summary.skippedCount !== undefined">，已存在跳过 {{ summary.skippedCount }} 条</span>，失败 {{ summary.failureCount }} 条，请修正后重新导入。
       </template>
     </el-alert>
 
@@ -69,7 +80,12 @@ defineProps({
       class="preview-alert"
     >
       <template #title>
-        全部 {{ summary.totalCount }} 条记录导入成功。
+        <span v-if="summary.skippedCount !== undefined">
+          导入完成：成功 {{ summary.successCount }} 条，已存在跳过 {{ summary.skippedCount }} 条。
+        </span>
+        <span v-else>
+          全部 {{ summary.totalCount }} 条记录导入成功。
+        </span>
       </template>
     </el-alert>
 
@@ -123,6 +139,11 @@ defineProps({
   border-color: #bbf7d0;
 }
 
+.stat-card--skipped {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
 .stat-card--failure {
   background: #fef2f2;
   border-color: #fecaca;
@@ -147,6 +168,10 @@ defineProps({
 
 .stat-card--success .stat-card__number {
   color: #16a34a;
+}
+
+.stat-card--skipped .stat-card__number {
+  color: #475569;
 }
 
 .stat-card--failure .stat-card__number {

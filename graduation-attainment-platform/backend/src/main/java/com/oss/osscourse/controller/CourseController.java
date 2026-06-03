@@ -44,6 +44,14 @@ public class CourseController {
         return Result.ok(courseService.listCourses(request));
     }
 
+    @PostMapping("/listGradeYears")
+    @Operation(summary = "查询培养方案年级列表", description = "供课程管理和导入使用")
+    public Result<List<Integer>> listGradeYears(
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(courseService.listGradeYears());
+    }
+
     @PostMapping("/getCourse")
     @Operation(summary = "查询课程详情", description = "根据课程 ID 查询课程详情")
     public Result<CourseResponse> getCourse(

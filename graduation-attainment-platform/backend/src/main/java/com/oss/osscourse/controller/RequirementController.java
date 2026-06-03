@@ -129,4 +129,15 @@ public class RequirementController {
             @RequestAttribute("permissions") List<String> permissions) {
         return Result.ok(requirementService.listMajors(roles, permissions));
     }
+
+    @PostMapping("/listGradeYears")
+    @Operation(summary = "查询培养方案年级列表", description = "供毕业要求、指标点和矩阵筛选使用")
+    public Result<List<Integer>> listGradeYears(
+            @Parameter(description = "毕业要求查询条件")
+            @RequestBody(required = false) GraduationRequirementQueryRequest request,
+            @RequestAttribute("roles") List<String> roles,
+            @RequestAttribute("permissions") List<String> permissions) {
+        Long majorId = request == null ? null : request.getMajorId();
+        return Result.ok(requirementService.listGradeYears(majorId, roles, permissions));
+    }
 }

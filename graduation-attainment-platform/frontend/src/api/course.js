@@ -4,6 +4,10 @@ export function listCoursesApi(data = {}) {
   return request.post('/admin/listCourses', data)
 }
 
+export function listCourseGradeYearsApi() {
+  return request.post('/admin/listGradeYears')
+}
+
 export function addCourseApi(data) {
   return request.post('/admin/saveCourse', data)
 }

@@ -15,6 +15,7 @@ public class TeachingClass {
     private Long courseId;
     private Long termId;
     private Long teacherId;
+    private Integer gradeYear;
     private String calcStatus;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
