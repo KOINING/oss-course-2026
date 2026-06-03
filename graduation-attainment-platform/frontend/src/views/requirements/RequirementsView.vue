@@ -58,19 +58,37 @@ const ipForm = reactive({
   ipId: null,
   ipCode: '',
   ipDescription: '',
+  gradeYear: null,
   grId: null,
 })
+
+function validateGradeYear(rule, value, callback) {
+  if (value === null || value === undefined || value === '') {
+    callback(new Error('请输入年级。'))
+    return
+  }
+  if (!Number.isInteger(value)) {
+    callback(new Error('年级必须为4位整数年份。'))
+    return
+  }
+  if (value < 2000 || value > 2100) {
+    callback(new Error('年级必须在 2000 到 2100 之间。'))
+    return
+  }
+  callback()
+}
 
 const grFormRules = {
   grCode: [{ required: true, message: '请输入毕业要求编号。', trigger: 'blur' }],
   grDescription: [{ required: true, message: '请输入毕业要求描述。', trigger: 'blur' }],
   majorId: [{ required: true, message: '请选择专业。', trigger: 'change' }],
-  gradeYear: [{ required: true, message: '请选择年级。', trigger: 'change' }],
+  gradeYear: [{ validator: validateGradeYear, trigger: 'change' }],
 }
 
 const ipFormRules = {
   ipCode: [{ required: true, message: '请输入指标点编号。', trigger: 'blur' }],
   ipDescription: [{ required: true, message: '请输入指标点描述。', trigger: 'blur' }],
+  gradeYear: [{ required: true, message: '请选择年级。', trigger: 'change' }],
   grId: [{ required: true, message: '请选择毕业要求。', trigger: 'change' }],
 }
 
@@ -83,10 +101,11 @@ function formatRequirementLabel(gr) {
 }
 
 const filteredRequirementOptions = computed(() => {
-  if (!ipFilters.gradeYear) {
+  const targetGradeYear = ipForm.gradeYear ?? ipFilters.gradeYear
+  if (!targetGradeYear) {
     return grs.value
   }
-  return grs.value.filter((item) => item.gradeYear === ipFilters.gradeYear)
+  return grs.value.filter((item) => item.gradeYear === targetGradeYear)
 })
 
 function normalizeRequirementFilters() {
@@ -158,6 +177,7 @@ function resetIpForm() {
   ipForm.ipId = null
   ipForm.ipCode = ''
   ipForm.ipDescription = ''
+  ipForm.gradeYear = currentRequirement.value?.gradeYear || gradeYearOptions.value[0] || 2022
   ipForm.grId = currentRequirement.value?.grId || null
 }
 
@@ -194,9 +214,20 @@ function openIpEditDialog(row) {
     ipId: row.ipId,
     ipCode: row.ipCode,
     ipDescription: row.ipDescription,
+    gradeYear: row.gradeYear,
     grId: row.grId,
   })
   ipDialogVisible.value = true
+}
+
+function onIpFormGradeYearChange() {
+  const matchedRequirement = grs.value.find((item) => item.grId === ipForm.grId)
+  if (!matchedRequirement || matchedRequirement.gradeYear !== ipForm.gradeYear) {
+    ipForm.grId = null
+  }
+  if (!ipForm.grId && filteredRequirementOptions.value.length > 0) {
+    ipForm.grId = filteredRequirementOptions.value[0].grId
+  }
 }
 
 function onGrRowChange(row) {
@@ -389,7 +420,11 @@ onMounted(async () => {
             <template #default="{ row }">{{ formatGradeYear(row.gradeYear) }}</template>
           </el-table-column>
           <el-table-column prop="grCode" label="编号" width="100" />
-          <el-table-column prop="grDescription" label="描述" min-width="320" show-overflow-tooltip />
+          <el-table-column prop="grDescription" label="描述" min-width="320">
+            <template #default="{ row }">
+              <div class="multiline-cell">{{ row.grDescription }}</div>
+            </template>
+          </el-table-column>
           <el-table-column prop="majorName" label="专业" width="180" />
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
@@ -441,11 +476,17 @@ onMounted(async () => {
         </el-form>
 
         <el-table v-loading="ipLoading" :data="ips" :span-method="indicatorSpanMethod" border>
-          <el-table-column label="毕业要求" min-width="340" show-overflow-tooltip>
-            <template #default="{ row }">{{ formatRequirementLabel(row) }}</template>
+          <el-table-column label="毕业要求" min-width="340">
+            <template #default="{ row }">
+              <div class="multiline-cell">{{ formatRequirementLabel(row) }}</div>
+            </template>
           </el-table-column>
           <el-table-column prop="ipCode" label="指标点编号" width="140" />
-          <el-table-column prop="ipDescription" label="描述" min-width="320" show-overflow-tooltip />
+          <el-table-column prop="ipDescription" label="描述" min-width="320">
+            <template #default="{ row }">
+              <div class="multiline-cell">{{ row.ipDescription }}</div>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
               <div class="table-actions">
@@ -477,14 +518,15 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item label="年级" prop="gradeYear">
-          <el-select v-model="grForm.gradeYear" placeholder="请选择年级" style="width: 100%">
-            <el-option
-              v-for="gradeYear in gradeYearOptions"
-              :key="gradeYear"
-              :label="formatGradeYear(gradeYear)"
-              :value="gradeYear"
-            />
-          </el-select>
+          <el-input-number
+            v-model="grForm.gradeYear"
+            :min="2000"
+            :max="2100"
+            :step="1"
+            :precision="0"
+            controls-position="right"
+            style="width: 100%"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -500,6 +542,16 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="描述" prop="ipDescription">
           <el-input v-model.trim="ipForm.ipDescription" type="textarea" :rows="4" placeholder="请输入指标点描述" />
+        </el-form-item>
+        <el-form-item label="年级" prop="gradeYear">
+          <el-select v-model="ipForm.gradeYear" placeholder="请选择年级" style="width: 100%" @change="onIpFormGradeYearChange">
+            <el-option
+              v-for="gradeYear in gradeYearOptions"
+              :key="gradeYear"
+              :label="formatGradeYear(gradeYear)"
+              :value="gradeYear"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="毕业要求" prop="grId">
           <el-select v-model="ipForm.grId" placeholder="请选择毕业要求" filterable style="width: 100%">
@@ -568,5 +620,11 @@ onMounted(async () => {
 .table-actions {
   display: flex;
   gap: 8px;
+}
+
+.multiline-cell {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.6;
 }
 </style>

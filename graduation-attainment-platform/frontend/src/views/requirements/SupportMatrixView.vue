@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import {
@@ -28,6 +28,9 @@ const resetLoading = ref(false)
 const courses = ref([])
 const indicators = ref([])
 const matrixMap = ref({})
+const matrixScrollRef = ref(null)
+const groupHeaderRowRef = ref(null)
+const indicatorHeaderRowRef = ref(null)
 let matrixSnapshot = {}
 
 function formatGradeYear(gradeYear) {
@@ -61,6 +64,16 @@ const visibleCourses = computed(() => {
   if (!filters.courseId) return courses.value
   return courses.value.filter((course) => course.courseId === filters.courseId)
 })
+
+function syncStickyMetrics() {
+  const matrixScroll = matrixScrollRef.value
+  if (!matrixScroll) return
+  const groupHeaderHeight = groupHeaderRowRef.value?.offsetHeight ?? 0
+  const indicatorHeaderHeight = indicatorHeaderRowRef.value?.offsetHeight ?? 0
+  matrixScroll.style.setProperty('--matrix-group-header-height', `${groupHeaderHeight}px`)
+  matrixScroll.style.setProperty('--matrix-indicator-header-top', `${groupHeaderHeight}px`)
+  matrixScroll.style.setProperty('--matrix-header-total-height', `${groupHeaderHeight + indicatorHeaderHeight}px`)
+}
 
 async function loadMajorOptions() {
   majorOptions.value = (await listMajorsForMatrixApi()) || []
@@ -135,6 +148,8 @@ async function loadMatrix() {
     indicators.value = indicatorRows || []
     matrixMap.value = buildMatrixMap(relationRows || [])
     matrixSnapshot = JSON.parse(JSON.stringify(matrixMap.value))
+    await nextTick()
+    syncStickyMetrics()
   } finally {
     tableLoading.value = false
   }
@@ -150,6 +165,7 @@ function resetFilters() {
   indicators.value = []
   matrixMap.value = {}
   matrixSnapshot = {}
+  syncStickyMetrics()
 }
 
 function handleLocalReset() {
@@ -255,7 +271,22 @@ async function handleServerReset() {
   }
 }
 
-onMounted(loadMajorOptions)
+watch(
+  () => [indicatorGroups.value.length, indicators.value.length, visibleCourses.value.length],
+  async () => {
+    await nextTick()
+    syncStickyMetrics()
+  },
+)
+
+onMounted(() => {
+  loadMajorOptions()
+  window.addEventListener('resize', syncStickyMetrics)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncStickyMetrics)
+})
 </script>
 
 <template>
@@ -313,18 +344,14 @@ onMounted(loadMajorOptions)
         </el-form-item>
       </el-form>
 
-      <el-alert type="info" :closable="false" show-icon class="notice-alert">
-        毕业要求和指标点表头支持换行展示，指标点列已压缩宽度以便在单页中显示更多信息。
-      </el-alert>
-
       <div v-loading="tableLoading" class="matrix-wrap">
         <el-empty v-if="!tableLoading && indicators.length === 0" description="请选择专业和年级后查询支撑矩阵。" />
 
-        <div v-else class="matrix-scroll">
+        <div v-else ref="matrixScrollRef" class="matrix-scroll">
           <table class="matrix-table">
             <thead>
-              <tr>
-                <th class="corner-cell" rowspan="2">课程 / 指标点</th>
+              <tr ref="groupHeaderRowRef">
+                <th class="corner-cell" rowspan="2">课程 / 毕业要求</th>
                 <th
                   v-for="group in indicatorGroups"
                   :key="`${group.grId}-${group.gradeYear}`"
@@ -332,11 +359,10 @@ onMounted(loadMajorOptions)
                   class="group-cell"
                 >
                   <div class="group-code">{{ group.grCode }}</div>
-                  <div class="group-year">{{ formatGradeYear(group.gradeYear) }}</div>
                   <div class="group-desc">{{ group.grDescription }}</div>
                 </th>
               </tr>
-              <tr>
+              <tr ref="indicatorHeaderRowRef">
                 <th v-for="indicator in indicators" :key="indicator.ipId" class="indicator-cell">
                   <div class="indicator-code">{{ indicator.ipCode }}</div>
                   <div class="indicator-desc">{{ indicator.ipDescription }}</div>
@@ -427,16 +453,20 @@ onMounted(loadMajorOptions)
   margin-bottom: 12px;
 }
 
-.notice-alert {
-  margin-bottom: 16px;
-}
-
 .matrix-wrap {
   min-height: 240px;
 }
 
 .matrix-scroll {
+  --matrix-group-header-height: 0px;
+  --matrix-indicator-header-top: 0px;
+  --matrix-header-total-height: 0px;
+  position: relative;
+  max-height: 70vh;
   overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
 }
 
 .matrix-table {
@@ -450,29 +480,33 @@ onMounted(loadMajorOptions)
   border: 1px solid #dbe2ea;
   padding: 10px 8px;
   vertical-align: top;
+  background: #fff;
 }
 
 .corner-cell {
-  min-width: 160px;
+  position: sticky;
+  top: 0;
+  left: 0;
+  min-width: 180px;
   background: #f8fafc;
   font-weight: 600;
+  z-index: 7;
+  box-shadow: 1px 0 0 #dbe2ea, 0 1px 0 #dbe2ea;
 }
 
 .group-cell {
+  position: sticky;
+  top: 0;
   min-width: 144px;
   max-width: 144px;
   background: #f8fafc;
+  z-index: 5;
+  box-shadow: 0 1px 0 #dbe2ea;
 }
 
 .group-code,
 .indicator-code {
   font-weight: 600;
-}
-
-.group-year {
-  margin-top: 4px;
-  color: #475569;
-  font-size: 12px;
 }
 
 .group-desc,
@@ -486,14 +520,23 @@ onMounted(loadMajorOptions)
 }
 
 .indicator-cell {
+  position: sticky;
+  top: var(--matrix-indicator-header-top);
   min-width: 144px;
   max-width: 144px;
   background: #f8fafc;
+  z-index: 4;
+  box-shadow: 0 1px 0 #dbe2ea;
 }
 
 .course-cell {
+  position: sticky;
+  left: 0;
   min-width: 180px;
+  background: #fff;
   font-weight: 500;
+  z-index: 3;
+  box-shadow: 1px 0 0 #dbe2ea;
 }
 
 .value-cell {
@@ -516,11 +559,22 @@ onMounted(loadMajorOptions)
 }
 
 .sum-label {
+  position: sticky;
+  left: 0;
+  bottom: 0;
   font-weight: 600;
+  background: #f8fafc !important;
+  z-index: 6;
+  box-shadow: 1px 0 0 #dbe2ea, 0 -1px 0 #dbe2ea;
 }
 
 .sum-cell {
+  position: sticky;
+  bottom: 0;
   text-align: center;
+  background: #f8fafc !important;
+  z-index: 2;
+  box-shadow: 0 -1px 0 #dbe2ea;
 }
 
 .sum-inner {
