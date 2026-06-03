@@ -76,12 +76,7 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
                                         List<String> permissions) {
         assertManagePermission(roles, permissions);
         Long majorId = request == null ? null : request.getMajorId();
-        List<Integer> years = new ArrayList<>(courseIndicatorSupportMapper.selectGradeYears(majorId));
-        if (!years.contains(2022)) {
-            years.add(2022);
-            years.sort((left, right) -> Integer.compare(right, left));
-        }
-        return years;
+        return new ArrayList<>(courseIndicatorSupportMapper.selectGradeYears(majorId));
     }
 
     @Override

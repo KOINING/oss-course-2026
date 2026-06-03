@@ -130,14 +130,13 @@ public interface CourseIndicatorSupportMapper extends BaseMapper<CourseIndicator
 
     @Select({
             "<script>",
-            "SELECT DISTINCT grade_year FROM (",
-            "SELECT gr.grade_year AS grade_year FROM graduation_requirement gr",
-            "<if test='majorId != null'>WHERE gr.major_id = #{majorId}</if>",
-            "UNION",
-            "SELECT cm.grade_year AS grade_year FROM course_major cm",
-            "<if test='majorId != null'>WHERE cm.major_id = #{majorId}</if>",
-            ") years",
-            "ORDER BY grade_year DESC",
+            "SELECT DISTINCT gr.grade_year",
+            "FROM graduation_requirement gr",
+            "JOIN course_major cm ON cm.major_id = gr.major_id AND cm.grade_year = gr.grade_year",
+            "<where>",
+            "<if test='majorId != null'>gr.major_id = #{majorId}</if>",
+            "</where>",
+            "ORDER BY gr.grade_year DESC",
             "</script>"
     })
     List<Integer> selectGradeYears(@Param("majorId") Long majorId);

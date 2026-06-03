@@ -351,7 +351,14 @@ onBeforeUnmount(() => {
           <table class="matrix-table">
             <thead>
               <tr ref="groupHeaderRowRef">
-                <th class="corner-cell" rowspan="2">课程 / 毕业要求</th>
+                <th class="corner-cell" rowspan="2">
+                  <div class="corner-title">课程 / 毕业要求</div>
+                  <div class="corner-stats">
+                    <span>毕业要求: {{ graduationRequirementCount }}</span>
+                    <span>指标点: {{ indicators.length }}</span>
+                    <span>课程: {{ courses.length }}</span>
+                  </div>
+                </th>
                 <th
                   v-for="group in indicatorGroups"
                   :key="`${group.grId}-${group.gradeYear}`"
@@ -417,12 +424,6 @@ onBeforeUnmount(() => {
         <el-button :loading="resetLoading" @click="handleServerReset">清空当前版本</el-button>
         <el-button @click="handleLocalReset">恢复本次查询结果</el-button>
       </div>
-
-      <div class="summary-bar" v-if="indicators.length > 0">
-        <span>毕业要求：{{ graduationRequirementCount }}</span>
-        <span>指标点：{{ indicators.length }}</span>
-        <span>课程：{{ courses.length }}</span>
-      </div>
     </el-card>
   </div>
 </template>
@@ -462,7 +463,7 @@ onBeforeUnmount(() => {
   --matrix-indicator-header-top: 0px;
   --matrix-header-total-height: 0px;
   position: relative;
-  max-height: 70vh;
+  max-height: 78vh;
   overflow-x: auto;
   overflow-y: auto;
   border: 1px solid #dbe2ea;
@@ -488,10 +489,27 @@ onBeforeUnmount(() => {
   top: 0;
   left: 0;
   min-width: 180px;
-  background: #f8fafc;
+  background: #eef4ff;
   font-weight: 600;
   z-index: 7;
-  box-shadow: 1px 0 0 #dbe2ea, 0 1px 0 #dbe2ea;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: inset 0 -1px 0 #cbd5e1, 1px 0 0 #dbe2ea;
+}
+
+.corner-title {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.corner-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .group-cell {
@@ -499,9 +517,10 @@ onBeforeUnmount(() => {
   top: 0;
   min-width: 144px;
   max-width: 144px;
-  background: #f8fafc;
+  background: #eef4ff;
   z-index: 5;
-  box-shadow: 0 1px 0 #dbe2ea;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: inset 0 -1px 0 #cbd5e1;
 }
 
 .group-code,
@@ -524,23 +543,25 @@ onBeforeUnmount(() => {
   top: var(--matrix-indicator-header-top);
   min-width: 144px;
   max-width: 144px;
-  background: #f8fafc;
+  background: #f7faff;
   z-index: 4;
-  box-shadow: 0 1px 0 #dbe2ea;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: inset 0 -1px 0 #cbd5e1;
 }
 
 .course-cell {
   position: sticky;
   left: 0;
   min-width: 180px;
-  background: #fff;
+  background: #f8fafc;
   font-weight: 500;
   z-index: 3;
-  box-shadow: 1px 0 0 #dbe2ea;
+  box-shadow: inset 0 -1px 0 #e2e8f0, 1px 0 0 #dbe2ea;
 }
 
 .value-cell {
   text-align: center;
+  background: #fff;
 }
 
 .cell-inner {
@@ -565,7 +586,8 @@ onBeforeUnmount(() => {
   font-weight: 600;
   background: #f8fafc !important;
   z-index: 6;
-  box-shadow: 1px 0 0 #dbe2ea, 0 -1px 0 #dbe2ea;
+  border-top: 1px solid #cbd5e1;
+  box-shadow: inset 0 1px 0 #cbd5e1, 1px 0 0 #dbe2ea;
 }
 
 .sum-cell {
@@ -574,7 +596,8 @@ onBeforeUnmount(() => {
   text-align: center;
   background: #f8fafc !important;
   z-index: 2;
-  box-shadow: 0 -1px 0 #dbe2ea;
+  border-top: 1px solid #cbd5e1;
+  box-shadow: inset 0 1px 0 #cbd5e1;
 }
 
 .sum-inner {
@@ -597,13 +620,5 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   margin-top: 16px;
-}
-
-.summary-bar {
-  display: flex;
-  gap: 20px;
-  margin-top: 12px;
-  color: #64748b;
-  font-size: 13px;
 }
 </style>
