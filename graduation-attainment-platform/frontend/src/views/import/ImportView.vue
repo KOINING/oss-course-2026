@@ -15,14 +15,14 @@ const courseUploadRef = ref(null)
 const studentUploadRef = ref(null)
 const studentClassUploadRef = ref(null)
 
-const COURSE_TEMPLATE_HEADERS = ['所属专业代码', '适用年级', '课程代码', '课程名称', '学分', '状态']
-const STUDENT_TEMPLATE_HEADERS = ['学号', '姓名', '专业代码', '入学年份', '状态']
-const STUDENT_CLASS_TEMPLATE_HEADERS = ['学号', '姓名', '专业代码', '入学年份', '教学班代码']
+const COURSE_TEMPLATE_HEADERS = ['鎵€灞炰笓涓氫唬鐮?, '閫傜敤骞寸骇', '璇剧▼浠ｇ爜', '璇剧▼鍚嶇О', '瀛﹀垎', '鐘舵€?]
+const STUDENT_TEMPLATE_HEADERS = ['瀛﹀彿', '濮撳悕', '涓撲笟浠ｇ爜', '鍏ュ骞翠唤', '鐘舵€?]
+const STUDENT_CLASS_TEMPLATE_HEADERS = ['瀛﹀彿', '濮撳悕', '涓撲笟浠ｇ爜', '鍏ュ骞翠唤', '鏁欏鐝唬鐮?]
 
 const courseFile = ref(null)
 const courseImporting = ref(false)
 const courseResult = reactive({
-  summary: { totalCount: 0, successCount: 0, failureCount: 0 },
+  summary: { totalCount: 0, successCount: 0, skippedCount: undefined, failureCount: 0 },
   failedItems: [],
 })
 
@@ -55,11 +55,11 @@ const studentClassImportSucceeded = computed(
 )
 
 const headerMeta = computed(() => ({
-  title: route.meta.title || '数据导入',
+  title: route.meta.title || '鏁版嵁瀵煎叆',
   summary:
     route.meta.summary ||
-    '支持课程清单、学生信息和教学班成员关系导入，并提供逐行校验结果。',
-  moduleTitle: route.meta.moduleTitle || '模块 A',
+    '鏀寔璇剧▼娓呭崟銆佸鐢熶俊鎭拰鏁欏鐝垚鍛樺叧绯诲鍏ワ紝骞舵彁渚涢€愯鏍￠獙缁撴灉銆?,
+  moduleTitle: route.meta.moduleTitle || '妯″潡 A',
 }))
 
 watch(
@@ -79,14 +79,17 @@ watch(
 )
 
 function resetResult(resultState) {
-  resultState.summary = { totalCount: 0, successCount: 0, failureCount: 0 }
+  const hasSkippedCount = Object.prototype.hasOwnProperty.call(resultState.summary || {}, 'skippedCount')
+  resultState.summary = hasSkippedCount
+    ? { totalCount: 0, successCount: 0, skippedCount: undefined, failureCount: 0 }
+    : { totalCount: 0, successCount: 0, failureCount: 0 }
   resultState.failedItems = []
 }
 
 function beforeUpload(file) {
   const supported = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
   if (!supported) {
-    ElMessage.error('仅支持 .xlsx、.xls 和 .csv 文件。')
+    ElMessage.error('浠呮敮鎸?.xlsx銆?xls 鍜?.csv 鏂囦欢銆?)
     return false
   }
   return false
@@ -141,7 +144,7 @@ function resetStudentClassImport() {
 
 async function submitCourseImport() {
   if (!courseFile.value) {
-    ElMessage.warning('请先选择课程导入文件。')
+    ElMessage.warning('璇峰厛閫夋嫨璇剧▼瀵煎叆鏂囦欢銆?)
     return
   }
   const formData = new FormData()
@@ -152,12 +155,13 @@ async function submitCourseImport() {
     courseResult.summary = {
       totalCount: data.totalCount ?? 0,
       successCount: data.successCount ?? 0,
+      skippedCount: data.skippedCount ?? 0,
       failureCount: data.failureCount ?? 0,
     }
     courseResult.failedItems = data.failedItems ?? []
-    ElMessage.success('课程导入完成。')
+    ElMessage.success('璇剧▼瀵煎叆瀹屾垚銆?)
   } catch (error) {
-    ElMessage.error(error.message || '课程导入失败。')
+    ElMessage.error(error.message || '璇剧▼瀵煎叆澶辫触銆?)
   } finally {
     courseImporting.value = false
   }
@@ -165,7 +169,7 @@ async function submitCourseImport() {
 
 async function submitStudentImport() {
   if (!studentFile.value) {
-    ElMessage.warning('请先选择学生导入文件。')
+    ElMessage.warning('璇峰厛閫夋嫨瀛︾敓瀵煎叆鏂囦欢銆?)
     return
   }
   const formData = new FormData()
@@ -179,9 +183,9 @@ async function submitStudentImport() {
       failureCount: data.failureCount ?? 0,
     }
     studentResult.failedItems = data.failedItems ?? []
-    ElMessage.success('学生导入完成。')
+    ElMessage.success('瀛︾敓瀵煎叆瀹屾垚銆?)
   } catch (error) {
-    ElMessage.error(error.message || '学生导入失败。')
+    ElMessage.error(error.message || '瀛︾敓瀵煎叆澶辫触銆?)
   } finally {
     studentImporting.value = false
   }
@@ -189,7 +193,7 @@ async function submitStudentImport() {
 
 async function submitStudentClassImport() {
   if (!studentClassFile.value) {
-    ElMessage.warning('请先选择学生教学班关系导入文件。')
+    ElMessage.warning('璇峰厛閫夋嫨瀛︾敓鏁欏鐝叧绯诲鍏ユ枃浠躲€?)
     return
   }
   const formData = new FormData()
@@ -203,9 +207,9 @@ async function submitStudentClassImport() {
       failureCount: data.failureCount ?? 0,
     }
     studentClassResult.failedItems = data.failedItems ?? []
-    ElMessage.success('学生教学班关系导入完成。')
+    ElMessage.success('瀛︾敓鏁欏鐝叧绯诲鍏ュ畬鎴愩€?)
   } catch (error) {
-    ElMessage.error(error.message || '学生教学班关系导入失败。')
+    ElMessage.error(error.message || '瀛︾敓鏁欏鐝叧绯诲鍏ュけ璐ャ€?)
   } finally {
     studentClassImporting.value = false
   }
@@ -241,12 +245,12 @@ function goToStudentList() {
       </template>
 
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="课程导入" name="course">
+        <el-tab-pane label="璇剧▼瀵煎叆" name="course">
           <div class="tab-layout">
             <section class="upload-section">
               <div class="section-header">
-                <h3>上传课程清单</h3>
-                <el-button type="primary" plain :icon="Download" @click="downloadCourseTemplate">下载模板</el-button>
+                <h3>涓婁紶璇剧▼娓呭崟</h3>
+                <el-button type="primary" plain :icon="Download" @click="downloadCourseTemplate">涓嬭浇妯℃澘</el-button>
               </div>
 
               <div class="template-tags">
@@ -265,18 +269,18 @@ function goToStudentList() {
                 class="upload-box"
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
-                <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
-                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
+                <div class="el-upload__text">灏嗘枃浠舵嫋鍒版澶勶紝鎴栫偣鍑婚€夋嫨鏂囦欢銆?/div>
+                <div class="upload-tip">鏀寔瀵煎叆 .xlsx銆?xls銆?csv锛屾帹鑽愪紭鍏堜娇鐢?.xlsx銆?/div>
               </el-upload>
 
               <div class="action-row">
-                <el-button type="primary" :loading="courseImporting" @click="submitCourseImport">开始导入</el-button>
-                <el-button @click="resetCourseImport">清空</el-button>
+                <el-button type="primary" :loading="courseImporting" @click="submitCourseImport">寮€濮嬪鍏?/el-button>
+                <el-button @click="resetCourseImport">娓呯┖</el-button>
               </div>
             </section>
 
             <ImportResultPreview
-              title="课程导入结果"
+              title="璇剧▼瀵煎叆缁撴灉"
               :summary="courseResult.summary"
               :failed-items="courseResult.failedItems"
               :loading="courseImporting"
@@ -284,13 +288,13 @@ function goToStudentList() {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="学生导入" name="students">
+        <el-tab-pane label="瀛︾敓瀵煎叆" name="students">
           <div class="tab-layout">
             <section class="upload-section">
               <div class="section-header">
-                <h3>上传学生信息</h3>
+                <h3>涓婁紶瀛︾敓淇℃伅</h3>
                 <el-button type="primary" plain :icon="Download" @click="downloadTemplate('/templates/students.xlsx', 'students-template.xlsx')">
-                  下载模板
+                  涓嬭浇妯℃澘
                 </el-button>
               </div>
 
@@ -310,18 +314,18 @@ function goToStudentList() {
                 class="upload-box"
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
-                <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
-                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
+                <div class="el-upload__text">灏嗘枃浠舵嫋鍒版澶勶紝鎴栫偣鍑婚€夋嫨鏂囦欢銆?/div>
+                <div class="upload-tip">鏀寔瀵煎叆 .xlsx銆?xls銆?csv锛屾帹鑽愪紭鍏堜娇鐢?.xlsx銆?/div>
               </el-upload>
 
               <div class="action-row">
-                <el-button type="primary" :loading="studentImporting" @click="submitStudentImport">开始导入</el-button>
-                <el-button @click="resetStudentImport">清空</el-button>
+                <el-button type="primary" :loading="studentImporting" @click="submitStudentImport">寮€濮嬪鍏?/el-button>
+                <el-button @click="resetStudentImport">娓呯┖</el-button>
               </div>
             </section>
 
             <ImportResultPreview
-              title="学生导入结果"
+              title="瀛︾敓瀵煎叆缁撴灉"
               :summary="studentResult.summary"
               :failed-items="studentResult.failedItems"
               :loading="studentImporting"
@@ -329,18 +333,18 @@ function goToStudentList() {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="学生教学班关系导入" name="student-classes">
+        <el-tab-pane label="瀛︾敓鏁欏鐝叧绯诲鍏? name="student-classes">
           <div class="tab-layout">
             <section class="upload-section">
               <div class="section-header">
-                <h3>上传学生教学班关系</h3>
+                <h3>涓婁紶瀛︾敓鏁欏鐝叧绯?/h3>
                 <el-button
                   type="primary"
                   plain
                   :icon="Download"
                   @click="downloadTemplate('/templates/student-classes.xlsx', 'student-class-template.xlsx')"
                 >
-                  下载模板
+                  涓嬭浇妯℃澘
                 </el-button>
               </div>
 
@@ -360,22 +364,22 @@ function goToStudentList() {
                 class="upload-box"
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
-                <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
-                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
+                <div class="el-upload__text">灏嗘枃浠舵嫋鍒版澶勶紝鎴栫偣鍑婚€夋嫨鏂囦欢銆?/div>
+                <div class="upload-tip">鏀寔瀵煎叆 .xlsx銆?xls銆?csv锛屾帹鑽愪紭鍏堜娇鐢?.xlsx銆?/div>
               </el-upload>
 
               <div class="action-row">
-                <el-button type="primary" :loading="studentClassImporting" @click="submitStudentClassImport">开始导入</el-button>
-                <el-button @click="resetStudentClassImport">清空</el-button>
+                <el-button type="primary" :loading="studentClassImporting" @click="submitStudentClassImport">寮€濮嬪鍏?/el-button>
+                <el-button @click="resetStudentClassImport">娓呯┖</el-button>
               </div>
 
               <div v-if="studentClassImportSucceeded" class="link-row">
-                <el-button type="primary" link @click="goToTeachingClassRelations">打开教学班页面</el-button>
-                <el-button type="primary" link @click="goToStudentList">打开学生列表</el-button>
+                <el-button type="primary" link @click="goToTeachingClassRelations">鎵撳紑鏁欏鐝〉闈?/el-button>
+                <el-button type="primary" link @click="goToStudentList">鎵撳紑瀛︾敓鍒楄〃</el-button>
               </div>
 
               <div v-if="targetTeachingClass" class="target-card">
-                <div class="target-title">当前教学班</div>
+                <div class="target-title">褰撳墠鏁欏鐝?/div>
                 <div class="target-content">
                   <span>{{ targetTeachingClass.classCode }}</span>
                   <span>{{ targetTeachingClass.className }}</span>
@@ -384,7 +388,7 @@ function goToStudentList() {
             </section>
 
             <ImportResultPreview
-              title="学生教学班关系导入结果"
+              title="瀛︾敓鏁欏鐝叧绯诲鍏ョ粨鏋?
               :summary="studentClassResult.summary"
               :failed-items="studentClassResult.failedItems"
               :loading="studentClassImporting"

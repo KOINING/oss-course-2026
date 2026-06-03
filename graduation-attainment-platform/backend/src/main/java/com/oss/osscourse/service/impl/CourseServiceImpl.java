@@ -244,11 +244,12 @@ public class CourseServiceImpl implements CourseService {
             throw new BusinessException(400, "该课程存在关联数据，无法删除");
         }
     }
-
     @Override
     public CourseImportResult importCourses(MultipartFile file) {
         List<CourseImportResult.FailedItem> failedItems = new ArrayList<>();
+        List<CourseImportResult.SkippedItem> skippedItems = new ArrayList<>();
         int successCount = 0;
+        int skippedCount = 0;
         int totalCount = 0;
         Set<String> courseCodesInBatch = new HashSet<>();
 
@@ -260,11 +261,17 @@ public class CourseServiceImpl implements CourseService {
 
             totalCount++;
             try {
-                String error = validateAndImportCourseRow(row, courseCodesInBatch);
-                if (error != null) {
+                CourseImportRowResult result = validateAndImportCourseRow(row, courseCodesInBatch);
+                if (result.status() == CourseImportRowStatus.FAILURE) {
                     failedItems.add(CourseImportResult.FailedItem.builder()
                             .rowNumber(row.getRowNumber())
-                            .reason(error)
+                            .reason(result.reason())
+                            .build());
+                } else if (result.status() == CourseImportRowStatus.SKIPPED) {
+                    skippedCount++;
+                    skippedItems.add(CourseImportResult.SkippedItem.builder()
+                            .rowNumber(row.getRowNumber())
+                            .reason(result.reason())
                             .build());
                 } else {
                     successCount++;
@@ -280,12 +287,14 @@ public class CourseServiceImpl implements CourseService {
         return CourseImportResult.builder()
                 .totalCount(totalCount)
                 .successCount(successCount)
+                .skippedCount(skippedCount)
                 .failureCount(failedItems.size())
+                .skippedItems(skippedItems)
                 .failedItems(failedItems)
                 .build();
     }
 
-    private String validateAndImportCourseRow(ImportSheetReader.ImportRowData row, Set<String> courseCodesInBatch) {
+    private CourseImportRowResult validateAndImportCourseRow(ImportSheetReader.ImportRowData row, Set<String> courseCodesInBatch) {
         String majorCode = row.getCell(0);
         String gradeYearStr = row.getCell(1);
         String courseCode = row.getCell(2);
@@ -293,70 +302,65 @@ public class CourseServiceImpl implements CourseService {
         String creditStr = row.getCell(4);
         String statusStr = row.getCell(5);
 
-        // 所属专业代码必须已存在
         if (majorCode == null || majorCode.isEmpty()) {
-            return "所属专业代码不能为空";
+            return CourseImportRowResult.failure("所属专业代码不能为空");
         }
         Major major = majorMapper.selectOne(
                 new LambdaQueryWrapper<Major>()
                         .eq(Major::getMajorCode, majorCode));
         if (major == null) {
-            return "所属专业代码不存在: " + majorCode;
+            return CourseImportRowResult.failure("所属专业代码不存在: " + majorCode);
         }
 
         Integer gradeYear;
         if (gradeYearStr == null || gradeYearStr.isEmpty()) {
-            return "适用年级不能为空";
+            return CourseImportRowResult.failure("适用年级不能为空");
         }
         try {
             gradeYear = Integer.parseInt(gradeYearStr);
         } catch (NumberFormatException e) {
-            return "适用年级必须为合法年份: " + gradeYearStr;
+            return CourseImportRowResult.failure("适用年级必须为合法年份: " + gradeYearStr);
         }
         if (gradeYear < 2000 || gradeYear > 2100) {
-            return "适用年级必须为合法年份: " + gradeYearStr;
+            return CourseImportRowResult.failure("适用年级必须为合法年份: " + gradeYearStr);
         }
 
-        // 课程代码不能为空
         if (courseCode == null || courseCode.isEmpty()) {
-            return "课程代码不能为空";
+            return CourseImportRowResult.failure("课程代码不能为空");
         }
 
-        // 课程名称不能为空
         if (courseName == null || courseName.isEmpty()) {
-            return "课程名称不能为空";
+            return CourseImportRowResult.failure("课程名称不能为空");
         }
 
-        // 学分必须为合法数值
         Float credit;
         if (creditStr == null || creditStr.isEmpty()) {
-            return "学分不能为空";
+            return CourseImportRowResult.failure("学分不能为空");
         }
         try {
             credit = Float.parseFloat(creditStr);
             if (credit < 0) {
-                return "学分不能为负数: " + creditStr;
+                return CourseImportRowResult.failure("学分不能为负数: " + creditStr);
             }
         } catch (NumberFormatException e) {
-            return "学分必须为合法数值: " + creditStr;
+            return CourseImportRowResult.failure("学分必须为合法数值: " + creditStr);
         }
 
-        // 状态
         Integer status = 1;
         if (statusStr != null && !statusStr.isEmpty()) {
             try {
                 status = Integer.parseInt(statusStr);
                 if (status != 0 && status != 1) {
-                    return "状态值必须为0或1: " + statusStr;
+                    return CourseImportRowResult.failure("状态值必须为0或1: " + statusStr);
                 }
             } catch (NumberFormatException e) {
-                return "状态值必须为合法整数: " + statusStr;
+                return CourseImportRowResult.failure("状态值必须为合法整数: " + statusStr);
             }
         }
 
-        // 课程代码在同一模板中不能重复
-        if (!courseCodesInBatch.add(majorCode + "_" + gradeYear + "_" + courseCode)) {
-            return "课程代码在导入模板中重复: " + courseCode;
+        String importKey = majorCode + "_" + gradeYear + "_" + courseCode;
+        if (!courseCodesInBatch.add(importKey)) {
+            return CourseImportRowResult.skipped("同一导入文件中已处理相同的专业、年级和课程代码，已跳过");
         }
 
         Course existingInDb = courseMapper.selectOne(
@@ -372,13 +376,11 @@ public class CourseServiceImpl implements CourseService {
             courseMapper.insert(course);
         } else {
             if (!courseName.equals(existingInDb.getCourseName())) {
-                return "课程代码已存在且课程名称不一致: " + courseCode;
+                return CourseImportRowResult.failure("课程代码已存在且课程名称不一致: " + courseCode);
             }
             if (Float.compare(credit, existingInDb.getCredit()) != 0) {
-                return "课程代码已存在且学分不一致: " + courseCode;
+                return CourseImportRowResult.failure("课程代码已存在且学分不一致: " + courseCode);
             }
-            existingInDb.setStatus(status);
-            courseMapper.updateById(existingInDb);
             course = existingInDb;
         }
 
@@ -386,15 +388,43 @@ public class CourseServiceImpl implements CourseService {
                 .eq(CourseMajor::getCourseId, course.getCourseId())
                 .eq(CourseMajor::getMajorId, major.getMajorId())
                 .eq(CourseMajor::getGradeYear, gradeYear));
-        if (relationCount == null || relationCount == 0) {
-            CourseMajor relation = new CourseMajor();
-            relation.setCourseId(course.getCourseId());
-            relation.setMajorId(major.getMajorId());
-            relation.setGradeYear(gradeYear);
-            courseMajorMapper.insert(relation);
+        if (relationCount != null && relationCount > 0) {
+            return CourseImportRowResult.skipped("该课程已存在于当前专业和年级的培养方案中，已跳过");
         }
 
-        return null;
+        if (existingInDb != null && !status.equals(existingInDb.getStatus())) {
+            existingInDb.setStatus(status);
+            courseMapper.updateById(existingInDb);
+        }
+
+        CourseMajor relation = new CourseMajor();
+        relation.setCourseId(course.getCourseId());
+        relation.setMajorId(major.getMajorId());
+        relation.setGradeYear(gradeYear);
+        courseMajorMapper.insert(relation);
+
+        return CourseImportRowResult.success();
+    }
+
+    private enum CourseImportRowStatus {
+        SUCCESS,
+        SKIPPED,
+        FAILURE
+    }
+
+    private record CourseImportRowResult(CourseImportRowStatus status, String reason) {
+
+        private static CourseImportRowResult success() {
+            return new CourseImportRowResult(CourseImportRowStatus.SUCCESS, null);
+        }
+
+        private static CourseImportRowResult skipped(String reason) {
+            return new CourseImportRowResult(CourseImportRowStatus.SKIPPED, reason);
+        }
+
+        private static CourseImportRowResult failure(String reason) {
+            return new CourseImportRowResult(CourseImportRowStatus.FAILURE, reason);
+        }
     }
 
     private List<CourseResponse> buildCourseResponses(List<Course> courses) {
@@ -584,3 +614,4 @@ public class CourseServiceImpl implements CourseService {
     private record CourseMajorBindingRow(Long majorId, Integer gradeYear) {
     }
 }
+
