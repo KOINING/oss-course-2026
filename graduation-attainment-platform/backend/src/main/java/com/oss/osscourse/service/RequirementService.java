@@ -39,4 +39,6 @@ public interface RequirementService {
                               List<String> permissions);
 
     List<Major> listMajors(List<String> roles, List<String> permissions);
+
+    List<Integer> listGradeYears(Long majorId, List<String> roles, List<String> permissions);
 }

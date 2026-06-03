@@ -22,4 +22,6 @@ public interface CourseService {
     void deleteCourse(Long courseId);
 
     CourseImportResult importCourses(MultipartFile file);
+
+    List<Integer> listGradeYears();
 }

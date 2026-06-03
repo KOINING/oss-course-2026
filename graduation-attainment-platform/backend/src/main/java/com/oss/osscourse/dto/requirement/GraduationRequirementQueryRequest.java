@@ -11,4 +11,7 @@ public class GraduationRequirementQueryRequest {
 
     @Schema(description = "所属专业ID", example = "1")
     private Long majorId;
+
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
 }

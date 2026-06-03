@@ -4,17 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.course.CourseCreateRequest;
 import com.oss.osscourse.dto.course.CourseImportResult;
+import com.oss.osscourse.dto.course.CourseMajorGradeYearBindingRequest;
+import com.oss.osscourse.dto.course.CourseMajorGradeYearBindingResponse;
 import com.oss.osscourse.dto.course.CourseQueryRequest;
 import com.oss.osscourse.dto.course.CourseResponse;
 import com.oss.osscourse.dto.course.CourseSaveRequest;
 import com.oss.osscourse.dto.course.CourseStatusRequest;
 import com.oss.osscourse.dto.course.CourseUpdateRequest;
 import com.oss.osscourse.entity.Course;
+import com.oss.osscourse.entity.GraduationRequirement;
 import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.Major;
+import com.oss.osscourse.entity.Student;
+import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
+import com.oss.osscourse.mapper.GraduationRequirementMapper;
 import com.oss.osscourse.mapper.MajorMapper;
+import com.oss.osscourse.mapper.StudentMapper;
+import com.oss.osscourse.mapper.TeachingClassMapper;
 import com.oss.osscourse.service.CourseService;
 import com.oss.osscourse.util.ImportSheetReader;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +39,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +51,9 @@ public class CourseServiceImpl implements CourseService {
     private final CourseMapper courseMapper;
     private final CourseMajorMapper courseMajorMapper;
     private final MajorMapper majorMapper;
+    private final GraduationRequirementMapper graduationRequirementMapper;
+    private final TeachingClassMapper teachingClassMapper;
+    private final StudentMapper studentMapper;
 
     @Override
     public List<CourseResponse> listCourses(CourseQueryRequest request) {
@@ -57,13 +70,13 @@ public class CourseServiceImpl implements CourseService {
                 wrapper.eq(Course::getStatus, request.getStatus());
             }
             if (request.getMajorId() != null) {
-                List<Long> courseIds = courseMajorMapper.selectList(
-                                new LambdaQueryWrapper<CourseMajor>()
-                                        .eq(CourseMajor::getMajorId, request.getMajorId()))
-                        .stream()
-                        .map(CourseMajor::getCourseId)
-                        .distinct()
-                        .toList();
+                List<Long> courseIds = selectCourseIdsByPlanFilters(request.getMajorId(), request.getGradeYear());
+                if (courseIds.isEmpty()) {
+                    return List.of();
+                }
+                wrapper.in(Course::getCourseId, courseIds);
+            } else if (request.getGradeYear() != null) {
+                List<Long> courseIds = selectCourseIdsByPlanFilters(null, request.getGradeYear());
                 if (courseIds.isEmpty()) {
                     return List.of();
                 }
@@ -79,12 +92,12 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public CourseResponse getCourseById(Long courseId) {
         if (courseId == null) {
-            throw new BusinessException(400, "courseId is required");
+            throw new BusinessException(400, "courseId不能为空");
         }
 
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
-            throw new BusinessException(404, "course not found");
+            throw new BusinessException(404, "课程不存在");
         }
 
         return buildCourseResponses(List.of(course)).get(0);
@@ -96,11 +109,11 @@ public class CourseServiceImpl implements CourseService {
         String courseCode = request.getCourseCode().trim();
         if (courseMapper.selectOne(new LambdaQueryWrapper<Course>()
                 .eq(Course::getCourseCode, courseCode)) != null) {
-            throw new BusinessException(400, "courseCode already exists");
+            throw new BusinessException(400, "课程代码已存在");
         }
 
-        List<Long> normalizedMajorIds = normalizeMajorIds(request.getMajorIds());
-        validateMajorIdsExist(normalizedMajorIds);
+        List<CourseMajorBindingRow> bindings = normalizeCourseBindings(request.getMajorGradeYearBindings(), request.getMajorIds());
+        validateBindings(bindings);
 
         Course course = new Course();
         course.setCourseCode(courseCode);
@@ -109,7 +122,7 @@ public class CourseServiceImpl implements CourseService {
         course.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         courseMapper.insert(course);
 
-        saveCourseMajorRelations(course.getCourseId(), normalizedMajorIds);
+        saveCourseMajorRelations(course.getCourseId(), bindings);
     }
 
     @Override
@@ -121,6 +134,7 @@ public class CourseServiceImpl implements CourseService {
             createRequest.setCourseName(request.getCourseName());
             createRequest.setCredit(request.getCredit());
             createRequest.setMajorIds(request.getMajorIds());
+            createRequest.setMajorGradeYearBindings(request.getMajorGradeYearBindings());
             createRequest.setStatus(request.getStatus());
             createCourse(createRequest);
             return;
@@ -132,6 +146,7 @@ public class CourseServiceImpl implements CourseService {
         updateRequest.setCourseName(request.getCourseName());
         updateRequest.setCredit(request.getCredit());
         updateRequest.setMajorIds(request.getMajorIds());
+        updateRequest.setMajorGradeYearBindings(request.getMajorGradeYearBindings());
         updateRequest.setStatus(request.getStatus());
         updateCourse(updateRequest);
     }
@@ -140,12 +155,12 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(rollbackFor = Exception.class)
     public void updateCourse(CourseUpdateRequest request) {
         if (request.getCourseId() == null) {
-            throw new BusinessException(400, "courseId is required");
+            throw new BusinessException(400, "courseId不能为空");
         }
 
         Course course = courseMapper.selectById(request.getCourseId());
         if (course == null) {
-            throw new BusinessException(404, "course not found");
+            throw new BusinessException(404, "课程不存在");
         }
 
         if (hasText(request.getCourseCode())) {
@@ -154,7 +169,7 @@ public class CourseServiceImpl implements CourseService {
                     .eq(Course::getCourseCode, courseCode)
                     .ne(Course::getCourseId, request.getCourseId()));
             if (existing != null) {
-                throw new BusinessException(400, "courseCode already exists");
+                throw new BusinessException(400, "课程代码已存在");
             }
             course.setCourseCode(courseCode);
         }
@@ -173,10 +188,10 @@ public class CourseServiceImpl implements CourseService {
 
         courseMapper.updateById(course);
 
-        if (request.getMajorIds() != null) {
-            List<Long> normalizedMajorIds = normalizeMajorIds(request.getMajorIds());
-            validateMajorIdsExist(normalizedMajorIds);
-            syncCourseMajorRelations(course.getCourseId(), normalizedMajorIds);
+        if (request.getMajorIds() != null || request.getMajorGradeYearBindings() != null) {
+            List<CourseMajorBindingRow> bindings = normalizeCourseBindings(request.getMajorGradeYearBindings(), request.getMajorIds());
+            validateBindings(bindings);
+            syncCourseMajorRelations(course.getCourseId(), bindings);
         }
     }
 
@@ -184,12 +199,12 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(rollbackFor = Exception.class)
     public void updateCourseStatus(CourseStatusRequest request) {
         if (request.getStatus() != 0 && request.getStatus() != 1) {
-            throw new BusinessException(400, "status must be 0 or 1");
+            throw new BusinessException(400, "状态值必须为0或1");
         }
 
         Course course = courseMapper.selectById(request.getCourseId());
         if (course == null) {
-            throw new BusinessException(404, "course not found");
+            throw new BusinessException(404, "课程不存在");
         }
 
         course.setStatus(request.getStatus());
@@ -200,12 +215,12 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteCourse(Long courseId) {
         if (courseId == null) {
-            throw new BusinessException(400, "courseId is required");
+            throw new BusinessException(400, "courseId不能为空");
         }
 
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
-            throw new BusinessException(404, "course not found");
+            throw new BusinessException(404, "课程不存在");
         }
 
         Long teachingClassRefCount = courseMapper.countTeachingClassReferences(courseId);
@@ -272,10 +287,11 @@ public class CourseServiceImpl implements CourseService {
 
     private String validateAndImportCourseRow(ImportSheetReader.ImportRowData row, Set<String> courseCodesInBatch) {
         String majorCode = row.getCell(0);
-        String courseCode = row.getCell(1);
-        String courseName = row.getCell(2);
-        String creditStr = row.getCell(3);
-        String statusStr = row.getCell(4);
+        String gradeYearStr = row.getCell(1);
+        String courseCode = row.getCell(2);
+        String courseName = row.getCell(3);
+        String creditStr = row.getCell(4);
+        String statusStr = row.getCell(5);
 
         // 所属专业代码必须已存在
         if (majorCode == null || majorCode.isEmpty()) {
@@ -286,6 +302,19 @@ public class CourseServiceImpl implements CourseService {
                         .eq(Major::getMajorCode, majorCode));
         if (major == null) {
             return "所属专业代码不存在: " + majorCode;
+        }
+
+        Integer gradeYear;
+        if (gradeYearStr == null || gradeYearStr.isEmpty()) {
+            return "适用年级不能为空";
+        }
+        try {
+            gradeYear = Integer.parseInt(gradeYearStr);
+        } catch (NumberFormatException e) {
+            return "适用年级必须为合法年份: " + gradeYearStr;
+        }
+        if (gradeYear < 2000 || gradeYear > 2100) {
+            return "适用年级必须为合法年份: " + gradeYearStr;
         }
 
         // 课程代码不能为空
@@ -326,31 +355,44 @@ public class CourseServiceImpl implements CourseService {
         }
 
         // 课程代码在同一模板中不能重复
-        if (!courseCodesInBatch.add(courseCode)) {
+        if (!courseCodesInBatch.add(majorCode + "_" + gradeYear + "_" + courseCode)) {
             return "课程代码在导入模板中重复: " + courseCode;
         }
 
-        // 检查数据库中是否已存在相同课程代码
         Course existingInDb = courseMapper.selectOne(
                 new LambdaQueryWrapper<Course>()
                         .eq(Course::getCourseCode, courseCode));
-        if (existingInDb != null) {
-            return "课程代码已存在: " + courseCode;
+        Course course;
+        if (existingInDb == null) {
+            course = new Course();
+            course.setCourseCode(courseCode);
+            course.setCourseName(courseName);
+            course.setCredit(credit);
+            course.setStatus(status);
+            courseMapper.insert(course);
+        } else {
+            if (!courseName.equals(existingInDb.getCourseName())) {
+                return "课程代码已存在且课程名称不一致: " + courseCode;
+            }
+            if (Float.compare(credit, existingInDb.getCredit()) != 0) {
+                return "课程代码已存在且学分不一致: " + courseCode;
+            }
+            existingInDb.setStatus(status);
+            courseMapper.updateById(existingInDb);
+            course = existingInDb;
         }
 
-        // 创建课程
-        Course course = new Course();
-        course.setCourseCode(courseCode);
-        course.setCourseName(courseName);
-        course.setCredit(credit);
-        course.setStatus(status);
-        courseMapper.insert(course);
-
-        // 创建课程-专业关联
-        CourseMajor relation = new CourseMajor();
-        relation.setCourseId(course.getCourseId());
-        relation.setMajorId(major.getMajorId());
-        courseMajorMapper.insert(relation);
+        Long relationCount = courseMajorMapper.selectCount(new LambdaQueryWrapper<CourseMajor>()
+                .eq(CourseMajor::getCourseId, course.getCourseId())
+                .eq(CourseMajor::getMajorId, major.getMajorId())
+                .eq(CourseMajor::getGradeYear, gradeYear));
+        if (relationCount == null || relationCount == 0) {
+            CourseMajor relation = new CourseMajor();
+            relation.setCourseId(course.getCourseId());
+            relation.setMajorId(major.getMajorId());
+            relation.setGradeYear(gradeYear);
+            courseMajorMapper.insert(relation);
+        }
 
         return null;
     }
@@ -392,14 +434,28 @@ public class CourseServiceImpl implements CourseService {
     private CourseResponse toResponse(Course course, List<CourseMajor> relations, Map<Long, Major> majorMap) {
         List<Long> majorIds = new ArrayList<>(relations.size());
         List<String> majorNames = new ArrayList<>(relations.size());
+        Map<Long, NavigableSet<Integer>> gradeYearMap = new LinkedHashMap<>();
 
         for (CourseMajor relation : relations) {
-            majorIds.add(relation.getMajorId());
+            if (!majorIds.contains(relation.getMajorId())) {
+                majorIds.add(relation.getMajorId());
+            }
             Major major = majorMap.get(relation.getMajorId());
-            if (major != null) {
+            if (major != null && !majorNames.contains(major.getMajorName())) {
                 majorNames.add(major.getMajorName());
             }
+            gradeYearMap
+                    .computeIfAbsent(relation.getMajorId(), key -> new TreeSet<>())
+                    .add(relation.getGradeYear());
         }
+
+        List<CourseMajorGradeYearBindingResponse> bindings = gradeYearMap.entrySet().stream()
+                .map(entry -> CourseMajorGradeYearBindingResponse.builder()
+                        .majorId(entry.getKey())
+                        .majorName(majorMap.get(entry.getKey()) == null ? null : majorMap.get(entry.getKey()).getMajorName())
+                        .gradeYears(new ArrayList<>(entry.getValue()))
+                        .build())
+                .toList();
 
         return CourseResponse.builder()
                 .courseId(course.getCourseId())
@@ -408,50 +464,123 @@ public class CourseServiceImpl implements CourseService {
                 .credit(course.getCredit())
                 .majorIds(majorIds)
                 .majorNames(majorNames)
+                .majorGradeYearBindings(bindings)
                 .status(course.getStatus())
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
 
-    private void saveCourseMajorRelations(Long courseId, Collection<Long> majorIds) {
-        for (Long majorId : majorIds) {
+    private void saveCourseMajorRelations(Long courseId, Collection<CourseMajorBindingRow> bindings) {
+        for (CourseMajorBindingRow binding : bindings) {
             CourseMajor relation = new CourseMajor();
             relation.setCourseId(courseId);
-            relation.setMajorId(majorId);
+            relation.setMajorId(binding.majorId());
+            relation.setGradeYear(binding.gradeYear());
             courseMajorMapper.insert(relation);
         }
     }
 
-    private void syncCourseMajorRelations(Long courseId, List<Long> majorIds) {
+    private void syncCourseMajorRelations(Long courseId, List<CourseMajorBindingRow> bindings) {
         courseMajorMapper.delete(
                 new LambdaQueryWrapper<CourseMajor>().eq(CourseMajor::getCourseId, courseId));
-        saveCourseMajorRelations(courseId, majorIds);
+        saveCourseMajorRelations(courseId, bindings);
     }
 
-    private void validateMajorIdsExist(List<Long> majorIds) {
-        if (majorIds.isEmpty()) {
-            throw new BusinessException(400, "majorIds cannot be empty");
+    private void validateBindings(List<CourseMajorBindingRow> bindings) {
+        if (bindings.isEmpty()) {
+            throw new BusinessException(400, "至少需要配置一个专业-年级绑定");
         }
 
+        List<Long> majorIds = bindings.stream().map(CourseMajorBindingRow::majorId).distinct().toList();
         List<Major> majors = majorMapper.selectBatchIds(majorIds);
         if (majors.size() != majorIds.size()) {
-            throw new BusinessException(400, "selected major does not exist");
+            throw new BusinessException(400, "所选专业不存在");
         }
     }
 
-    private List<Long> normalizeMajorIds(List<Long> majorIds) {
-        if (majorIds == null) {
+    private List<CourseMajorBindingRow> normalizeCourseBindings(List<CourseMajorGradeYearBindingRequest> bindingRequests,
+                                                                List<Long> legacyMajorIds) {
+        List<CourseMajorBindingRow> bindings = new ArrayList<>();
+        if (bindingRequests != null && !bindingRequests.isEmpty()) {
+            for (CourseMajorGradeYearBindingRequest bindingRequest : bindingRequests) {
+                if (bindingRequest == null || bindingRequest.getMajorId() == null || bindingRequest.getGradeYears() == null) {
+                    continue;
+                }
+                for (Integer gradeYear : bindingRequest.getGradeYears()) {
+                    validateGradeYear(gradeYear);
+                    bindings.add(new CourseMajorBindingRow(bindingRequest.getMajorId(), gradeYear));
+                }
+            }
+        }
+        if (!bindings.isEmpty()) {
+            return bindings.stream().distinct().toList();
+        }
+        if (legacyMajorIds == null) {
             return Collections.emptyList();
         }
-
-        return majorIds.stream()
+        return legacyMajorIds.stream()
                 .filter(id -> id != null)
                 .distinct()
+                .map(majorId -> new CourseMajorBindingRow(majorId, 2022))
+                .toList();
+    }
+
+    private List<Long> selectCourseIdsByPlanFilters(Long majorId, Integer gradeYear) {
+        LambdaQueryWrapper<CourseMajor> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(CourseMajor::getCourseId)
+                .eq(majorId != null, CourseMajor::getMajorId, majorId)
+                .eq(gradeYear != null, CourseMajor::getGradeYear, gradeYear);
+        return courseMajorMapper.selectList(wrapper).stream()
+                .map(CourseMajor::getCourseId)
                 .collect(Collectors.toList());
     }
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private void validateGradeYear(Integer gradeYear) {
+        if (gradeYear == null || gradeYear < 2000 || gradeYear > 2100) {
+            throw new BusinessException(400, "年级必须在2000到2100之间");
+        }
+    }
+
+    @Override
+    public List<Integer> listGradeYears() {
+        NavigableSet<Integer> years = new TreeSet<>((left, right) -> Integer.compare(right, left));
+        years.addAll(graduationRequirementMapper.selectList(
+                        new LambdaQueryWrapper<GraduationRequirement>()
+                                .select(GraduationRequirement::getGradeYear))
+                .stream()
+                .map(GraduationRequirement::getGradeYear)
+                .filter(year -> year != null)
+                .collect(Collectors.toSet()));
+        years.addAll(courseMajorMapper.selectList(
+                        new LambdaQueryWrapper<CourseMajor>()
+                                .select(CourseMajor::getGradeYear))
+                .stream()
+                .map(CourseMajor::getGradeYear)
+                .filter(year -> year != null)
+                .collect(Collectors.toSet()));
+        years.addAll(teachingClassMapper.selectList(
+                        new LambdaQueryWrapper<TeachingClass>()
+                                .select(TeachingClass::getGradeYear))
+                .stream()
+                .map(TeachingClass::getGradeYear)
+                .filter(year -> year != null)
+                .collect(Collectors.toSet()));
+        years.addAll(studentMapper.selectList(
+                        new LambdaQueryWrapper<Student>()
+                                .select(Student::getEnrollmentYear))
+                .stream()
+                .map(Student::getEnrollmentYear)
+                .filter(year -> year != null)
+                .collect(Collectors.toSet()));
+        years.add(2022);
+        return new ArrayList<>(years);
+    }
+
+    private record CourseMajorBindingRow(Long majorId, Integer gradeYear) {
     }
 }

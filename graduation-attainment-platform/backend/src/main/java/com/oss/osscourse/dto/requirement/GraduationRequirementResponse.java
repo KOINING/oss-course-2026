@@ -22,4 +22,7 @@ public class GraduationRequirementResponse {
 
     @Schema(description = "所属专业名称", example = "计算机科学与技术")
     private String majorName;
+
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
 }

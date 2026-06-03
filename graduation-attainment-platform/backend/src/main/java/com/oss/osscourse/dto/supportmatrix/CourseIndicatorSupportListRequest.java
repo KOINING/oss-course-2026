@@ -9,6 +9,9 @@ public class CourseIndicatorSupportListRequest {
     @Schema(description = "专业ID，传入后限定在该专业范围内", example = "1")
     private Long majorId;
 
+    @Schema(description = "培养方案适用年级，传入后限定在该年级范围内", example = "2022")
+    private Integer gradeYear;
+
     @Schema(description = "课程ID，精确筛选", example = "10")
     private Long courseId;
 

@@ -47,6 +47,16 @@ public class SupportMatrixController {
         return Result.ok(supportMatrixService.listMajors(request, roles, permissions));
     }
 
+    @PostMapping("/listGradeYears")
+    @Operation(summary = "查询培养方案年级列表", description = "供支撑矩阵筛选使用")
+    public Result<List<Integer>> listGradeYears(
+            @Parameter(description = "可选筛选条件")
+            @RequestBody(required = false) SupportMatrixMajorFilterRequest request,
+            @RequestAttribute("roles") List<String> roles,
+            @RequestAttribute("permissions") List<String> permissions) {
+        return Result.ok(supportMatrixService.listGradeYears(request, roles, permissions));
+    }
+
     @PostMapping("/listCourses")
     @Operation(summary = "按专业查询课程列表", description = "查询指定专业下可配置支撑关系的课程")
     public Result<List<MatrixCourseOptionResponse>> listCourses(

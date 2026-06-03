@@ -11,4 +11,7 @@ public class IndicatorPointQueryRequest {
 
     @Schema(description = "所属毕业要求ID", example = "1")
     private Long grId;
+
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
 }

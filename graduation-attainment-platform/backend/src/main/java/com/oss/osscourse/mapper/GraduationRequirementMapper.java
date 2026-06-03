@@ -15,7 +15,7 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
     @Select({
             "<script>",
             "SELECT gr.gr_id AS grId, gr.gr_code AS grCode, gr.gr_description AS grDescription,",
-            "gr.major_id AS majorId, m.major_name AS majorName",
+            "gr.major_id AS majorId, m.major_name AS majorName, gr.grade_year AS gradeYear",
             "FROM graduation_requirement gr",
             "LEFT JOIN major m ON gr.major_id = m.major_id",
             "<where>",
@@ -25,10 +25,26 @@ public interface GraduationRequirementMapper extends BaseMapper<GraduationRequir
             "<if test='majorId != null'>",
             "AND gr.major_id = #{majorId}",
             "</if>",
+            "<if test='gradeYear != null'>",
+            "AND gr.grade_year = #{gradeYear}",
+            "</if>",
             "</where>",
-            "ORDER BY gr.gr_id ASC",
+            "ORDER BY gr.grade_year DESC, gr.gr_id ASC",
             "</script>"
     })
     List<GraduationRequirementResponse> selectRequirementList(@Param("grCode") String grCode,
-                                                             @Param("majorId") Long majorId);
+                                                             @Param("majorId") Long majorId,
+                                                             @Param("gradeYear") Integer gradeYear);
+
+    @Select({
+            "<script>",
+            "SELECT DISTINCT grade_year",
+            "FROM graduation_requirement",
+            "<where>",
+            "<if test='majorId != null'>AND major_id = #{majorId}</if>",
+            "</where>",
+            "ORDER BY grade_year DESC",
+            "</script>"
+    })
+    List<Integer> selectRequirementGradeYears(@Param("majorId") Long majorId);
 }

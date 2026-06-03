@@ -23,6 +23,10 @@ public interface SupportMatrixService {
                                                List<String> roles,
                                                List<String> permissions);
 
+    List<Integer> listGradeYears(SupportMatrixMajorFilterRequest request,
+                                 List<String> roles,
+                                 List<String> permissions);
+
     List<MatrixCourseOptionResponse> listCourses(SupportMatrixMajorFilterRequest request,
                                                  List<String> roles,
                                                  List<String> permissions);

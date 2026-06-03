@@ -17,4 +17,7 @@ public class MatrixCourseOptionResponse {
 
     @Schema(description = "状态：1=启用，0=停用", example = "1")
     private Integer status;
+
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
 }
