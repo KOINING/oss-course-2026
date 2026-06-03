@@ -5,7 +5,6 @@ import { ElMessage } from 'element-plus'
 import { Download, UploadFilled } from '@element-plus/icons-vue'
 import ImportResultPreview from '@/components/import/ImportResultPreview.vue'
 import { importCoursesApi, importStudentClassesApi, importStudentsApi } from '@/api/import'
-import { COURSE_IMPORT_TEMPLATE_FIELDS, downloadTemplate as downloadCsvTemplate } from '@/constants/importTemplate'
 import { ROUTE_NAMES } from '@/utils/constants'
 
 const route = useRoute()
@@ -104,7 +103,7 @@ function downloadTemplate(path, filename) {
 }
 
 function downloadCourseTemplate() {
-  downloadCsvTemplate('course-import-template.csv', COURSE_IMPORT_TEMPLATE_FIELDS)
+  downloadTemplate('/templates/course-import-template.xlsx', 'course-import-template.xlsx')
 }
 
 function handleCourseFileChange(file) {
@@ -267,6 +266,7 @@ function goToStudentList() {
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
                 <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
+                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
               </el-upload>
 
               <div class="action-row">
@@ -311,6 +311,7 @@ function goToStudentList() {
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
                 <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
+                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
               </el-upload>
 
               <div class="action-row">
@@ -360,6 +361,7 @@ function goToStudentList() {
               >
                 <el-icon class="upload-icon"><UploadFilled /></el-icon>
                 <div class="el-upload__text">将文件拖到此处，或点击选择文件。</div>
+                <div class="upload-tip">支持导入 .xlsx、.xls、.csv，推荐优先使用 .xlsx。</div>
               </el-upload>
 
               <div class="action-row">
@@ -452,6 +454,13 @@ function goToStudentList() {
 .upload-icon {
   font-size: 28px;
   color: #3b82f6;
+}
+
+.upload-tip {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .action-row {

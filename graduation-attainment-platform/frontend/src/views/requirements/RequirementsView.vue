@@ -298,6 +298,28 @@ function indicatorSpanMethod({ row, columnIndex, rowIndex }) {
   return { rowspan, colspan: 1 }
 }
 
+function requirementGradeYearSpanMethod({ row, columnIndex, rowIndex }) {
+  if (columnIndex !== 0) {
+    return { rowspan: 1, colspan: 1 }
+  }
+  if (rowIndex > 0) {
+    const prev = grs.value[rowIndex - 1]
+    if (prev?.gradeYear === row.gradeYear) {
+      return { rowspan: 0, colspan: 0 }
+    }
+  }
+  let rowspan = 1
+  for (let index = rowIndex + 1; index < grs.value.length; index += 1) {
+    const next = grs.value[index]
+    if (next?.gradeYear === row.gradeYear) {
+      rowspan += 1
+    } else {
+      break
+    }
+  }
+  return { rowspan, colspan: 1 }
+}
+
 onMounted(async () => {
   await loadMajorOptions()
   await loadGradeYearOptions()
@@ -355,11 +377,18 @@ onMounted(async () => {
           </el-form-item>
         </el-form>
 
-        <el-table v-loading="grLoading" :data="grs" border highlight-current-row @current-change="onGrRowChange">
-          <el-table-column prop="grCode" label="编号" width="100" />
+        <el-table
+          v-loading="grLoading"
+          :data="grs"
+          :span-method="requirementGradeYearSpanMethod"
+          border
+          highlight-current-row
+          @current-change="onGrRowChange"
+        >
           <el-table-column label="年级" width="110">
             <template #default="{ row }">{{ formatGradeYear(row.gradeYear) }}</template>
           </el-table-column>
+          <el-table-column prop="grCode" label="编号" width="100" />
           <el-table-column prop="grDescription" label="描述" min-width="320" show-overflow-tooltip />
           <el-table-column prop="majorName" label="专业" width="180" />
           <el-table-column label="操作" width="140" fixed="right">

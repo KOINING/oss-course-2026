@@ -272,7 +272,7 @@ onMounted(async () => {
 
       <div class="toolbar">
         <el-button type="primary" @click="openCourseDialog('create')">新增课程</el-button>
-        <el-button @click="goToCourseImport">导入</el-button>
+        <el-button @click="goToCourseImport">前往批量导入课程清单</el-button>
       </div>
 
       <el-table v-loading="courseLoading" :data="courses" border>
