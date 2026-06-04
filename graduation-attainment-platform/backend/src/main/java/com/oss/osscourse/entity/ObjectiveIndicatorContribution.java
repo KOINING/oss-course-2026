@@ -1,10 +1,6 @@
 package com.oss.osscourse.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -14,11 +10,8 @@ import java.time.LocalDateTime;
 public class ObjectiveIndicatorContribution {
     @TableId(value = "oic_id", type = IdType.AUTO)
     private Long oicId;
-
     private Long coId;
-
     private Long ipId;
-
     private Float internalWeight;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)

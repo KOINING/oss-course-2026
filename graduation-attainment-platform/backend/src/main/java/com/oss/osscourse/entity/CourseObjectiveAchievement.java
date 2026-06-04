@@ -6,13 +6,13 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("course_objective")
-public class CourseObjective {
-    @TableId(value = "co_id", type = IdType.AUTO)
+@TableName("course_objective_achievement")
+public class CourseObjectiveAchievement {
+    @TableId(value = "coa_id", type = IdType.AUTO)
+    private Long coaId;
+    private Long classId;
     private Long coId;
-    private String objectiveCode;
-    private String coDescription;
-    private Long courseId;
+    private Float averageAchievement;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
