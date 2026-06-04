@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("AcademicTerm")
+@TableName("academic_term")
 public class AcademicTerm {
     @TableId(value = "term_id", type = IdType.AUTO)
     private Long termId;

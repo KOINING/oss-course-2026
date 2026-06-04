@@ -2,7 +2,14 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
-import com.oss.osscourse.dto.requirement.*;
+import com.oss.osscourse.dto.requirement.AddGraduationRequirementRequest;
+import com.oss.osscourse.dto.requirement.AddIndicatorPointRequest;
+import com.oss.osscourse.dto.requirement.GraduationRequirementQueryRequest;
+import com.oss.osscourse.dto.requirement.GraduationRequirementResponse;
+import com.oss.osscourse.dto.requirement.IndicatorPointQueryRequest;
+import com.oss.osscourse.dto.requirement.IndicatorPointResponse;
+import com.oss.osscourse.dto.requirement.UpdateGraduationRequirementRequest;
+import com.oss.osscourse.dto.requirement.UpdateIndicatorPointRequest;
 import com.oss.osscourse.entity.GraduationRequirement;
 import com.oss.osscourse.entity.IndicatorPoint;
 import com.oss.osscourse.entity.Major;
@@ -10,6 +17,7 @@ import com.oss.osscourse.mapper.GraduationRequirementMapper;
 import com.oss.osscourse.mapper.IndicatorPointMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.service.RequirementService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,8 +54,8 @@ public class RequirementServiceImpl implements RequirementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addGraduationRequirement(AddGraduationRequirementRequest request,
-                                        List<String> roles,
-                                        List<String> permissions) {
+                                         List<String> roles,
+                                         List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         String grCode = normalizeRequired(request.getGrCode(), "毕业要求编号不能为空");
@@ -70,14 +78,15 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setGrCode(grCode);
         entity.setGrDescription(grDescription);
         entity.setMajorId(majorId);
+        entity.setStatus(1);
         grMapper.insert(entity);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateGraduationRequirement(UpdateGraduationRequirementRequest request,
-                                           List<String> roles,
-                                           List<String> permissions) {
+                                            List<String> roles,
+                                            List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         Long grId = request.getGrId();
@@ -116,8 +125,8 @@ public class RequirementServiceImpl implements RequirementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteGraduationRequirement(Long grId,
-                                           List<String> roles,
-                                           List<String> permissions) {
+                                            List<String> roles,
+                                            List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         if (grId == null) {
@@ -132,13 +141,17 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(400, "该毕业要求下存在 " + ipCount + " 个指标点，请先删除指标点后再删除毕业要求");
         }
 
-        grMapper.deleteById(grId);
+        try {
+            grMapper.deleteById(grId);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "该毕业要求存在关联数据，无法删除");
+        }
     }
 
     @Override
     public List<IndicatorPointResponse> listIndicatorPoints(IndicatorPointQueryRequest request,
-                                                             List<String> roles,
-                                                             List<String> permissions) {
+                                                            List<String> roles,
+                                                            List<String> permissions) {
         assertManagePermission(roles, permissions);
         IndicatorPointQueryRequest query = request == null ? new IndicatorPointQueryRequest() : request;
         return ipMapper.selectIndicatorPointList(trimToNull(query.getIpCode()), query.getGrId());
@@ -147,8 +160,8 @@ public class RequirementServiceImpl implements RequirementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addIndicatorPoint(AddIndicatorPointRequest request,
-                                 List<String> roles,
-                                 List<String> permissions) {
+                                  List<String> roles,
+                                  List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         String ipCode = normalizeRequired(request.getIpCode(), "指标点编号不能为空");
@@ -171,14 +184,15 @@ public class RequirementServiceImpl implements RequirementService {
         entity.setIpCode(ipCode);
         entity.setIpDescription(ipDescription);
         entity.setGrId(grId);
+        entity.setStatus(1);
         ipMapper.insert(entity);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateIndicatorPoint(UpdateIndicatorPointRequest request,
-                                    List<String> roles,
-                                    List<String> permissions) {
+                                     List<String> roles,
+                                     List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         Long ipId = request.getIpId();
@@ -217,8 +231,8 @@ public class RequirementServiceImpl implements RequirementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteIndicatorPoint(Long ipId,
-                                    List<String> roles,
-                                    List<String> permissions) {
+                                     List<String> roles,
+                                     List<String> permissions) {
         assertManagePermission(roles, permissions);
 
         if (ipId == null) {
@@ -228,7 +242,11 @@ public class RequirementServiceImpl implements RequirementService {
             throw new BusinessException(404, "指标点不存在");
         }
 
-        ipMapper.deleteById(ipId);
+        try {
+            ipMapper.deleteById(ipId);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "该指标点存在关联数据，无法删除");
+        }
     }
 
     @Override

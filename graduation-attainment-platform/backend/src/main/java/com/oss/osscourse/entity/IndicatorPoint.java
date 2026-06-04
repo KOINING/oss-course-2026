@@ -6,13 +6,14 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("IndicatorPoint")
+@TableName("indicator_point")
 public class IndicatorPoint {
     @TableId(type = IdType.AUTO)
     private Long ipId;
     private String ipCode;
     private String ipDescription;
     private Long grId;
+    private Integer status;
 
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
