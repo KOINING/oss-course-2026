@@ -67,9 +67,16 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="满分" width="120" align="center">
+      <el-table-column label="满分" width="100" align="center">
         <template #default="{ row }">
           <span class="full-score">{{ row.fullScore }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 0 ? 'info' : 'success'" effect="plain" size="small">
+            {{ row.status === 0 ? '停用' : '启用' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
