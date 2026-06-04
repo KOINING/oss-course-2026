@@ -36,9 +36,20 @@ public class ScoreCalcController {
             @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
         byte[] excelBytes = scoreCalcService.downloadTemplate(classId);
 
+        // 文件名需要URL编码，防止中文乱码
+        String fileName = "成绩模板_" + classId + ".xlsx";
+        String encodedFileName;
+        try {
+            encodedFileName = java.net.URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
+        } catch (java.io.UnsupportedEncodingException e) {
+            encodedFileName = "template_" + classId + ".xlsx";
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.setContentDispositionFormData("attachment", "成绩模板_" + classId + ".xlsx");
+        headers.setContentDisposition(org.springframework.http.ContentDisposition.builder("attachment")
+                .filename(encodedFileName, java.nio.charset.StandardCharsets.UTF_8)
+                .build());
         headers.setContentLength(excelBytes.length);
 
         return ResponseEntity.ok()
