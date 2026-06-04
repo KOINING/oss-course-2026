@@ -29,6 +29,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     private final CourseObjectiveAchievementMapper coaMapper;
     private final CourseIndicatorAchievementMapper ciaMapper;
     private final MajorIndicatorAchievementMapper miaMapper;
+    private final StudentObjectiveAchievementMapper soaMapper;
     private final CourseMapper courseMapper;
     private final MajorMapper majorMapper;
     private final AcademicTermMapper academicTermMapper;
@@ -121,6 +122,124 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .dynamicHeaders(dynamicHeaders)
                 .rows(rows)
                 .build();
+    }
+
+    @Override
+    public byte[] downloadTemplate(Long classId) {
+        // 1. 获取模板预览数据
+        ScoreTemplatePreviewResponse preview = previewTemplate(classId);
+
+        // 2. 创建 Excel 工作簿
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            org.apache.poi.xssf.usermodel.XSSFSheet sheet = workbook.createSheet("成绩模板");
+
+            // 3. 创建表头样式
+            org.apache.poi.xssf.usermodel.XSSFCellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+
+            org.apache.poi.xssf.usermodel.XSSFFont headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            // 4. 创建第一行：固定列头 + 动态列头（考核点名称）
+            org.apache.poi.xssf.usermodel.XSSFRow headerRow = sheet.createRow(0);
+            int cellIndex = 0;
+
+            // 固定列头
+            for (String header : preview.getFixedHeaders()) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = headerRow.createCell(cellIndex++);
+                cell.setCellValue(header);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 动态列头（考核点名称）
+            for (ScoreTemplatePreviewResponse.AssessmentPointHeader apHeader : preview.getDynamicHeaders()) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = headerRow.createCell(cellIndex++);
+                cell.setCellValue(apHeader.getApName());
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 5. 创建第二行：满分信息
+            org.apache.poi.xssf.usermodel.XSSFRow scoreRow = sheet.createRow(1);
+            cellIndex = 0;
+
+            // 固定列显示"满分"
+            org.apache.poi.xssf.usermodel.XSSFCell labelCell = scoreRow.createCell(cellIndex++);
+            labelCell.setCellValue("满分");
+            labelCell.setCellStyle(headerStyle);
+
+            org.apache.poi.xssf.usermodel.XSSFCell emptyCell = scoreRow.createCell(cellIndex++);
+            emptyCell.setCellValue("");
+            emptyCell.setCellStyle(headerStyle);
+
+            // 动态列显示满分值
+            for (ScoreTemplatePreviewResponse.AssessmentPointHeader apHeader : preview.getDynamicHeaders()) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = scoreRow.createCell(cellIndex++);
+                cell.setCellValue(apHeader.getFullScore());
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 6. 创建第三行：课程目标信息
+            org.apache.poi.xssf.usermodel.XSSFRow coRow = sheet.createRow(2);
+            cellIndex = 0;
+
+            org.apache.poi.xssf.usermodel.XSSFCell coLabelCell = coRow.createCell(cellIndex++);
+            coLabelCell.setCellValue("课程目标");
+            coLabelCell.setCellStyle(headerStyle);
+
+            org.apache.poi.xssf.usermodel.XSSFCell coEmptyCell = coRow.createCell(cellIndex++);
+            coEmptyCell.setCellValue("");
+            coEmptyCell.setCellStyle(headerStyle);
+
+            for (ScoreTemplatePreviewResponse.AssessmentPointHeader apHeader : preview.getDynamicHeaders()) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = coRow.createCell(cellIndex++);
+                cell.setCellValue(apHeader.getObjectiveCode() != null ? apHeader.getObjectiveCode() : "");
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 7. 填充学生数据行
+            int rowIndex = 3;
+            for (ScoreTemplatePreviewResponse.StudentScoreRow studentRow : preview.getRows()) {
+                org.apache.poi.xssf.usermodel.XSSFRow dataRow = sheet.createRow(rowIndex++);
+                cellIndex = 0;
+
+                // 学号
+                org.apache.poi.xssf.usermodel.XSSFCell studentNoCell = dataRow.createCell(cellIndex++);
+                studentNoCell.setCellValue(studentRow.getStudentNo());
+
+                // 姓名
+                org.apache.poi.xssf.usermodel.XSSFCell studentNameCell = dataRow.createCell(cellIndex++);
+                studentNameCell.setCellValue(studentRow.getStudentName());
+
+                // 成绩列（留空供填写）
+                for (int i = 0; i < preview.getDynamicHeaders().size(); i++) {
+                    dataRow.createCell(cellIndex++);
+                }
+            }
+
+            // 8. 自动调整列宽
+            for (int i = 0; i < cellIndex; i++) {
+                sheet.autoSizeColumn(i);
+                // 设置最小列宽
+                if (sheet.getColumnWidth(i) < 3000) {
+                    sheet.setColumnWidth(i, 3000);
+                }
+            }
+
+            // 9. 转换为字节数组
+            java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+
+        } catch (java.io.IOException e) {
+            throw new BusinessException(500, "生成Excel模板失败：" + e.getMessage());
+        }
     }
 
     @Override
@@ -313,6 +432,29 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             }
 
             studentObjectiveAchievement.put(studentId, coAchievement);
+
+            // 保存学生-课程目标达成度到数据库
+            for (Map.Entry<Long, Float> entry : coAchievement.entrySet()) {
+                Long coId = entry.getKey();
+                Float achievement = entry.getValue();
+
+                StudentObjectiveAchievement existingSoa = soaMapper.selectOne(
+                        new LambdaQueryWrapper<StudentObjectiveAchievement>()
+                                .eq(StudentObjectiveAchievement::getStudentId, studentId)
+                                .eq(StudentObjectiveAchievement::getClassId, request.getClassId())
+                                .eq(StudentObjectiveAchievement::getCoId, coId));
+                if (existingSoa != null) {
+                    existingSoa.setAchievement(achievement);
+                    soaMapper.updateById(existingSoa);
+                } else {
+                    StudentObjectiveAchievement soa = new StudentObjectiveAchievement();
+                    soa.setStudentId(studentId);
+                    soa.setClassId(request.getClassId());
+                    soa.setCoId(coId);
+                    soa.setAchievement(achievement);
+                    soaMapper.insert(soa);
+                }
+            }
         }
 
         // 7. 计算班级课程目标平均达成度 C̄j

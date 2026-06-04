@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,6 +28,22 @@ public class ScoreCalcController {
             @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
         ScoreTemplatePreviewResponse response = scoreCalcService.previewTemplate(classId);
         return Result.ok(response);
+    }
+
+    @GetMapping("/downloadTemplate")
+    @Operation(summary = "下载成绩模板", description = "根据教学班ID下载Excel格式的成绩模板")
+    public ResponseEntity<byte[]> downloadTemplate(
+            @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
+        byte[] excelBytes = scoreCalcService.downloadTemplate(classId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "成绩模板_" + classId + ".xlsx");
+        headers.setContentLength(excelBytes.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelBytes);
     }
 
     @PostMapping("/importScorePreview")

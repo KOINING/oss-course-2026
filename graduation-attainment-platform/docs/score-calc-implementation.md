@@ -64,6 +64,7 @@
 | 方法 | 路径 | 说明 | 角色 |
 |------|------|------|------|
 | POST | `/api/teacher/previewTemplate` | 预览成绩模板 | 课程主讲教师 |
+| GET | `/api/teacher/downloadTemplate` | 下载成绩模板 Excel | 课程主讲教师 |
 | POST | `/api/teacher/importScorePreview` | 成绩导入预校验 | 课程主讲教师 |
 | POST | `/api/teacher/saveScores` | 保存成绩 | 课程主讲教师 |
 | POST | `/api/teacher/calcCourseAchievement` | 课程级达成度计算 | 课程主讲教师 |

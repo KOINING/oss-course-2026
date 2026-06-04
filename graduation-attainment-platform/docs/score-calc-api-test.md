@@ -23,6 +23,22 @@ curl -X POST "http://localhost:8080/api/teacher/previewTemplate?classId=1" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
+### 2.1 下载成绩模板 Excel
+
+```bash
+curl -X GET "http://localhost:8080/api/teacher/downloadTemplate?classId=1" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -o "成绩模板.xlsx"
+```
+
+**说明：**
+- 下载的 Excel 文件包含以下内容：
+  - 第一行：固定列头（学号、姓名）+ 动态列头（考核点名称）
+  - 第二行：满分信息
+  - 第三行：课程目标编码
+  - 第四行起：学生数据（学号、姓名，成绩列留空供填写）
+- 文件会自动下载到当前目录，文件名为 `成绩模板_1.xlsx`
+
 **预期响应：**
 ```json
 {
@@ -262,6 +278,7 @@ curl -X POST http://localhost:8080/api/teacher/calcMajorAchievement \
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/teacher/previewTemplate` | 预览成绩模板 |
+| GET | `/api/teacher/downloadTemplate` | 下载成绩模板 Excel |
 | POST | `/api/teacher/importScorePreview` | 成绩导入预校验 |
 | POST | `/api/teacher/saveScores` | 保存成绩 |
 | POST | `/api/teacher/calcCourseAchievement` | 课程级达成度计算 |

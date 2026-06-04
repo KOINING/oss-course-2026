@@ -13,6 +13,13 @@ public interface ScoreCalcService {
     ScoreTemplatePreviewResponse previewTemplate(Long classId);
 
     /**
+     * 下载成绩模板Excel
+     * @param classId 教学班ID
+     * @return Excel文件字节数组
+     */
+    byte[] downloadTemplate(Long classId);
+
+    /**
      * 导入成绩预校验
      * @param request 导入请求
      * @return 预览结果
