@@ -1,9 +1,69 @@
 package com.oss.osscourse.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.oss.osscourse.dto.objectivecontribution.ObjectiveIndicatorContributionResponse;
 import com.oss.osscourse.entity.ObjectiveIndicatorContribution;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 @Mapper
 public interface ObjectiveIndicatorContributionMapper extends BaseMapper<ObjectiveIndicatorContribution> {
+
+    /**
+     * 按课程 + 年级查询当前已配置的内部权重，JOIN 获取课程目标、指标点、毕业要求信息。
+     * 仅返回其 ipId 对应的毕业要求匹配目标年级的记录。
+     */
+    @Select({
+            "SELECT oic.oic_id AS oicId,",
+            "co.co_id AS coId, co.objective_code AS objectiveCode, co.co_description AS coDescription,",
+            "ip.ip_id AS ipId, ip.ip_code AS ipCode, ip.ip_description AS ipDescription,",
+            "gr.gr_id AS grId, gr.gr_code AS grCode,",
+            "oic.internal_weight AS internalWeight,",
+            "oic.created_at AS createdAt",
+            "FROM objective_indicator_contribution oic",
+            "JOIN course_objective co ON oic.co_id = co.co_id",
+            "JOIN indicator_point ip ON oic.ip_id = ip.ip_id",
+            "JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
+            "WHERE co.course_id = #{courseId}",
+            "AND gr.grade_year = #{gradeYear}",
+            "ORDER BY gr.gr_code ASC, co.objective_code ASC"
+    })
+    List<ObjectiveIndicatorContributionResponse> selectByCourseAndGradeYear(@Param("courseId") Long courseId,
+                                                                            @Param("gradeYear") Integer gradeYear);
+
+    /**
+     * 删除属于指定课程 + 年级版本的所有内部权重记录。
+     * 仅删除 ipId 对应毕业要求年级匹配的记录，避免误删其他年级版本的配置。
+     * 用于批量保存前的"先删后插"策略。
+     */
+    @Delete({
+            "DELETE FROM objective_indicator_contribution",
+            "WHERE co_id IN (SELECT co_id FROM course_objective WHERE course_id = #{courseId})",
+            "AND ip_id IN (",
+            "  SELECT ip.ip_id FROM indicator_point ip",
+            "  JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
+            "  WHERE gr.grade_year = #{gradeYear}",
+            ")"
+    })
+    int deleteByCourseIdAndGradeYear(@Param("courseId") Long courseId,
+                                      @Param("gradeYear") Integer gradeYear);
+
+    /**
+     * 查询该课程在指定年级版本下所有合法的指标点ID。
+     * 合法性：ip → gr → major_id（课程所属专业）且 grade_year = 目标年级。
+     */
+    @Select({
+            "SELECT ip.ip_id",
+            "FROM indicator_point ip",
+            "JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
+            "JOIN course_major cm ON cm.major_id = gr.major_id",
+            "WHERE cm.course_id = #{courseId}",
+            "AND gr.grade_year = #{gradeYear}"
+    })
+    List<Long> selectValidIpIds(@Param("courseId") Long courseId,
+                                @Param("gradeYear") Integer gradeYear);
 }
