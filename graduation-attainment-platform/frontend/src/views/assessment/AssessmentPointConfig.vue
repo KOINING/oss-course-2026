@@ -1,0 +1,332 @@
+<template>
+  <div class="ap-config">
+    <div class="filter-bar">
+      <el-select
+        v-model="selectedCourseId"
+        placeholder="选择课程"
+        clearable
+        style="width: 240px"
+        @change="handleCourseChange"
+      >
+        <el-option
+          v-for="c in courseOptions"
+          :key="c.courseId"
+          :label="`${c.courseCode} - ${c.courseName}`"
+          :value="c.courseId"
+        />
+      </el-select>
+      <el-select
+        v-model="filters.coId"
+        placeholder="按课程目标筛选"
+        clearable
+        style="width: 240px"
+        @change="loadAssessmentPoints"
+      >
+        <el-option
+          v-for="obj in objectiveOptions"
+          :key="obj.coId"
+          :label="`${obj.objectiveCode}: ${obj.coDescription}`"
+          :value="obj.coId"
+        />
+      </el-select>
+    </div>
+
+    <div class="table-toolbar">
+      <el-button type="primary" :disabled="!selectedCourseId" @click="openDialog('create')">
+        <el-icon><Plus /></el-icon>
+        新增考核点
+      </el-button>
+    </div>
+
+    <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
+
+    <EmptyState
+      v-else-if="!loading && points.length === 0 && selectedCourseId"
+      description="暂无考核点数据，请先选择一个课程并新增考核点"
+    />
+
+    <EmptyState
+      v-else-if="!selectedCourseId"
+      description="请先选择一门课程以查看考核点"
+    />
+
+    <el-table
+      v-else
+      v-loading="loading"
+      :data="points"
+      border
+      stripe
+    >
+      <el-table-column prop="apId" label="ID" width="70" />
+      <el-table-column prop="apName" label="考核点名称" min-width="160" />
+      <el-table-column label="所属课程目标" min-width="220">
+        <template #default="{ row }">
+          <div class="objective-cell">
+            <el-tag type="info" effect="plain" size="small">{{ row.objectiveCode }}</el-tag>
+            <span class="objective-desc">{{ row.coDescription || '-' }}</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="满分" width="120" align="center">
+        <template #default="{ row }">
+          <span class="full-score">{{ row.fullScore }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="160" fixed="right">
+        <template #default="{ row }">
+          <div class="table-actions">
+            <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
+            <el-popconfirm
+              title="确认删除该考核点吗？若已产生成绩数据则无法删除"
+              @confirm="handleDelete(row.apId)"
+            >
+              <template #reference>
+                <el-button link type="danger">删除</el-button>
+              </template>
+            </el-popconfirm>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <FormDialog
+      v-model="dialogVisible"
+      :title="dialogMode === 'create' ? '新增考核点' : '编辑考核点'"
+      width="480px"
+      :loading="submitLoading"
+      @confirm="handleSubmit"
+      @cancel="dialogVisible = false"
+    >
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="formRules"
+        label-width="110px"
+      >
+        <el-form-item label="考核点名称" prop="apName">
+          <el-input v-model.trim="form.apName" maxlength="100" placeholder="请输入考核点名称" />
+        </el-form-item>
+        <el-form-item label="满分" prop="fullScore">
+          <el-input-number
+            v-model="form.fullScore"
+            :min="0.5"
+            :max="999"
+            :step="0.5"
+            :precision="1"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="绑定课程目标" prop="coId">
+          <el-select v-model="form.coId" placeholder="请选择课程目标" style="width: 100%">
+            <el-option
+              v-for="obj in objectiveOptions"
+              :key="obj.coId"
+              :label="`${obj.objectiveCode}: ${obj.coDescription}`"
+              :value="obj.coId"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </FormDialog>
+  </div>
+</template>
+
+<script setup>
+import { nextTick, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import FormDialog from '@/components/common/FormDialog.vue'
+import { listCoursesApi } from '@/api/course'
+import {
+  addAssessmentPointApi,
+  deleteAssessmentPointApi,
+  listAssessmentPointsApi,
+  listCourseObjectivesApi,
+  updateAssessmentPointApi,
+} from '@/api/assessment'
+
+const loading = ref(false)
+const loadError = ref('')
+const courseOptions = ref([])
+const objectiveOptions = ref([])
+const selectedCourseId = ref(null)
+const points = ref([])
+
+const filters = reactive({ coId: null })
+
+const dialogVisible = ref(false)
+const dialogMode = ref('create')
+const submitLoading = ref(false)
+const formRef = ref(null)
+
+const form = reactive({
+  apId: null,
+  apName: '',
+  fullScore: 60,
+  coId: null,
+})
+
+const formRules = {
+  apName: [{ required: true, message: '请输入考核点名称', trigger: 'blur' }],
+  fullScore: [{ required: true, message: '请输入满分', trigger: 'blur' }],
+  coId: [{ required: true, message: '请选择课程目标', trigger: 'change' }],
+}
+
+async function loadCourses() {
+  try {
+    courseOptions.value = (await listCoursesApi()) || []
+  } catch {
+    courseOptions.value = []
+  }
+}
+
+async function loadObjectives(courseId) {
+  if (!courseId) {
+    objectiveOptions.value = []
+    return
+  }
+  try {
+    objectiveOptions.value = (await listCourseObjectivesApi({ courseId })) || []
+  } catch {
+    objectiveOptions.value = []
+  }
+}
+
+async function loadAssessmentPoints() {
+  if (!selectedCourseId.value) {
+    points.value = []
+    return
+  }
+  loading.value = true
+  loadError.value = ''
+  try {
+    const params = { courseId: selectedCourseId.value }
+    if (filters.coId) params.coId = filters.coId
+    points.value = (await listAssessmentPointsApi(params)) || []
+  } catch (e) {
+    loadError.value = e.message || '加载考核点失败'
+    points.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleCourseChange(courseId) {
+  filters.coId = null
+  loadObjectives(courseId)
+  loadAssessmentPoints()
+}
+
+function resetForm() {
+  form.apId = null
+  form.apName = ''
+  form.fullScore = 60
+  form.coId = null
+}
+
+function openDialog(mode, row = null) {
+  dialogMode.value = mode
+  resetForm()
+  if (mode === 'edit' && row) {
+    form.apId = row.apId
+    form.apName = row.apName
+    form.fullScore = row.fullScore
+    form.coId = row.coId
+  }
+  dialogVisible.value = true
+  nextTick(() => formRef.value?.clearValidate())
+}
+
+async function handleSubmit() {
+  await formRef.value?.validate()
+  submitLoading.value = true
+  try {
+    const payload = {
+      apName: form.apName,
+      fullScore: form.fullScore,
+      coId: form.coId,
+    }
+    if (dialogMode.value === 'edit') {
+      payload.apId = form.apId
+      await updateAssessmentPointApi(payload)
+      ElMessage.success('考核点更新成功')
+    } else {
+      await addAssessmentPointApi(payload)
+      ElMessage.success('考核点创建成功')
+    }
+    dialogVisible.value = false
+    await loadAssessmentPoints()
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+async function handleDelete(apId) {
+  try {
+    await deleteAssessmentPointApi({ apId })
+    ElMessage.success('考核点已删除')
+    await loadAssessmentPoints()
+  } catch {
+    // error handled by interceptor
+  }
+}
+
+async function loadAll() {
+  await loadCourses()
+  if (selectedCourseId.value) {
+    await loadObjectives(selectedCourseId.value)
+    await loadAssessmentPoints()
+  }
+}
+
+onMounted(() => {
+  loadCourses()
+})
+</script>
+
+<style scoped>
+.ap-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.objective-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.objective-desc {
+  color: #4b5563;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.full-score {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+</style>
