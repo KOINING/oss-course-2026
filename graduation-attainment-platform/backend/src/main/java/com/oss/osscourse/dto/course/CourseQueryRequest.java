@@ -16,6 +16,9 @@ public class CourseQueryRequest {
     @Schema(description = "所属专业ID")
     private Long majorId;
 
+    @Schema(description = "培养方案适用年级")
+    private Integer gradeYear;
+
     @Schema(description = "状态：1=启用，0=停用")
     private Integer status;
 }

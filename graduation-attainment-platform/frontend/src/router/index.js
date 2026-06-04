@@ -9,14 +9,34 @@ function resolveProtectedComponent(item) {
   if (item.componentKey === 'account-role-management') {
     return () => import('@/views/admin/AccountRoleManagementView.vue')
   }
-
   if (item.routeName === ROUTE_NAMES.REQUIREMENTS) {
     return () => import('@/views/requirements/RequirementsView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.SUPPORT_MATRIX) {
+    return () => import('@/views/requirements/SupportMatrixView.vue')
   }
 
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }
+
+  if (item.routeName === ROUTE_NAMES.COURSE_MANAGEMENT) {
+    return () => import('@/views/basic/CourseManagementView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.TEACHING_CLASS) {
+    return () => import('@/views/basic/TeachingClassView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.STUDENT_LIST) {
+    return () => import('@/views/basic/StudentListView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.DATA_IMPORT) {
+    return () => import('@/views/import/ImportView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')
@@ -32,6 +52,7 @@ const protectedChildren = getProtectedRoutes().map((item) => ({
     entities: item.entities,
     moduleTitle: item.moduleTitle,
     sectionLabel: item.sectionLabel,
+    allowedRoles: item.roles,
   },
 }))
 
@@ -83,6 +104,14 @@ router.beforeEach(async (to) => {
       if (!getToken()) {
         return { name: ROUTE_NAMES.LOGIN, query: { redirect: to.fullPath } }
       }
+    }
+  }
+
+  const allowedRoles = Array.isArray(to.meta.allowedRoles) ? to.meta.allowedRoles : []
+  if (!isPublic && allowedRoles.length > 0) {
+    const hasAccess = allowedRoles.some((roleCode) => userStore.roleCodes.includes(roleCode))
+    if (!hasAccess) {
+      return DEFAULT_HOME_PATH
     }
   }
 

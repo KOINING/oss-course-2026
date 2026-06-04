@@ -1,5 +1,6 @@
 package com.oss.osscourse.controller;
 
+import com.oss.osscourse.common.AcademicAffairsAccessGuard;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.teachingclass.StudentClassImportResult;
 import com.oss.osscourse.dto.teachingclass.StudentClassListRequest;
@@ -11,7 +12,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -19,43 +25,49 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@Tag(name = "教学班-学生关联管理", description = "教学班与学生之间的关联关系管理接口")
+@Tag(name = "教学班学生关联管理", description = "教学班与学生关联接口")
 public class StudentClassController {
 
     private final StudentClassService studentClassService;
+    private final AcademicAffairsAccessGuard accessGuard;
 
     @PostMapping("/importStudentClasses")
-    @Operation(summary = "教学班学生名单导入", description = "上传Excel文件批量导入学生到教学班，返回导入结果概要（总条数、成功数、失败数及失败明细）")
+    @Operation(summary = "导入教学班学生名单", description = "上传 Excel 批量导入学生与教学班关联")
     public Result<StudentClassImportResult> importStudentClasses(
-            @Parameter(description = "教学班学生名单Excel文件", required = true)
-            @RequestParam("file") MultipartFile file) {
-        StudentClassImportResult result = studentClassService.importStudentClasses(file);
-        return Result.ok(result);
+            @Parameter(description = "教学班学生名单 Excel 文件", required = true)
+            @RequestParam("file") MultipartFile file,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentClassService.importStudentClasses(file));
     }
 
     @PostMapping("/listStudentsByTeachingClass")
-    @Operation(summary = "按教学班查询学生列表", description = "根据教学班ID查询该教学班下的所有学生关联记录")
+    @Operation(summary = "按教学班查询学生列表", description = "根据教学班 ID 查询学生关联记录")
     public Result<List<StudentClass>> listStudentsByTeachingClass(
-            @Parameter(description = "查询请求，传入teachingClassId", required = true)
-            @Valid @RequestBody StudentClassListRequest request) {
-        List<StudentClass> list = studentClassService.listByTeachingClassId(request.getTeachingClassId());
-        return Result.ok(list);
+            @Parameter(description = "查询请求", required = true)
+            @Valid @RequestBody StudentClassListRequest request,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentClassService.listByTeachingClassId(request.getTeachingClassId()));
     }
 
     @PostMapping("/listTeachingClassesByStudent")
-    @Operation(summary = "按学生查询教学班列表", description = "根据学生ID查询该学生所在的所有教学班关联记录")
+    @Operation(summary = "按学生查询教学班列表", description = "根据学生 ID 查询教学班关联记录")
     public Result<List<StudentClass>> listTeachingClassesByStudent(
-            @Parameter(description = "查询请求，传入studentId", required = true)
-            @Valid @RequestBody StudentClassListRequest request) {
-        List<StudentClass> list = studentClassService.listByStudentId(request.getStudentId());
-        return Result.ok(list);
+            @Parameter(description = "查询请求", required = true)
+            @Valid @RequestBody StudentClassListRequest request,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentClassService.listByStudentId(request.getStudentId()));
     }
 
     @PostMapping("/removeStudentFromClass")
-    @Operation(summary = "移除学生-教学班关联", description = "根据关联ID移除学生与教学班的关联关系")
+    @Operation(summary = "移除学生与教学班关联", description = "根据关联 ID 删除学生与教学班关系")
     public Result<Void> removeStudentFromClass(
-            @Parameter(description = "关联移除请求", required = true)
-            @Valid @RequestBody StudentClassRemoveRequest request) {
+            @Parameter(description = "关联删除请求", required = true)
+            @Valid @RequestBody StudentClassRemoveRequest request,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
         studentClassService.removeStudentFromClass(request.getScId());
         return Result.ok("学生已从教学班移除", null);
     }
