@@ -93,6 +93,28 @@ export const NAVIGATION_SECTIONS = [
         entities: ['Student'],
       },
       {
+        key: 'teaching-class',
+        label: '教学班管理',
+        path: '/teaching-class',
+        routeName: ROUTE_NAMES.TEACHING_CLASS,
+        roles: ['admin', 'academic_affairs'],
+        moduleTitle: '模块 A：基础与宏观数据管理',
+        summary:
+          '管理课程的教学班信息，包括班级编号、授课教师、班级容量等。',
+        entities: ['TeachingClass'],
+      },
+      {
+        key: 'student-list',
+        label: '学生名单管理',
+        path: '/student-list',
+        routeName: ROUTE_NAMES.STUDENT_LIST,
+        roles: ['admin', 'academic_affairs'],
+        moduleTitle: '模块 A：基础与宏观数据管理',
+        summary:
+          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。',
+        entities: ['Student'],
+      },
+      {
         key: 'requirements',
         label: '毕业要求与指标点',
         path: '/requirements',
