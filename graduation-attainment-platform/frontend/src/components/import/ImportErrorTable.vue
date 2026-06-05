@@ -10,29 +10,74 @@ const props = defineProps({
   },
 })
 
-const TEMPLATE_KEYWORDS = [
-  '不能为空',
-  '必须为合法',
-  '必须为数字',
-  '必须为 0 或 1',
-  '必须为合法数值',
-  '必须为合法年份',
+const ERROR_CLASSIFIERS = [
+  {
+    type: 'template',
+    label: '模板字段错误',
+    tagType: 'danger',
+    keywords: [
+      '不能为空',
+      '必须为合法',
+      '必须为数字',
+      '必须为 0 或 1',
+      '必须为合法数值',
+      '必须为合法年份',
+      '模板',
+      '表头',
+      '列名',
+      '字段缺失',
+      '字段类型',
+      '字段格式',
+    ],
+  },
+  {
+    type: 'student_not_found',
+    label: '学号或学生不在当前教学班',
+    tagType: 'warning',
+    keywords: ['学号', '学生不在', '不在当前教学班', '不属于该教学班', '学生不存在', '未找到该学生'],
+  },
+  {
+    type: 'score_out_of_range',
+    label: '成绩超出满分或小于 0',
+    tagType: 'warning',
+    keywords: ['超出满分', '小于 0', '超出范围', '成绩范围', '大于满分', '负数', '分数不合法', '成绩不合法'],
+  },
+  {
+    type: 'duplicate',
+    label: '重复记录',
+    tagType: 'warning',
+    keywords: ['重复', '已存在', 'duplicate'],
+  },
+  {
+    type: 'context_mismatch',
+    label: '当前课程/教学班与年级上下文不匹配',
+    tagType: 'danger',
+    keywords: ['不匹配', '年级', '上下文', '学期', '不属于当前课程', '课程不一致', '教学班不一致'],
+  },
+  {
+    type: 'unknown',
+    label: '未知错误',
+    tagType: 'info',
+    keywords: [],
+  },
 ]
-
-const BUSINESS_KEYWORDS = ['不存在', '已存在', '重复', '冲突', '不匹配', '不合法']
 
 function classifyError(reason) {
   const message = reason || ''
-  if (TEMPLATE_KEYWORDS.some((keyword) => message.includes(keyword))) return 'template'
-  if (BUSINESS_KEYWORDS.some((keyword) => message.includes(keyword))) return 'business'
+  for (const cls of ERROR_CLASSIFIERS) {
+    if (cls.keywords.length === 0) continue
+    if (cls.keywords.some((kw) => message.includes(kw))) return cls.type
+  }
   return 'unknown'
 }
 
-const errorTypeConfig = {
-  template: { label: '模板字段错误', type: 'danger' },
-  business: { label: '业务校验错误', type: 'warning' },
-  unknown: { label: '未知错误', type: 'info' },
+function getErrorConfig(type) {
+  return ERROR_CLASSIFIERS.find((c) => c.type === type) || ERROR_CLASSIFIERS[ERROR_CLASSIFIERS.length - 1]
 }
+
+const errorTypeConfig = Object.fromEntries(
+  ERROR_CLASSIFIERS.map((c) => [c.type, { label: c.label, type: c.tagType }]),
+)
 </script>
 
 <template>
@@ -45,8 +90,8 @@ const errorTypeConfig = {
       </el-table-column>
       <el-table-column label="错误类型" width="140">
         <template #default="{ row }">
-          <el-tag :type="errorTypeConfig[classifyError(row.reason)]?.type || 'info'" effect="plain" size="small">
-            {{ errorTypeConfig[classifyError(row.reason)]?.label || '错误' }}
+          <el-tag :type="getErrorConfig(classifyError(row.reason)).tagType" effect="plain" size="small">
+            {{ getErrorConfig(classifyError(row.reason)).label }}
           </el-tag>
         </template>
       </el-table-column>

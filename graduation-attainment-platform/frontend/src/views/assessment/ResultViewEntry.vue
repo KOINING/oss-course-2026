@@ -56,11 +56,47 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { DataAnalysis, TrendCharts } from '@element-plus/icons-vue'
+import {
+  getMacroDashboardDataApi,
+  listMajorGradeYearTermsApi,
+} from '@/api/assessment'
 
 const courseResultAvailable = ref(false)
 const majorResultAvailable = ref(false)
+
+async function checkAvailability() {
+  try {
+    const filterData = await listMajorGradeYearTermsApi()
+    const majors = filterData?.majors || []
+    const gradeYears = filterData?.gradeYears || []
+    const terms = filterData?.terms || []
+
+    if (majors.length === 0 || gradeYears.length === 0 || terms.length === 0) {
+      return
+    }
+
+    const dashboard = await getMacroDashboardDataApi({
+      majorId: majors[0].majorId,
+      gradeYear: gradeYears[0],
+      termId: terms[0].termId,
+    })
+
+    const courses = dashboard?.courses || []
+    courseResultAvailable.value = courses.some(
+      (c) => c.calcStatus === 'calculating' || c.calcStatus === 'locked',
+    )
+    majorResultAvailable.value = dashboard?.aggregationAllowed === true
+  } catch {
+    courseResultAvailable.value = false
+    majorResultAvailable.value = false
+  }
+}
+
+onMounted(() => {
+  checkAvailability()
+})
 </script>
 
 <style scoped>
