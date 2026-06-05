@@ -17,6 +17,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/requirements/SupportMatrixView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.COURSE_OBJECTIVES) {
+    return () => import('@/views/requirements/CourseWeightView.vue')
+  }
+
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
     return () => import('@/views/basic-data/BasicDataView.vue')
   }

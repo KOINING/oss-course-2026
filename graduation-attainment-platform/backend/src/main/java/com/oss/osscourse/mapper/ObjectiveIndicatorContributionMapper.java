@@ -50,7 +50,7 @@ public interface ObjectiveIndicatorContributionMapper extends BaseMapper<Objecti
             ")"
     })
     int deleteByCourseIdAndGradeYear(@Param("courseId") Long courseId,
-                                      @Param("gradeYear") Integer gradeYear);
+                                     @Param("gradeYear") Integer gradeYear);
 
     /**
      * 查询该课程在指定年级版本下所有合法的指标点ID。
