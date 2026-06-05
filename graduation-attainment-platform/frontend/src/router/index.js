@@ -26,6 +26,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/basic/StudentListView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.COURSE_OBJECTIVES) {
+    return () => import('@/views/course-objectives/CourseObjectivesView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')
