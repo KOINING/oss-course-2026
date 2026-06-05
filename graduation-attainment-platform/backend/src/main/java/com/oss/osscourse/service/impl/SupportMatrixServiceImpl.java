@@ -65,7 +65,6 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     public List<MatrixMajorOptionResponse> listMajors(SupportMatrixMajorFilterRequest request,
                                                        List<String> roles,
                                                        List<String> permissions) {
-        assertManagePermission(roles, permissions);
         Long majorId = request == null ? null : request.getMajorId();
         return courseIndicatorSupportMapper.selectMajorOptions(majorId);
     }
@@ -74,7 +73,6 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     public List<Integer> listGradeYears(SupportMatrixMajorFilterRequest request,
                                         List<String> roles,
                                         List<String> permissions) {
-        assertManagePermission(roles, permissions);
         Long majorId = request == null ? null : request.getMajorId();
         return new ArrayList<>(courseIndicatorSupportMapper.selectGradeYears(majorId));
     }
@@ -83,7 +81,6 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     public List<MatrixCourseOptionResponse> listCourses(SupportMatrixMajorFilterRequest request,
                                                         List<String> roles,
                                                         List<String> permissions) {
-        assertManagePermission(roles, permissions);
         Long majorId = extractMajorId(request);
         Integer gradeYear = extractGradeYear(request);
         assertMajorExists(majorId);
@@ -126,7 +123,6 @@ public class SupportMatrixServiceImpl implements SupportMatrixService {
     public List<MatrixIndicatorPointResponse> listIndicatorPoints(SupportMatrixMajorFilterRequest request,
                                                                   List<String> roles,
                                                                   List<String> permissions) {
-        assertManagePermission(roles, permissions);
         Long majorId = extractMajorId(request);
         Integer gradeYear = extractGradeYear(request);
         assertMajorExists(majorId);
