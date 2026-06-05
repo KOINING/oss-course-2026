@@ -1,119 +1,122 @@
 <script setup>
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import QueryBar from '@/components/common/QueryBar.vue'
-import FormDialog from '@/components/common/FormDialog.vue'
-import ImportDialog from '@/components/common/ImportDialog.vue'
+import { listMajorsForSelectApi } from '@/api/basic'
 import {
   addStudentApi,
   deleteStudentApi,
   listStudentsApi,
   updateStudentApi,
   updateStudentStatusApi,
-  importStudentsApi,
 } from '@/api/student'
-import {
-  STUDENT_IMPORT_TEMPLATE_FIELDS,
-  STATUS_OPTIONS,
-  formatStatus,
-  downloadTemplate,
-} from '@/constants/importTemplate'
+import { ROUTE_NAMES } from '@/utils/constants'
+
+const route = useRoute()
+const router = useRouter()
 
 const tableLoading = ref(false)
 const submitLoading = ref(false)
-const importLoading = ref(false)
 const dialogVisible = ref(false)
-const importDialogVisible = ref(false)
 const dialogMode = ref('create')
 const rows = ref([])
 const formRef = ref(null)
+const majorOptions = ref([])
 
-const defaultFilters = () => ({
-  studentId: '',
+const statusOptions = [
+  { value: 1, label: '在读' },
+  { value: 2, label: '毕业' },
+  { value: 3, label: '休学' },
+  { value: 0, label: '退学' },
+]
+
+const filters = reactive({
+  studentNo: '',
   studentName: '',
-  majorCode: '',
-  teachingClassCode: '',
+  majorId: null,
+  enrollmentYear: null,
   status: null,
 })
 
-const filters = reactive(defaultFilters())
-
-const queryFields = [
-  { prop: 'studentId', label: '学号', type: 'input' },
-  { prop: 'studentName', label: '姓名', type: 'input' },
-  { prop: 'majorCode', label: '专业代码', type: 'input', width: 140 },
-  { prop: 'teachingClassCode', label: '教学班编号', type: 'input', width: 140 },
-  {
-    prop: 'status',
-    label: '状态',
-    type: 'select',
-    options: STATUS_OPTIONS,
-    width: 140,
-  },
-]
-
-const defaultForm = () => ({
+const form = reactive({
   studentId: null,
-  studentId_input: '',
+  studentNo: '',
   studentName: '',
-  majorCode: '',
+  majorId: null,
   enrollmentYear: new Date().getFullYear(),
-  teachingClassCode: '',
   status: 1,
 })
 
-const form = reactive(defaultForm())
-
 const formRules = {
-  studentId_input: [{ required: true, message: '请输入学号', trigger: 'blur' }],
+  studentNo: [{ required: true, message: '请输入学号', trigger: 'blur' }],
   studentName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  majorCode: [{ required: true, message: '请输入专业代码', trigger: 'blur' }],
+  majorId: [{ required: true, message: '请选择专业', trigger: 'change' }],
   enrollmentYear: [{ required: true, message: '请输入入学年份', trigger: 'blur' }],
-  teachingClassCode: [{ required: true, message: '请输入教学班编号', trigger: 'blur' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+  status: [{ required: true, message: '请选择学籍状态', trigger: 'change' }],
 }
 
-const dialogTitle = ref('')
+const dialogTitle = computed(() => (dialogMode.value === 'create' ? '新增学生' : '编辑学生'))
+
+function resetFilters() {
+  filters.studentNo = ''
+  filters.studentName = ''
+  filters.majorId = null
+  filters.enrollmentYear = null
+  filters.status = null
+}
+
+function resetForm() {
+  form.studentId = null
+  form.studentNo = ''
+  form.studentName = ''
+  form.majorId = null
+  form.enrollmentYear = new Date().getFullYear()
+  form.status = 1
+}
+
+function normalizeFilters() {
+  return {
+    studentNo: filters.studentNo || undefined,
+    studentName: filters.studentName || undefined,
+    majorId: filters.majorId || undefined,
+    enrollmentYear: filters.enrollmentYear || undefined,
+    status: filters.status === null ? undefined : filters.status,
+  }
+}
+
+async function loadOptions() {
+  majorOptions.value = (await listMajorsForSelectApi()) || []
+}
 
 async function loadRows() {
   tableLoading.value = true
   try {
-    const payload = {
-      studentId: filters.studentId || undefined,
-      studentName: filters.studentName || undefined,
-      majorCode: filters.majorCode || undefined,
-      teachingClassCode: filters.teachingClassCode || undefined,
-      status: filters.status ?? undefined,
-    }
-    rows.value = (await listStudentsApi(payload)) || []
+    rows.value = (await listStudentsApi(normalizeFilters())) || []
   } finally {
     tableLoading.value = false
   }
 }
 
-function resetFilters() {
-  Object.assign(filters, defaultFilters())
+function handleResetFilters() {
+  resetFilters()
   loadRows()
 }
 
 function openCreateDialog() {
   dialogMode.value = 'create'
-  dialogTitle.value = '新增学生'
-  Object.assign(form, defaultForm())
+  resetForm()
   dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
 
 function openEditDialog(row) {
   dialogMode.value = 'edit'
-  dialogTitle.value = '编辑学生'
   Object.assign(form, {
     studentId: row.studentId,
-    studentId_input: row.studentId,
+    studentNo: row.studentNo,
     studentName: row.studentName,
-    majorCode: row.majorCode,
+    majorId: row.majorId,
     enrollmentYear: row.enrollmentYear,
-    teachingClassCode: row.teachingClassCode,
     status: row.status,
   })
   dialogVisible.value = true
@@ -127,13 +130,14 @@ async function handleSubmit() {
   submitLoading.value = true
   try {
     const payload = {
-      studentId: form.studentId || form.studentId_input,
-      studentName: form.studentName,
-      majorCode: form.majorCode,
+      studentId: form.studentId,
+      studentNo: form.studentNo.trim(),
+      studentName: form.studentName.trim(),
+      majorId: form.majorId,
       enrollmentYear: Number(form.enrollmentYear),
-      teachingClassCode: form.teachingClassCode,
       status: Number(form.status),
     }
+
     if (dialogMode.value === 'create') {
       await addStudentApi(payload)
       ElMessage.success('学生创建成功')
@@ -141,6 +145,7 @@ async function handleSubmit() {
       await updateStudentApi(payload)
       ElMessage.success('学生更新成功')
     }
+
     dialogVisible.value = false
     await loadRows()
   } finally {
@@ -154,40 +159,24 @@ async function handleDelete(row) {
   await loadRows()
 }
 
-async function handleToggleStatus(row) {
-  const newStatus = row.status === 1 ? 0 : 1
-  try {
-    await updateStudentStatusApi({
-      studentId: row.studentId,
-      status: newStatus,
-    })
-    ElMessage.success(`学生已${newStatus === 1 ? '启用' : '停用'}`)
-    await loadRows()
-  } catch (error) {
-    ElMessage.error('状态更新失败')
-  }
+async function handleUpdateStatus(row, status) {
+  await updateStudentStatusApi({ studentId: row.studentId, status })
+  ElMessage.success('学生学籍状态已更新')
+  await loadRows()
 }
 
-function handleDownloadTemplate() {
-  downloadTemplate('student-import-template.csv', STUDENT_IMPORT_TEMPLATE_FIELDS)
-  ElMessage.success('模板已下载')
+function goToStudentImport() {
+  router.push({ name: ROUTE_NAMES.DATA_IMPORT, query: { type: 'students' } })
 }
 
-async function handleImportConfirm(file) {
-  importLoading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-    await importStudentsApi(formData)
-    ElMessage.success('学生名单导入成功')
-    importDialogVisible.value = false
-    await loadRows()
-  } finally {
-    importLoading.value = false
-  }
+function formatStatus(status) {
+  return statusOptions.find((item) => item.value === status)?.label || '-'
 }
 
-onMounted(loadRows)
+onMounted(async () => {
+  await loadOptions()
+  await loadRows()
+})
 </script>
 
 <template>
@@ -196,94 +185,116 @@ onMounted(loadRows)
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A：基础与宏观数据管理</p>
-            <h1>学生名单管理</h1>
-            <p class="page-summary">管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。</p>
+            <p class="page-section">{{ route.meta.moduleTitle }}</p>
+            <h1>{{ route.meta.title }}</h1>
+            <p class="page-summary">{{ route.meta.summary }}</p>
           </div>
         </div>
       </template>
 
-      <div class="student-list-toolbar">
-        <QueryBar
-          v-model="filters"
-          :fields="queryFields"
-          :loading="tableLoading"
-          @search="loadRows"
-          @reset="resetFilters"
-        >
-          <template #actions>
-            <el-button @click="handleDownloadTemplate">下载导入模板</el-button>
-            <el-button @click="importDialogVisible = true">导入学生名单</el-button>
-            <el-button type="primary" @click="openCreateDialog">新增学生</el-button>
-          </template>
-        </QueryBar>
+      <el-alert type="info" :closable="false" class="page-tip" show-icon>
+        <template #title>
+          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班学生关联请在教学班管理或数据导入页维护。
+        </template>
+      </el-alert>
+
+      <el-form :inline="true" :model="filters" class="filter-form">
+        <el-form-item label="学号">
+          <el-input v-model.trim="filters.studentNo" placeholder="请输入学号" clearable />
+        </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model.trim="filters.studentName" placeholder="请输入姓名" clearable />
+        </el-form-item>
+        <el-form-item label="专业">
+          <el-select v-model="filters.majorId" placeholder="全部专业" clearable filterable style="width: 200px">
+            <el-option
+              v-for="major in majorOptions"
+              :key="major.majorId"
+              :label="major.majorName"
+              :value="major.majorId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="入学年份">
+          <el-input-number v-model="filters.enrollmentYear" :min="2000" :max="2100" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="学籍状态">
+          <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 160px">
+            <el-option
+              v-for="status in statusOptions"
+              :key="status.value"
+              :label="status.label"
+              :value="status.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadRows">查询</el-button>
+          <el-button @click="handleResetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <div class="table-toolbar">
+        <el-button type="primary" @click="openCreateDialog">新增学生</el-button>
+        <el-button type="success" plain @click="goToStudentImport">前往批量导入学生基础信息</el-button>
       </div>
 
-      <el-table v-loading="tableLoading" :data="rows" border>
-        <el-table-column prop="studentId" label="学号" min-width="120" />
+      <el-table v-loading="tableLoading" :data="rows" border stripe>
+        <el-table-column prop="studentNo" label="学号" min-width="140" />
         <el-table-column prop="studentName" label="姓名" min-width="120" />
         <el-table-column prop="majorCode" label="专业代码" min-width="120" />
-        <el-table-column prop="enrollmentYear" label="入学年份" width="100" />
-        <el-table-column prop="teachingClassCode" label="教学班编号" min-width="140" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="majorName" label="专业名称" min-width="180" />
+        <el-table-column prop="enrollmentYear" label="入学年份" min-width="110" />
+        <el-table-column label="学籍状态" min-width="110">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ formatStatus(row.status) }}
-            </el-tag>
+            <el-tag effect="plain">{{ row.statusText || formatStatus(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" min-width="180" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
-            <el-button
-              link
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 1 ? '停用' : '启用' }}
-            </el-button>
-            <el-popconfirm
-              title="确认删除该学生吗？"
-              @confirm="handleDelete(row)"
-            >
-              <template #reference>
-                <el-button link type="danger">删除</el-button>
-              </template>
-            </el-popconfirm>
+            <div class="table-actions">
+              <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-dropdown @command="(command) => handleUpdateStatus(row, command)">
+                <el-button link type="warning">更新状态</el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="status in statusOptions"
+                      :key="status.value"
+                      :command="status.value"
+                    >
+                      {{ status.label }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-popconfirm title="确认删除该学生吗？" @confirm="handleDelete(row)">
+                <template #reference>
+                  <el-button link type="danger">删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <FormDialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        :loading="submitLoading"
-        :confirm-text="dialogMode === 'create' ? '创建' : '保存'"
-        @confirm="handleSubmit"
-      >
-        <el-form ref="formRef" :model="form" :rules="formRules">
-          <el-form-item label="学号" prop="studentId_input">
-            <el-input
-              v-model.trim="form.studentId_input"
-              placeholder="如 2024001"
-              maxlength="20"
-              :disabled="dialogMode === 'edit'"
-            />
+      <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close>
+        <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
+          <el-form-item label="学号" prop="studentNo">
+            <el-input v-model.trim="form.studentNo" maxlength="20" />
           </el-form-item>
           <el-form-item label="姓名" prop="studentName">
-            <el-input
-              v-model.trim="form.studentName"
-              placeholder="请输入学生姓名"
-              maxlength="50"
-            />
+            <el-input v-model.trim="form.studentName" maxlength="50" />
           </el-form-item>
-          <el-form-item label="专业代码" prop="majorCode">
-            <el-input
-              v-model.trim="form.majorCode"
-              placeholder="如 CS"
-              maxlength="20"
-            />
+          <el-form-item label="专业" prop="majorId">
+            <el-select v-model="form.majorId" placeholder="请选择专业" filterable style="width: 100%">
+              <el-option
+                v-for="major in majorOptions"
+                :key="major.majorId"
+                :label="major.majorName"
+                :value="major.majorId"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="入学年份" prop="enrollmentYear">
             <el-input-number
@@ -294,33 +305,22 @@ onMounted(loadRows)
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item label="教学班编号" prop="teachingClassCode">
-            <el-input
-              v-model.trim="form.teachingClassCode"
-              placeholder="如 CS101-01"
-              maxlength="20"
-            />
-          </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
+          <el-form-item label="学籍状态" prop="status">
+            <el-select v-model="form.status" placeholder="请选择学籍状态" style="width: 100%">
               <el-option
-                v-for="option in STATUS_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
+                v-for="status in statusOptions"
+                :key="status.value"
+                :label="status.label"
+                :value="status.value"
               />
             </el-select>
           </el-form-item>
         </el-form>
-      </FormDialog>
-
-      <ImportDialog
-        v-model="importDialogVisible"
-        title="导入学生名单"
-        :loading="importLoading"
-        :template-fields="STUDENT_IMPORT_TEMPLATE_FIELDS"
-        @confirm="handleImportConfirm"
-      />
+        <template #footer>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="submitLoading" @click="handleSubmit">保存</el-button>
+        </template>
+      </el-dialog>
     </el-card>
   </div>
 </template>
@@ -336,26 +336,43 @@ onMounted(loadRows)
 }
 
 .page-header h1 {
-  margin: 4px 0 0;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 8px 0 6px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
-  color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
-  margin: 8px 0 0;
+  margin: 0;
   color: #64748b;
   line-height: 1.7;
 }
 
-.student-list-toolbar {
+.page-tip {
   margin-bottom: 16px;
+}
+
+.filter-form {
+  margin-bottom: 16px;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 </style>

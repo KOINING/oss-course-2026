@@ -29,6 +29,9 @@ public class CourseUpdateRequest {
     @Schema(description = "所属专业ID列表", example = "[1,2]")
     private List<Long> majorIds;
 
+    @Schema(description = "课程适用的专业-年级绑定关系")
+    private List<CourseMajorGradeYearBindingRequest> majorGradeYearBindings;
+
     @Schema(description = "状态：1=启用，0=停用", example = "1")
     private Integer status;
 }

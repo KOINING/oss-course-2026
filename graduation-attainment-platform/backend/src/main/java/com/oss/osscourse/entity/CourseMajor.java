@@ -12,6 +12,7 @@ public class CourseMajor {
     private Long cmId;
     private Long courseId;
     private Long majorId;
+    private Integer gradeYear;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;

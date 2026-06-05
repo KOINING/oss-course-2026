@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -32,9 +31,11 @@ public class CourseSaveRequest {
     @Schema(description = "学分", example = "4.0", requiredMode = Schema.RequiredMode.REQUIRED)
     private Float credit;
 
-    @NotEmpty(message = "所属专业不能为空")
-    @Schema(description = "所属专业ID列表", example = "[1,2]", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "所属专业ID列表，仅兼容旧版请求", example = "[1,2]", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private List<Long> majorIds;
+
+    @Schema(description = "课程适用的专业-年级绑定关系")
+    private List<CourseMajorGradeYearBindingRequest> majorGradeYearBindings;
 
     @NotNull(message = "状态不能为空")
     @Min(value = 0, message = "状态值必须为0或1")

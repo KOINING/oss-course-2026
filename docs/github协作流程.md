@@ -1,7 +1,7 @@
-﻿# 课程小组 GitHub 协作开发规范
+# 课程小组 GitHub 协作开发规范
 
 本文档适用于课程小组使用 GitHub 协作开发的场景。  
-本仓库采用的协作方式不是"每个任务新建一个分支"，而是：
+本仓库采用的协作方式不是“每个任务新建一个分支”，而是：
 
 - 组长创建仓库并邀请组员成为 Collaborator
 - 每位协作者分配一个固定的长期个人分支
@@ -237,8 +237,8 @@ base: main <- compare: member/zhangsan
 
 确认无误后，点击：
 
-```
-Create pull request 
+```text
+Create pull request
 ```
 
 创建 PR 后，进入当前 PR 页面，在当前页面继续完善以下信息。
@@ -273,7 +273,7 @@ Closes #4
 
 如果没有关联 Issue，可以写 `无`，但课程项目建议尽量每个任务都对应一个 Issue。
 
-## 14. 在 PR 页面右侧边栏设置 Assignee、Reviewer 和 Label
+## 14. 在 PR 页面右侧边栏设置 Assignee、Reviewer、Project 和 Label
 
 创建 Pull Request 后，在页面右侧边栏依次设置以下内容：
 
@@ -285,16 +285,6 @@ Assignees 表示该 PR 的负责人。
 
 - Assignee 设置为提交者本人
 
-操作方式：
-
-1. 在右侧找到 Assignees
-2. 点击该区域
-3. 搜索并选择自己
-
-例如：
-
-- Assignee：李四
-
 ### 14.2 Reviewers
 
 Reviewers 表示负责审核该 PR 的组员。
@@ -303,16 +293,6 @@ Reviewers 表示负责审核该 PR 的组员。
 
 - 至少指定 1 名其他组员
 - Reviewer 不能是自己
-
-操作方式：
-
-1. 在右侧找到 Reviewers
-2. 点击该区域
-3. 搜索并选择其他组员
-
-例如：
-
-- Reviewer：张三
 
 ### 14.3 Labels
 
@@ -324,17 +304,6 @@ Labels 用于标记该 PR 的类型，方便分类和筛选。
 - bug：问题修复
 - enhancement：功能增强
 - feature：新功能开发
-
-操作方式：
-
-1. 在右侧找到 Labels
-2. 点击该区域
-3. 选择与本次任务相符的标签
-
-示例：
-
-- 修改 README：选择 documentation
-- 修复登录错误：选择 bug
 
 ## 15. PR 创建后继续修改
 
@@ -372,11 +341,17 @@ Reviewer 检查完成后：
 Create a merge commit
 ```
 
-选择这个方式的原因是：保留个人分支上的完整提交历史，能在 `main` 上看到每次任务开发过程中的多个 commit，适合长期个人分支协作模式。
+选择这个方式的原因是：
+
+- 保留个人分支上的完整提交历史
+- 能在 `main` 上看到每次任务开发过程中的多个 commit
+- 适合长期个人分支协作模式
 
 ## 17. 合并后的处理
 
 PR 合并后无需额外本地操作；下次开始任务前按第 4 节开始即可。
+
+
 
 ## 18. Project 看板四个状态的使用总结
 
