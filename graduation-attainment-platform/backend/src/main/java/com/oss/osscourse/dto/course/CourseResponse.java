@@ -34,6 +34,9 @@ public class CourseResponse {
     @Schema(description = "所属专业名称列表", example = "[\"计算机科学与技术\",\"软件工程\"]")
     private List<String> majorNames;
 
+    @Schema(description = "课程适用的专业-年级绑定关系")
+    private List<CourseMajorGradeYearBindingResponse> majorGradeYearBindings;
+
     @Schema(description = "状态：1=启用，0=停用", example = "1")
     private Integer status;
 

@@ -1,6 +1,7 @@
 package com.oss.osscourse.service;
 
 import com.oss.osscourse.dto.student.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -18,6 +19,13 @@ public interface StudentService {
      * @return 学生列表
      */
     List<StudentResponse> listStudentsForSelect();
+
+    /**
+     * 批量导入学生基础信息
+     * @param file 导入文件
+     * @return 导入结果
+     */
+    StudentImportResult importStudents(MultipartFile file);
 
     /**
      * 根据ID查询学生详情

@@ -25,4 +25,7 @@ public class IndicatorPointResponse {
 
     @Schema(description = "所属毕业要求描述", example = "能够应用工程知识解决复杂工程问题")
     private String grDescription;
+
+    @Schema(description = "培养方案适用年级", example = "2022")
+    private Integer gradeYear;
 }

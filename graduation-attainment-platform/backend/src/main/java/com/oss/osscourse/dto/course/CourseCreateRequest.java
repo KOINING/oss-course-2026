@@ -2,7 +2,6 @@ package com.oss.osscourse.dto.course;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -27,9 +26,11 @@ public class CourseCreateRequest {
     @Schema(description = "学分", example = "4.0", requiredMode = Schema.RequiredMode.REQUIRED)
     private Float credit;
 
-    @NotEmpty(message = "所属专业不能为空")
-    @Schema(description = "所属专业ID列表", example = "[1,2]", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "所属专业ID列表，仅兼容旧版请求", example = "[1,2]", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private List<Long> majorIds;
+
+    @Schema(description = "课程适用的专业-年级绑定关系", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private List<CourseMajorGradeYearBindingRequest> majorGradeYearBindings;
 
     @Schema(description = "状态：1=启用，0=停用", example = "1", defaultValue = "1")
     private Integer status;

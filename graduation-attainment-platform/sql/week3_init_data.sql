@@ -12,8 +12,8 @@ USE GraduationDB;
 -- A. 新增教师系统用户（2名，id 9~10）
 -- ================================================================
 INSERT INTO sys_user (username, password, real_name, email, phone, status) VALUES
-('teacher_zhao', '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '赵讲师',   'zhao@university.edu.cn',  '13800000009', 1),
-('teacher_sun',  '$2a$10$N.zmdr9k7uOCQb7nVB1cReAtViFqHtBeGqMbGtX4EGrLp/JAUa5BW', '孙副教授', 'sun@university.edu.cn',   '13800000010', 1);
+('teacher_zhao', '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '赵讲师',   'zhao@university.edu.cn',  '13800000009', 1),
+('teacher_sun',  '$2a$10$qu.LU91tlBtajfCGKhWRzuEdxKNUoAv3J1zH5bTWDTUazRYIaWK06', '孙副教授', 'sun@university.edu.cn',   '13800000010', 1);
 
 -- ================================================================
 -- B. 新增教师（2名，id 4~5，role=4 instructor）
@@ -26,8 +26,8 @@ INSERT INTO sys_user_role (user_id, role_id) VALUES
 (9, 4),
 (10, 4);
 
-INSERT INTO sys_role_permission (role_id, permission_id) VALUES
-(4, 10),(4, 11),(4, 12),(4, 13),(4, 14);  -- 赵讲师和孙副教授的角色已有权限，此行为幂等
+INSERT IGNORE INTO sys_role_permission (role_id, permission_id) VALUES
+(4, 10),(4, 11),(4, 12),(4, 13),(4, 14);  -- instructor 角色权限已在主脚本初始化，重复执行时忽略
 
 -- ================================================================
 -- C. 新增课程（10门，id 6~15，均归属计算机科学与技术 major_id=1）
@@ -51,14 +51,14 @@ INSERT INTO course_major (course_id, major_id) VALUES
 -- ================================================================
 -- D. 新增教学班级（7个，id 4~10，均为2024-2025-1学期）
 -- ================================================================
-INSERT INTO teaching_class (class_name, course_id, term_id, teacher_id) VALUES
-('离散数学2024-2025-1班',       6,  1, 4),  -- id=4
-('计算机组成原理2024-2025-1班', 7,  1, 5),  -- id=5
-('数据库原理2024-2025-1班',     8,  1, 1),  -- id=6  张教授
-('编译原理2024-2025-1班',       9,  1, 2),  -- id=7  李副教授
-('算法设计与分析2024-2025-1班', 10, 1, 3),  -- id=8  王讲师
-('人工智能导论2024-2025-1班',   11, 1, 4),  -- id=9  赵讲师
-('计算机图形学2024-2025-2班',   12, 2, 5);  -- id=10 孙副教授(第二学期)
+INSERT INTO teaching_class (class_code, class_name, course_id, term_id, teacher_id) VALUES
+('TC2024CS04', '离散数学2024-2025-1班',       6,  1, 4),  -- id=4
+('TC2024CS05', '计算机组成原理2024-2025-1班', 7,  1, 5),  -- id=5
+('TC2024CS06', '数据库原理2024-2025-1班',     8,  1, 1),  -- id=6  张教授
+('TC2024CS07', '编译原理2024-2025-1班',       9,  1, 2),  -- id=7  李副教授
+('TC2024CS08', '算法设计与分析2024-2025-1班', 10, 1, 3),  -- id=8  王讲师
+('TC2024CS09', '人工智能导论2024-2025-1班',   11, 1, 4),  -- id=9  赵讲师
+('TC2024CS10', '计算机图形学2024-2025-2班',   12, 2, 5);  -- id=10 孙副教授(第二学期)
 
 -- ================================================================
 -- E. 新增学生（50名，id 11~60，计算机科学与技术 2022级 major_id=1）
