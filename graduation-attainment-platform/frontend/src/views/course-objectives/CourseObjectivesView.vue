@@ -15,20 +15,34 @@
         <section class="context-section">
           <h2>课程上下文</h2>
           <div class="context-info">
-            <p class="context-hint">当前配置版本：<span class="version-badge">{{ context ? `${context.majorName} - ${context.enrollmentYear}年级` : '未选择' }}</span></p>
+            <p class="context-hint">
+              <span class="hint-label">当前配置版本：</span>
+              <span class="version-badge">{{ context ? `${context.majorName} - ${context.enrollmentYear}年级` : '未选择' }}</span>
+            </p>
+            <p class="context-note">课程目标属于课程级配置，对该专业、该年级下的所有教学班通用</p>
           </div>
-          <el-form :inline="true" :model="filters">
-            <el-form-item label="课程">
-              <el-select v-model="filters.courseId" @change="onCourseChange" placeholder="请选择课程" style="width: 200px">
-                <el-option v-for="c in courses" :key="c.courseId" :label="`${c.courseCode}-${c.courseName}`" :value="c.courseId" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="教学班">
-              <el-select v-model="filters.teachingClassId" @change="onContextChange" placeholder="请选择教学班" style="width: 200px">
-                <el-option v-for="tc in teachingClasses" :key="tc.teachingClassId" :label="tc.teachingClassCode" :value="tc.teachingClassId" />
-              </el-select>
-            </el-form-item>
-          </el-form>
+          <div class="context-selector-wrapper">
+            <div class="selector-group">
+              <p class="group-label">课程级上下文（用于定义课程目标）</p>
+              <el-form :inline="true" :model="filters">
+                <el-form-item label="课程">
+                  <el-select v-model="filters.courseId" @change="onCourseChange" placeholder="请选择课程" style="width: 200px">
+                    <el-option v-for="c in courses" :key="c.courseId" :label="`${c.courseCode}-${c.courseName}`" :value="c.courseId" />
+                  </el-select>
+                </el-form-item>
+              </el-form>
+            </div>
+            <div class="selector-group">
+              <p class="group-label">教学班级上下文（用于成绩导入和计算）</p>
+              <el-form :inline="true" :model="filters">
+                <el-form-item label="教学班">
+                  <el-select v-model="filters.teachingClassId" @change="onContextChange" placeholder="请选择教学班" style="width: 200px">
+                    <el-option v-for="tc in teachingClasses" :key="tc.teachingClassId" :label="tc.teachingClassCode" :value="tc.teachingClassId" />
+                  </el-select>
+                </el-form-item>
+              </el-form>
+            </div>
+          </div>
 
           <div v-if="context" class="context-display">
             <el-row :gutter="20">
@@ -459,5 +473,45 @@ onMounted(async () => {
   background: #fef3c7;
   padding: 2px 8px;
   border-radius: 3px;
+}
+
+.hint-label {
+  font-weight: 600;
+  color: #92400e;
+  margin-right: 8px;
+}
+
+.context-note {
+  margin: 12px 0 0;
+  padding: 12px;
+  background: #dbeafe;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.6;
+}
+
+.context-selector-wrapper {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.selector-group {
+  flex: 1;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.group-label {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 </style>
