@@ -274,7 +274,6 @@ async function loadObjectives() {
     const [objectiveRows, assessmentPoints, weightRows] = await Promise.all([
       listCourseObjectivesApi({
         courseId: filters.courseId,
-        teachingClassId: filters.teachingClassId || undefined,
       }),
       listAssessmentPointsApi({ courseId: filters.courseId }).catch(() => []),
       context.value?.gradeYear

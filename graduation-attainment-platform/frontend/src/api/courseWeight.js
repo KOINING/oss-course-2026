@@ -21,7 +21,10 @@ export function listIndicatorPointsForWeightApi(data = {}) {
 // ========== 课程目标 ==========
 
 export function listCourseObjectivesApi(params = {}) {
-    return request.get('/course-objectives', { params })
+    const query = {}
+    if (params?.objectiveCode) query.objectiveCode = params.objectiveCode
+    if (params?.courseId) query.courseId = params.courseId
+    return request.get('/course-objectives', { params: query })
 }
 
 // ========== 内部权重矩阵 ==========

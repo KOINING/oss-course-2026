@@ -30,7 +30,6 @@ export function listCourseObjectivesApi(data = {}) {
   const params = {}
   if (data?.objectiveCode) params.objectiveCode = data.objectiveCode
   if (data?.courseId) params.courseId = data.courseId
-  if (data?.teachingClassId) params.teachingClassId = data.teachingClassId
   return request.get('/course-objectives', { params })
 }
 

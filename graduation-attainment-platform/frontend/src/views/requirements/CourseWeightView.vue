@@ -350,7 +350,6 @@ async function loadMatrix() {
     const [objectiveRows, weightRows] = await Promise.all([
       listCourseObjectivesApi({
         courseId: filters.courseId,
-        teachingClassId: filters.teachingClassId,
       }),
       getCourseWeightApi({
         courseId: filters.courseId,

@@ -102,7 +102,12 @@
             >
               计算并锁定
             </el-button>
-            <el-button :disabled="!scoreFile" @click="clearFile">清空</el-button>
+            <el-button
+              :disabled="!scoreFile && importResult.summary.totalCount === 0"
+              @click="clearImportState"
+            >
+              清空
+            </el-button>
           </div>
 
           <el-descriptions
@@ -313,6 +318,12 @@ function resetResult() {
   importResult.failedItems = []
 }
 
+function clearImportState() {
+  clearFile()
+  resetResult()
+  previewPayload.value = []
+}
+
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -380,8 +391,7 @@ async function calculateCourse() {
   try {
     courseCalcResult.value = await calculateCourseLevelApi({ classId: selectedClassId.value })
     await loadContext()
-    clearFile()
-    previewPayload.value = []
+    clearImportState()
     ElMessage.success('课程级计算完成，当前教学班已锁定')
   } catch (error) {
     ElMessage.error(error.message || '课程级计算失败')
