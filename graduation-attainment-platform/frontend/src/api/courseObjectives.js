@@ -22,12 +22,16 @@ export function getContextApi(data) {
     .post('/teacherContext/listMyTeachingClasses', { courseId: data?.courseId })
     .then((rows = []) => {
       const current = rows.find((row) => row.classId === data?.teachingClassId)
-      return current ? { ...current, hasSupportIndicatorPoints: true } : null
+      return current || null
     })
 }
 
 export function listCourseObjectivesApi(data = {}) {
-  return request.get('/course-objectives', { params: data })
+  const params = {}
+  if (data?.objectiveCode) params.objectiveCode = data.objectiveCode
+  if (data?.courseId) params.courseId = data.courseId
+  if (data?.teachingClassId) params.teachingClassId = data.teachingClassId
+  return request.get('/course-objectives', { params })
 }
 
 export function addCourseObjectiveApi(data) {

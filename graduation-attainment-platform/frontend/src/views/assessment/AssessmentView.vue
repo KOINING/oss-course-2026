@@ -15,13 +15,10 @@
 
       <template v-else>
         <el-tabs v-if="isInstructor" v-model="instructorTab" class="assessment-tabs">
-          <el-tab-pane label="考核点配置" name="points" lazy>
-            <AssessmentPointConfig />
-          </el-tab-pane>
           <el-tab-pane label="成绩模板预览" name="template" lazy>
             <TemplatePreview />
           </el-tab-pane>
-          <el-tab-pane label="成绩导入" name="import" lazy>
+          <el-tab-pane label="成绩录入" name="import" lazy>
             <ScoreImport />
           </el-tab-pane>
         </el-tabs>
@@ -44,7 +41,6 @@ import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import NoPermission from '@/components/common/NoPermission.vue'
-import AssessmentPointConfig from './AssessmentPointConfig.vue'
 import TemplatePreview from './TemplatePreview.vue'
 import ScoreImport from './ScoreImport.vue'
 import MacroDashboard from './MacroDashboard.vue'
@@ -53,7 +49,7 @@ import ResultViewEntry from './ResultViewEntry.vue'
 const route = useRoute()
 const userStore = useUserStore()
 
-const instructorTab = ref('points')
+const instructorTab = ref('template')
 const directorTab = ref('dashboard')
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))

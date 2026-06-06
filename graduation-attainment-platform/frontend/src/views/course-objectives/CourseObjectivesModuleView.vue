@@ -7,6 +7,9 @@
       <el-tab-pane label="内部权重配置" name="weights" lazy>
         <CourseWeightView />
       </el-tab-pane>
+      <el-tab-pane label="考核点配置" name="assessment-points" lazy>
+        <AssessmentPointConfig />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -15,6 +18,7 @@
 import { ref } from 'vue'
 import CourseObjectivesView from './CourseObjectivesView.vue'
 import CourseWeightView from '@/views/requirements/CourseWeightView.vue'
+import AssessmentPointConfig from '@/views/assessment/AssessmentPointConfig.vue'
 
 const activeTab = ref('objectives')
 </script>

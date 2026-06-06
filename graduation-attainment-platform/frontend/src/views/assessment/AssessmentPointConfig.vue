@@ -25,7 +25,7 @@
         <el-option
           v-for="obj in objectiveOptions"
           :key="obj.coId"
-          :label="`${obj.objectiveCode}: ${obj.coDescription}`"
+          :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
           :value="obj.coId"
         />
       </el-select>
@@ -128,7 +128,7 @@
             <el-option
               v-for="obj in objectiveOptions"
               :key="obj.coId"
-              :label="`${obj.objectiveCode}: ${obj.coDescription}`"
+              :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
               :value="obj.coId"
             />
           </el-select>

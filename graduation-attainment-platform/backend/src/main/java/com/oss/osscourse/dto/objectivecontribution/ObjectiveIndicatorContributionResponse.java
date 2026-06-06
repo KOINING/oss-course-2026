@@ -19,7 +19,7 @@ public class ObjectiveIndicatorContributionResponse {
     @Schema(description = "课程目标编号", example = "CO1")
     private String objectiveCode;
 
-    @Schema(description = "课程目标纯文本描述")
+    @Schema(description = "课程目标描述")
     private String coDescription;
 
     @Schema(description = "指标点ID", example = "1")
@@ -34,8 +34,11 @@ public class ObjectiveIndicatorContributionResponse {
     @Schema(description = "毕业要求ID", example = "1")
     private Long grId;
 
-    @Schema(description = "毕业要求编号", example = "3")
+    @Schema(description = "毕业要求编号", example = "GR1")
     private String grCode;
+
+    @Schema(description = "毕业要求描述")
+    private String grDescription;
 
     @Schema(description = "内部权重", example = "0.6")
     private Float internalWeight;

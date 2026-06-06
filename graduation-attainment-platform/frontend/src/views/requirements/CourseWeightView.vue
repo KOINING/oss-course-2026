@@ -4,189 +4,177 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 B：课程内部权重配置</p>
-            <h1>课程内部权重配置</h1>
+            <p class="page-section">模块 B：内部权重配置</p>
+            <h1>课程目标对指标点的内部权重</h1>
             <p class="page-summary">
-              为当前课程的各课程目标配置对毕业要求指标点的内部支撑权重，每个指标点列下所有课程目标的权重之和须等于 1.00。
+              根据《软件需求规格说明书》B-2，教师端只展示当前课程在当前专业、年级版本下负责支撑的指标点，并配置课程目标对这些指标点的内部贡献权重。
             </p>
           </div>
         </div>
       </template>
 
-      <el-form :inline="true" :model="filters" class="filter-form">
-        <el-form-item label="专业">
-          <el-select
-              v-model="filters.majorId"
-              placeholder="请选择专业"
-              clearable
-              style="width: 200px"
-              @change="onMajorChange"
-          >
-            <el-option
-                v-for="major in majorOptions"
-                :key="major.majorId"
-                :label="major.majorName"
-                :value="major.majorId"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="年级">
-          <el-select
-              v-model="filters.gradeYear"
-              placeholder="请选择年级"
-              clearable
-              style="width: 160px"
-              @change="onGradeChange"
-          >
-            <el-option
-                v-for="grade in gradeOptions"
-                :key="grade.value"
-                :label="grade.label"
-                :value="grade.value"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="课程">
-          <el-select
+      <section class="context-section">
+        <el-form :inline="true" :model="filters">
+          <el-form-item label="课程">
+            <el-select
               v-model="filters.courseId"
               placeholder="请选择课程"
-              clearable
-              style="width: 200px"
-          >
-            <el-option
-                v-for="course in courseOptions"
+              style="width: 240px"
+              @change="handleCourseChange"
+            >
+              <el-option
+                v-for="course in courses"
                 :key="course.courseId"
-                :label="course.courseName"
+                :label="`${course.courseCode} - ${course.courseName}`"
                 :value="course.courseId"
-            />
-          </el-select>
-        </el-form-item>
+              />
+            </el-select>
+          </el-form-item>
 
-        <el-form-item>
-          <el-button type="primary" :loading="tableLoading" @click="loadMatrix">查询</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-        </el-form-item>
-      </el-form>
+          <el-form-item label="教学班">
+            <el-select
+              v-model="filters.teachingClassId"
+              placeholder="请选择教学班"
+              style="width: 240px"
+              :disabled="!filters.courseId"
+              @change="handleTeachingClassChange"
+            >
+              <el-option
+                v-for="item in teachingClasses"
+                :key="item.classId"
+                :label="`${item.classCode} - ${item.className || item.courseName}`"
+                :value="item.classId"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button type="primary" :disabled="!canQuery" :loading="tableLoading" @click="loadMatrix">
+              查询
+            </el-button>
+            <el-button @click="resetAll">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-descriptions v-if="context" :column="5" border class="context-panel">
+          <el-descriptions-item label="专业">{{ context.majorName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="年级">{{ context.gradeYear || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="课程">{{ context.courseName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="教学班">{{ context.classCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="学期">{{ context.termCode || '-' }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-alert
+          v-if="contextWarning"
+          :title="contextWarning"
+          type="warning"
+          :closable="false"
+          class="context-alert"
+        />
+      </section>
 
       <el-alert type="info" :closable="false" show-icon class="notice-alert">
         <template #default>
-          说明：灰色单元格表示该课程目标与指标点之间无支撑关系，不可录入权重；每列权重之和须等于 1.00 方可保存。
+          页面仅展示当前课程负责支撑的指标点。每个指标点列下所有课程目标的权重和必须等于 1.00，未参与该指标点的课程目标保持 0 即可，保存时不会提交 0 值单元格。
         </template>
       </el-alert>
 
       <div v-loading="tableLoading" class="matrix-wrap">
         <el-empty
-            v-if="!tableLoading && indicators.length === 0"
-            description="暂无数据，请先选择专业、年级和课程并查询"
+          v-if="!canQuery"
+          description="请先选择课程和教学班"
+        />
+
+        <el-empty
+          v-else-if="!tableLoading && courseObjectives.length === 0"
+          description="当前课程暂无课程目标，请先到课程目标页完成配置"
+        />
+
+        <el-empty
+          v-else-if="!tableLoading && indicators.length === 0"
+          description="当前课程在该专业和年级下没有可配置的支撑指标点，请先检查宏观支撑矩阵"
         />
 
         <div v-else class="matrix-scroll">
-          <table class="matrix-table" border="0" cellspacing="0" cellpadding="0">
+          <table class="matrix-table" cellspacing="0" cellpadding="0">
             <thead>
-            <tr>
-              <th class="th-corner" rowspan="2">
-                <div class="corner-inner">
-                  <div class="corner-title-main">课程目标 / 指标点</div>
-                  <div class="corner-stats">
-                    <span>毕业要求: {{ graduationRequirementCount }}</span>
-                    <span class="corner-stat-sep">|</span>
-                    <span>指标点: {{ indicators.length }}</span>
-                    <span class="corner-stat-sep">|</span>
-                    <span>课程目标: {{ courseObjectives.length }}</span>
+              <tr>
+                <th class="th-corner" rowspan="2">
+                  <div class="corner-inner">
+                    <div class="corner-title-main">课程目标 / 指标点</div>
+                    <div class="corner-stats">
+                      <span>课程目标 {{ courseObjectives.length }}</span>
+                      <span class="corner-stat-sep">|</span>
+                      <span>指标点 {{ indicators.length }}</span>
+                    </div>
                   </div>
-                </div>
-              </th>
-
-              <th
+                </th>
+                <th
                   v-for="group in indicatorGroups"
                   :key="group.grId"
                   :colspan="group.indicators.length"
                   class="th-gr-group"
-              >
-                <div class="gr-name">{{ group.grCode }}</div>
-                <el-tooltip :content="group.grDescription" placement="top" :show-after="300">
-                  <div class="gr-desc">{{ group.grDescription }}</div>
-                </el-tooltip>
-              </th>
-            </tr>
-
-            <tr>
-              <th
-                  v-for="indicator in indicators"
-                  :key="indicator.ipId"
-                  class="th-indicator"
-              >
-                <div class="indicator-name">{{ indicator.ipCode }}</div>
-                <el-tooltip :content="indicator.ipDescription" placement="top" :show-after="300">
-                  <div class="indicator-desc">{{ indicator.ipDescription }}</div>
-                </el-tooltip>
-              </th>
-            </tr>
+                >
+                  <div class="gr-name">{{ group.grCode }}</div>
+                  <div class="gr-desc">{{ group.grDescription || '-' }}</div>
+                </th>
+              </tr>
+              <tr>
+                <th v-for="indicator in indicators" :key="indicator.ipId" class="th-indicator">
+                  <div class="indicator-name">{{ indicator.ipCode }}</div>
+                  <div class="indicator-desc">{{ indicator.ipDescription || '-' }}</div>
+                </th>
+              </tr>
             </thead>
 
             <tbody>
-            <tr v-for="obj in courseObjectives" :key="obj.coId">
-              <td class="td-objective">
-                <div class="objective-code">{{ obj.objectiveCode }}</div>
-                <div class="objective-desc">{{ obj.description }}</div>
-              </td>
-              <td
+              <tr v-for="objective in courseObjectives" :key="objective.coId">
+                <td class="td-objective">
+                  <div class="objective-code">{{ objective.objectiveCode }}</div>
+                  <div class="objective-desc">{{ objective.description }}</div>
+                </td>
+
+                <td
                   v-for="indicator in indicators"
                   :key="indicator.ipId"
                   class="td-cell"
-                  :class="{ 'td-cell-disabled': !isSupported(obj.coId, indicator.ipId) }"
-              >
-                <div v-if="isSupported(obj.coId, indicator.ipId)" class="cell-inner">
-                  <el-input-number
-                      :model-value="getWeight(obj.coId, indicator.ipId)"
+                  :class="{ 'td-cell-disabled': !isSupported(objective.coId, indicator.ipId) }"
+                >
+                  <div v-if="isSupported(objective.coId, indicator.ipId)" class="cell-inner">
+                    <el-input-number
+                      :model-value="getWeight(objective.coId, indicator.ipId)"
                       :min="0"
                       :max="1"
                       :step="0.05"
                       :precision="2"
                       controls-position="right"
                       size="small"
-                      style="width: 96px"
-                      @change="(value) => onWeightChange(obj.coId, indicator.ipId, value)"
-                  />
-                </div>
-                <div v-else class="cell-disabled-inner">—</div>
-              </td>
-            </tr>
+                      style="width: 110px"
+                      @change="(value) => onWeightChange(objective.coId, indicator.ipId, value)"
+                    />
+                  </div>
+                  <div v-else class="cell-disabled-inner">-</div>
+                </td>
+              </tr>
 
-            <tr class="tr-sum-spacer" aria-hidden="true">
-              <td :colspan="indicators.length + 1"></td>
-            </tr>
-
-            <tr class="tr-sum">
-              <td class="td-sum-label">列权重合计（Σ）</td>
-              <td
-                  v-for="indicator in indicators"
-                  :key="indicator.ipId"
-                  class="td-sum"
-              >
-                <div class="sum-inner">
+              <tr class="tr-sum">
+                <td class="td-sum-label">列权重合计</td>
+                <td v-for="indicator in indicators" :key="indicator.ipId" class="td-sum">
+                  <div class="sum-inner">
                     <span :class="isColumnValid(indicator.ipId) ? 'sum-valid' : 'sum-invalid'">
                       {{ getColumnSum(indicator.ipId).toFixed(2) }}
                     </span>
-                  <el-icon v-if="isColumnValid(indicator.ipId)" color="#67c23a" size="15">
-                    <CircleCheck />
-                  </el-icon>
-                  <el-icon v-else color="#f56c6c" size="15">
-                    <CircleClose />
-                  </el-icon>
-                </div>
-              </td>
-            </tr>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
       <div class="bottom-actions">
-        <el-button type="primary" :loading="saveLoading" @click="handleSave">保存配置</el-button>
-        <el-button @click="handleFormReset">重置</el-button>
+        <el-button type="primary" :loading="saveLoading" :disabled="!canSave" @click="handleSave">保存配置</el-button>
+        <el-button :disabled="!hasSnapshot" @click="resetMatrix">恢复上次加载结果</el-button>
       </div>
     </el-card>
   </div>
@@ -195,92 +183,35 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import {
-  getCourseWeightApi,
+  getContextApi,
   listCourseObjectivesApi,
-  listCoursesForWeightApi,
-  listGradesApi,
-  listIndicatorPointsForWeightApi,
-  listMajorsForWeightApi,
-  saveCourseWeightApi,
-} from '@/api/courseWeight.js'
+  listCoursesForInstructorApi,
+  listTeachingClassesApi,
+} from '@/api/courseObjectives'
+import { getCourseWeightApi, saveCourseWeightApi } from '@/api/courseWeight'
 
 const filters = reactive({
-  majorId: null,
-  gradeYear: null,
   courseId: null,
+  teachingClassId: null,
 })
 
-const majorOptions = ref([])
-const gradeOptions = ref([])
-const courseOptions = ref([])
+const courses = ref([])
+const teachingClasses = ref([])
+const context = ref(null)
+const contextWarning = ref('')
+
 const tableLoading = ref(false)
 const saveLoading = ref(false)
-
 const courseObjectives = ref([])
 const indicators = ref([])
 const supportSet = ref(new Set())
 const matrixData = ref({})
-
 let matrixSnapshot = {}
 
-async function loadOptions() {
-  majorOptions.value = await listMajorsForWeightApi()
-  const gradeYears = await listGradesApi()
-  gradeOptions.value = gradeYears.map((year) => ({
-    value: String(year),
-    label: year + '级',
-  }))
-}
-
-async function onMajorChange(majorId) {
-  filters.gradeYear = null
-  filters.courseId = null
-  courseOptions.value = []
-  if (!majorId) return
-}
-
-async function onGradeChange() {
-  filters.courseId = null
-  courseOptions.value = []
-  if (!filters.majorId || !filters.gradeYear) return
-  courseOptions.value = await listCoursesForWeightApi({
-    majorId: filters.majorId,
-    gradeYear: Number(filters.gradeYear),
-  })
-}
-
-function resetFilters() {
-  filters.majorId = null
-  filters.gradeYear = null
-  filters.courseId = null
-  courseOptions.value = []
-  courseObjectives.value = []
-  indicators.value = []
-  supportSet.value = new Set()
-  matrixData.value = {}
-  matrixSnapshot = {}
-}
-
-const indicatorGroups = computed(() => {
-  const map = new Map()
-  indicators.value.forEach((indicator) => {
-    const key = indicator.grId ?? 'other'
-    if (!map.has(key)) {
-      map.set(key, {
-        grId: indicator.grId,
-        grCode: indicator.grCode ?? '其他',
-        grDescription: indicator.grDescription ?? '',
-        indicators: [],
-      })
-    }
-    map.get(key).indicators.push(indicator)
-  })
-  return Array.from(map.values())
-})
-
-const graduationRequirementCount = computed(() => indicatorGroups.value.length)
+const canQuery = computed(() => Boolean(filters.courseId && filters.teachingClassId && context.value?.gradeYear))
+const hasSnapshot = computed(() => Object.keys(matrixSnapshot).length > 0)
+const canSave = computed(() => canQuery.value && courseObjectives.value.length > 0 && indicators.value.length > 0)
 
 function cellKey(coId, ipId) {
   return `${coId}_${ipId}`
@@ -300,68 +231,148 @@ function onWeightChange(coId, ipId, value) {
 
 function getColumnSum(ipId) {
   let total = 0
-  courseObjectives.value.forEach((obj) => {
-    if (isSupported(obj.coId, ipId)) {
-      total += matrixData.value[cellKey(obj.coId, ipId)] ?? 0
+  courseObjectives.value.forEach((objective) => {
+    if (isSupported(objective.coId, ipId)) {
+      total += Number(matrixData.value[cellKey(objective.coId, ipId)] ?? 0)
     }
   })
   return Math.round(total * 100) / 100
 }
 
 function isColumnValid(ipId) {
-  const hasAny = courseObjectives.value.some((obj) => isSupported(obj.coId, ipId))
-  if (!hasAny) return true
-  return getColumnSum(ipId) === 1.0
+  const hasSupport = courseObjectives.value.some((objective) => isSupported(objective.coId, ipId))
+  if (!hasSupport) {
+    return true
+  }
+  return Math.abs(getColumnSum(ipId) - 1) < 0.001
 }
 
-function buildMatrixData(serverRows) {
-  const data = {}
-  const supported = new Set()
+const indicatorGroups = computed(() => {
+  const groups = new Map()
+  indicators.value.forEach((indicator) => {
+    const key = indicator.grId ?? 'unknown'
+    if (!groups.has(key)) {
+      groups.set(key, {
+        grId: indicator.grId,
+        grCode: indicator.grCode || '未分组',
+        grDescription: indicator.grDescription || '',
+        indicators: [],
+      })
+    }
+    groups.get(key).indicators.push(indicator)
+  })
+  return Array.from(groups.values())
+})
 
-  serverRows.forEach((row) => {
-    const key = cellKey(row.coId, row.ipId)
-    supported.add(key)
-    data[key] = row.internalWeight ?? 0
+async function loadCourses() {
+  try {
+    courses.value = (await listCoursesForInstructorApi()) || []
+  } catch {
+    courses.value = []
+    ElMessage.error('加载课程列表失败')
+  }
+}
+
+async function handleCourseChange() {
+  filters.teachingClassId = null
+  teachingClasses.value = []
+  context.value = null
+  contextWarning.value = ''
+  clearMatrix()
+
+  if (!filters.courseId) {
+    return
+  }
+
+  try {
+    teachingClasses.value = (await listTeachingClassesApi({ courseId: filters.courseId })) || []
+  } catch {
+    ElMessage.error('加载教学班失败')
+  }
+}
+
+async function handleTeachingClassChange() {
+  clearMatrix()
+  if (!filters.courseId || !filters.teachingClassId) {
+    context.value = null
+    contextWarning.value = ''
+    return
+  }
+
+  try {
+    context.value = await getContextApi({
+      courseId: filters.courseId,
+      teachingClassId: filters.teachingClassId,
+    })
+    contextWarning.value = context.value?.blockReason || ''
+    await loadMatrix()
+  } catch {
+    ElMessage.error('加载教学班上下文失败')
+  }
+}
+
+function buildMatrix(weightRows) {
+  const nextMatrix = {}
+  const nextSupportSet = new Set()
+  const indicatorMap = new Map()
+
+  ;(weightRows || []).forEach((row) => {
+    nextSupportSet.add(cellKey(row.coId, row.ipId))
+    if (!indicatorMap.has(row.ipId)) {
+      indicatorMap.set(row.ipId, {
+        ipId: row.ipId,
+        ipCode: row.ipCode,
+        ipDescription: row.ipDescription,
+        grId: row.grId,
+        grCode: row.grCode,
+        grDescription: row.grDescription,
+      })
+    }
+    if (row.internalWeight !== null && row.internalWeight !== undefined) {
+      nextMatrix[cellKey(row.coId, row.ipId)] = Number(row.internalWeight)
+    }
   })
 
-  return { data, supported }
+  return {
+    matrix: nextMatrix,
+    supported: nextSupportSet,
+    indicatorList: Array.from(indicatorMap.values()),
+  }
 }
 
 async function loadMatrix() {
-  if (!filters.majorId) {
-    ElMessage.warning('请先选择专业')
-    return
-  }
-  if (!filters.gradeYear) {
-    ElMessage.warning('请先选择年级')
-    return
-  }
-  if (!filters.courseId) {
-    ElMessage.warning('请先选择课程')
+  if (!canQuery.value) {
     return
   }
 
   tableLoading.value = true
   try {
-    const [objectiveList, indicatorList, weightRows] = await Promise.all([
-      listCourseObjectivesApi({ courseId: filters.courseId }),
-      listIndicatorPointsForWeightApi({
-        majorId: filters.majorId,
-        gradeYear: Number(filters.gradeYear),
+    const [objectiveRows, weightRows] = await Promise.all([
+      listCourseObjectivesApi({
+        courseId: filters.courseId,
+        teachingClassId: filters.teachingClassId,
       }),
       getCourseWeightApi({
         courseId: filters.courseId,
-        gradeYear: Number(filters.gradeYear),
+        gradeYear: Number(context.value.gradeYear),
       }),
     ])
 
-    courseObjectives.value = objectiveList
-    indicators.value = indicatorList
+    courseObjectives.value = objectiveRows || []
 
-    const { data, supported } = buildMatrixData(weightRows)
-    matrixData.value = data
+    const { matrix, supported, indicatorList } = buildMatrix(weightRows || [])
+    matrixData.value = matrix
     supportSet.value = supported
-    matrixSnapshot = JSON.parse(JSON.stringify(data))
+    indicators.value = indicatorList
+    matrixSnapshot = JSON.parse(JSON.stringify(matrix))
+
+    if (!indicatorList.length) {
+      contextWarning.value = '当前课程在该专业和年级下没有可配置的支撑指标点，请先检查宏观支撑矩阵。'
+    } else if (!context.value?.blockReason) {
+      contextWarning.value = ''
+    }
+  } catch {
+    ElMessage.error('加载内部权重矩阵失败')
   } finally {
     tableLoading.value = false
   }
@@ -370,47 +381,71 @@ async function loadMatrix() {
 async function handleSave() {
   const invalidColumns = indicators.value.filter((indicator) => !isColumnValid(indicator.ipId))
   if (invalidColumns.length) {
-    ElMessage.warning(
-        `以下指标点列权重之和不等于 1.00：${invalidColumns.map((item) => item.ipCode).join('、')}`,
-    )
+    ElMessage.warning(`以下指标点列的权重和不等于 1.00：${invalidColumns.map((item) => item.ipCode).join('、')}`)
     return
   }
 
   const contributions = []
-  courseObjectives.value.forEach((obj) => {
+  courseObjectives.value.forEach((objective) => {
     indicators.value.forEach((indicator) => {
-      if (isSupported(obj.coId, indicator.ipId)) {
+      if (!isSupported(objective.coId, indicator.ipId)) {
+        return
+      }
+      const internalWeight = Number(matrixData.value[cellKey(objective.coId, indicator.ipId)] ?? 0)
+      if (internalWeight > 0) {
         contributions.push({
-          coId: obj.coId,
+          coId: objective.coId,
           ipId: indicator.ipId,
-          internalWeight: matrixData.value[cellKey(obj.coId, indicator.ipId)] ?? 0,
+          internalWeight,
         })
       }
     })
   })
 
+  if (!contributions.length) {
+    ElMessage.warning('当前没有可保存的内部权重配置')
+    return
+  }
+
   saveLoading.value = true
   try {
     await saveCourseWeightApi({
       courseId: filters.courseId,
-      gradeYear: Number(filters.gradeYear),
+      gradeYear: Number(context.value.gradeYear),
       contributions,
     })
-    ElMessage.success('保存成功')
+    ElMessage.success('内部权重保存成功')
     matrixSnapshot = JSON.parse(JSON.stringify(matrixData.value))
+    await loadMatrix()
   } finally {
     saveLoading.value = false
   }
 }
 
-function handleFormReset() {
-  if (!Object.keys(matrixSnapshot).length) return
+function resetMatrix() {
   matrixData.value = JSON.parse(JSON.stringify(matrixSnapshot))
-  ElMessage.info('已重置为上次保存状态')
+  ElMessage.info('已恢复到上次加载结果')
+}
+
+function clearMatrix() {
+  courseObjectives.value = []
+  indicators.value = []
+  supportSet.value = new Set()
+  matrixData.value = {}
+  matrixSnapshot = {}
+}
+
+function resetAll() {
+  filters.courseId = null
+  filters.teachingClassId = null
+  teachingClasses.value = []
+  context.value = null
+  contextWarning.value = ''
+  clearMatrix()
 }
 
 onMounted(async () => {
-  await loadOptions()
+  await loadCourses()
 })
 </script>
 
@@ -425,332 +460,143 @@ onMounted(async () => {
 }
 
 .page-header h1 {
-  margin: 4px 0 8px;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 6px 0 8px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
   color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
   margin: 0;
-  max-width: 720px;
   color: #64748b;
-  line-height: 1.75;
+  line-height: 1.7;
+  max-width: 760px;
 }
 
-.filter-form {
-  margin-bottom: 16px;
+.context-section {
+  margin-bottom: 20px;
+}
+
+.context-panel {
+  margin-top: 16px;
+  background: #fff;
+}
+
+.context-alert {
+  margin-top: 16px;
 }
 
 .notice-alert {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .matrix-wrap {
   min-height: 160px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .matrix-scroll {
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: 860px;
-  width: 100%;
-  position: relative;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.matrix-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.matrix-scroll::-webkit-scrollbar-track {
-  background: #f5f7fa;
-  border-radius: 4px;
-}
-
-.matrix-scroll::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 4px;
-}
-
-.matrix-scroll::-webkit-scrollbar-thumb:hover {
-  background: #909399;
-}
-
-.matrix-scroll::-webkit-scrollbar-corner {
-  background: #f5f7fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .matrix-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 15px;
-  table-layout: fixed;
   width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .matrix-table th,
 .matrix-table td {
-  border-right: 1px solid #e4e7ed;
-  border-bottom: 1px solid #e4e7ed;
+  border: 1px solid #e5e7eb;
   padding: 0;
 }
 
-.th-corner {
-  width: 220px;
-  min-width: 180px;
-  background: #fff;
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.1);
-  transform: translateZ(0);
-}
-
-.corner-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 14px;
+.th-corner,
+.td-objective,
+.td-sum-label {
+  width: 240px;
+  min-width: 240px;
   background: #fff;
 }
 
-.corner-title-main {
-  font-weight: 700;
-  font-size: 16px;
-  color: #1f2937;
-  text-align: center;
-  margin-bottom: 10px;
-  letter-spacing: 0.02em;
+.corner-inner,
+.td-objective,
+.td-sum-label {
+  padding: 16px;
 }
 
-.corner-stats {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.6;
-}
-
-.corner-stat-sep {
-  color: #c0c4cc;
-}
-
-.th-gr-group {
-  position: sticky;
-  top: 0;
-  z-index: 8;
-  text-align: center;
-  padding: 14px 18px 14px;
-  background: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  color: #1d4ed8;
-  border-left: 2px solid #e4e7ed;
-  letter-spacing: 0.02em;
-  vertical-align: top;
-  border-top: none;
-  border-bottom: 1px solid #e4e7ed;
-  white-space: normal;
-}
-
-.th-gr-group:first-of-type {
-  border-left: none;
-}
-
-.gr-name {
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 15px;
-  margin-bottom: 6px;
-  padding-bottom: 5px;
-  border-bottom: 1px dashed #d4d8e0;
-  text-align: center;
-}
-
-.gr-desc {
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.6;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  cursor: default;
-  min-height: 18px;
-  text-align: center;
-  font-weight: 400;
-}
-
-.th-indicator {
-  position: sticky;
-  top: auto;
-  z-index: 7;
-  padding: 12px 16px 12px;
-  background: #fff;
-  vertical-align: top;
-  text-align: center;
-  border-top: none;
-  white-space: normal;
-  word-break: break-word;
-}
-
-.indicator-name {
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 14px;
-  margin-bottom: 8px;
-  padding-bottom: 5px;
-  border-bottom: 1px dashed #d4d8e0;
-  text-align: center;
-}
-
-.indicator-desc {
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.6;
-  white-space: normal !important;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  display: block;
-  overflow: visible;
-  cursor: default;
-  min-height: 0;
-  text-align: center;
-  max-width: 100%;
-}
-
-.td-objective {
-  padding: 14px 20px;
-  background: #fff;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.08);
-  vertical-align: middle;
-  min-width: 180px;
-  max-width: 220px;
-  border-right: 1px solid #e4e7ed;
-}
-
+.corner-title-main,
 .objective-code {
   font-weight: 600;
-  font-size: 14px;
-  color: #1d4ed8;
-  margin-bottom: 6px;
+  color: #111827;
 }
 
-.objective-desc {
-  font-size: 13px;
+.corner-stats,
+.objective-desc,
+.gr-desc,
+.indicator-desc {
+  margin-top: 8px;
   color: #6b7280;
-  line-height: 1.5;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.th-gr-group,
+.th-indicator,
+.td-cell,
+.td-sum {
+  text-align: center;
+  background: #fff;
+}
+
+.th-gr-group,
+.th-indicator {
+  padding: 12px;
 }
 
 .td-cell {
-  padding: 16px 20px;
-  text-align: center;
-  background: #fff;
-  vertical-align: middle;
-  position: relative;
-  z-index: 0;
+  padding: 12px;
 }
 
 .td-cell-disabled {
-  background: #f5f7fa;
+  background: #f8fafc;
 }
 
 .cell-inner {
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 
 .cell-disabled-inner {
-  color: #c0c4cc;
-  font-size: 18px;
-  line-height: 32px;
-}
-
-.tr-sum-spacer td {
-  height: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
+  color: #9ca3af;
 }
 
 .tr-sum td {
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
-  background: #fff !important;
-  font-weight: 700;
-  border-top: 2px solid #e4e7ed;
-  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
-}
-
-.td-sum-label {
-  padding: 24px 24px;
-  vertical-align: middle;
-  color: #374151;
-  font-size: 13px;
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  z-index: 5;
-  white-space: nowrap;
-  background: #fff !important;
-  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.08);
-  text-align: center;
-}
-
-.td-sum {
-  padding: 24px 16px;
-  vertical-align: middle;
-  text-align: center;
-}
-
-.sum-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 700;
-  min-height: 24px;
+  background: #f8fafc;
 }
 
 .sum-valid {
-  color: #15803d;
+  color: #16a34a;
+  font-weight: 600;
 }
 
 .sum-invalid {
   color: #dc2626;
+  font-weight: 600;
 }
 
 .bottom-actions {
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding-top: 12px;
 }
 </style>

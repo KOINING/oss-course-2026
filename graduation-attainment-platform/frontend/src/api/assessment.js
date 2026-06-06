@@ -30,7 +30,11 @@ export function deleteAssessmentPointApi(data) {
 }
 
 export function listCourseObjectivesApi(data = {}) {
-  return request.get('/course-objectives', { params: data })
+  const params = {}
+  if (data?.objectiveCode) params.objectiveCode = data.objectiveCode
+  if (data?.courseId) params.courseId = data.courseId
+  if (data?.teachingClassId) params.teachingClassId = data.teachingClassId
+  return request.get('/course-objectives', { params })
 }
 
 export function listInstructorTeachingClassesApi(data = {}) {

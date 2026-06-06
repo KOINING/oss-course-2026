@@ -5,93 +5,114 @@
         <div class="page-header">
           <div>
             <p class="page-section">模块 B：课程大纲与微观映射管理</p>
-            <h1>课程目标与考核点</h1>
-            <p class="page-summary">维护课程目标、课程目标对指标点的内部贡献权重，以及与考核点之间的映射关系。</p>
+            <h1>课程目标</h1>
+            <p class="page-summary">
+              先选择课程和教学班上下文，再维护课程目标。课程目标属于课程级配置，但教师端页面需要基于当前教学班确认专业、年级和学期口径。
+            </p>
           </div>
         </div>
       </template>
 
       <div class="page-content">
         <section class="context-section">
-          <h2>课程上下文</h2>
-          <div class="context-info">
-            <p class="context-hint">
-              <span class="hint-label">当前配置版本：</span>
-              <span class="version-badge">{{ context ? `${context.majorName} - ${context.gradeYear}年级` : '未选择' }}</span>
-            </p>
-            <p class="context-note">课程目标属于课程级配置，对该专业、该年级下的所有教学班通用</p>
-          </div>
-          <div class="context-selector-wrapper">
-            <div class="selector-group">
-              <p class="group-label">课程级上下文（用于定义课程目标）</p>
-              <el-form :inline="true" :model="filters">
-                <el-form-item label="课程">
-                  <el-select v-model="filters.courseId" @change="onCourseChange" placeholder="请选择课程" style="width: 200px">
-                    <el-option v-for="c in courses" :key="c.courseId" :label="`${c.courseCode}-${c.courseName}`" :value="c.courseId" />
-                  </el-select>
-                </el-form-item>
-              </el-form>
-            </div>
-            <div class="selector-group">
-              <p class="group-label">教学班级上下文（用于成绩导入和计算）</p>
-              <el-form :inline="true" :model="filters">
-                <el-form-item label="教学班">
-                  <el-select v-model="filters.teachingClassId" @change="onContextChange" placeholder="请选择教学班" style="width: 200px">
-                    <el-option v-for="tc in teachingClasses" :key="tc.classId" :label="tc.classCode" :value="tc.classId" />
-                  </el-select>
-                </el-form-item>
-              </el-form>
-            </div>
+          <div class="section-header">
+            <h2>课程上下文</h2>
           </div>
 
-          <div v-if="context" class="context-display">
-            <el-row :gutter="20">
-              <el-col :span="4"><span class="label">专业:</span> {{ context.majorName }}</el-col>
-              <el-col :span="4"><span class="label">年级:</span> {{ context.gradeYear }}</el-col>
-              <el-col :span="4"><span class="label">课程:</span> {{ context.courseName }}</el-col>
-              <el-col :span="4"><span class="label">教学班:</span> {{ context.classCode }}</el-col>
-              <el-col :span="4"><span class="label">学期:</span> {{ context.termCode }}</el-col>
-            </el-row>
+          <div class="selectors">
+            <el-form :inline="true" :model="filters">
+              <el-form-item label="课程">
+                <el-select
+                  v-model="filters.courseId"
+                  placeholder="请选择课程"
+                  style="width: 240px"
+                  @change="handleCourseChange"
+                >
+                  <el-option
+                    v-for="course in courses"
+                    :key="course.courseId"
+                    :label="`${course.courseCode} - ${course.courseName}`"
+                    :value="course.courseId"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="教学班">
+                <el-select
+                  v-model="filters.teachingClassId"
+                  placeholder="请选择教学班"
+                  style="width: 240px"
+                  :disabled="!filters.courseId"
+                  @change="handleTeachingClassChange"
+                >
+                  <el-option
+                    v-for="item in teachingClasses"
+                    :key="item.classId"
+                    :label="`${item.classCode} - ${item.className || item.courseName}`"
+                    :value="item.classId"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-form>
           </div>
 
-          <el-alert v-if="contextWarning" :title="contextWarning" type="warning" :closable="false" style="margin-top: 12px" />
+          <el-descriptions v-if="context" :column="5" border class="context-panel">
+            <el-descriptions-item label="专业">{{ context.majorName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="年级">{{ context.gradeYear || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="课程">{{ context.courseName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="教学班">{{ context.classCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="学期">{{ context.termCode || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <el-alert
+            v-if="contextWarning"
+            :title="contextWarning"
+            type="warning"
+            :closable="false"
+            class="context-alert"
+          />
         </section>
 
         <section class="objectives-section">
           <div class="section-header">
-            <h2>课程目标定义</h2>
-            <el-button type="primary" @click="openDialog('create')">新增课程目标</el-button>
+            <h2>课程目标列表</h2>
+            <el-button type="primary" :disabled="!filters.courseId" @click="openDialog('create')">
+              新增课程目标
+            </el-button>
           </div>
 
-          <el-alert v-if="!context" type="info" title="请先选择课程和教学班" :closable="false" />
+          <el-alert
+            v-if="!filters.courseId"
+            title="请先选择课程"
+            type="info"
+            :closable="false"
+          />
 
-          <el-table v-else v-loading="loading" :data="objectives" border style="margin-top: 16px">
-            <el-table-column prop="objectiveCode" label="编号" width="100" />
-            <el-table-column label="描述" min-width="200">
+          <el-table v-else v-loading="loading" :data="objectives" border>
+            <el-table-column prop="objectiveCode" label="目标编号" width="120" />
+            <el-table-column prop="description" label="目标描述" min-width="320" show-overflow-tooltip />
+            <el-table-column label="考核点引用" width="120" align="center">
               <template #default="{ row }">
-                <div v-html="row.description" class="desc-preview" />
+                <el-tag :type="row.isReferencedByAssessmentPoint ? 'warning' : 'info'" effect="light">
+                  {{ row.isReferencedByAssessmentPoint ? '已引用' : '未引用' }}
+                </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="引用状态" width="120">
+            <el-table-column label="内部权重配置" width="140" align="center">
               <template #default="{ row }">
-                <el-tag v-if="row.isReferencedByAssessmentPoint" type="warning">已引用</el-tag>
-                <el-tag v-else type="info">未引用</el-tag>
+                <el-tag :type="row.isInWeightConfiguration ? 'success' : 'info'" effect="light">
+                  {{ row.isInWeightConfiguration ? '已配置' : '未配置' }}
+                </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="权重配置" width="120">
-              <template #default="{ row }">
-                <el-tag v-if="row.isInWeightConfiguration" type="success">已配置</el-tag>
-                <el-tag v-else type="info">未配置</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
-                <el-popconfirm 
-                  :title="getDeleteConfirmTitle(row)" 
-                  @confirm="deleteObjective(row)"
+                <el-popconfirm
+                  :title="buildDeleteTitle(row)"
                   confirm-button-text="确认删除"
                   cancel-button-text="取消"
+                  @confirm="deleteObjective(row)"
                 >
                   <template #reference>
                     <el-button link type="danger">删除</el-button>
@@ -100,36 +121,39 @@
               </template>
             </el-table-column>
             <template #empty>
-              <el-empty description="暂无数据" />
+              <el-empty description="当前课程暂无课程目标" />
             </template>
           </el-table>
         </section>
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增课程目标' : '编辑课程目标'" width="600px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增课程目标' : '编辑课程目标'" width="640px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="目标编号" prop="objectiveCode">
-          <el-input v-model.trim="form.objectiveCode" placeholder="请输入目标编号" />
+          <el-input v-model.trim="form.objectiveCode" placeholder="例如 CO1" />
         </el-form-item>
         <el-form-item label="描述类型" prop="descriptionType">
           <el-radio-group v-model="form.descriptionType">
             <el-radio label="text">纯文本</el-radio>
-            <el-radio label="html">富文本</el-radio>
+            <el-radio label="html">富文本源码</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-if="form.descriptionType === 'text'" v-model="form.description" type="textarea" rows="4" />
-          <div v-else class="editor">
-            <div class="toolbar">
-              <el-button-group>
-                <el-button size="small" @click="insertTag('b')">粗体</el-button>
-                <el-button size="small" @click="insertTag('i')">斜体</el-button>
-                <el-button size="small" @click="insertTag('u')">下划线</el-button>
-              </el-button-group>
-            </div>
-            <textarea v-model="form.description" class="textarea" />
-          </div>
+        <el-form-item label="目标描述" prop="description">
+          <el-input
+            v-if="form.descriptionType === 'text'"
+            v-model="form.description"
+            type="textarea"
+            :rows="5"
+            placeholder="请输入课程目标描述"
+          />
+          <el-input
+            v-else
+            v-model="form.description"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入 HTML 内容"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -141,35 +165,44 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, onMounted } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
 import {
-  listCoursesForInstructorApi,
-  listTeachingClassesApi,
+  addCourseObjectiveApi,
+  deleteCourseObjectiveApi,
   getContextApi,
   listCourseObjectivesApi,
-  addCourseObjectiveApi,
+  listCoursesForInstructorApi,
+  listTeachingClassesApi,
   updateCourseObjectiveApi,
-  deleteCourseObjectiveApi,
-  checkAssessmentPointReferencesApi,
-  checkWeightConfigurationApi,
 } from '@/api/courseObjectives'
+import { listAssessmentPointsApi } from '@/api/assessment'
+import { getCourseWeightApi } from '@/api/courseWeight'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))
 
+const filters = reactive({
+  courseId: null,
+  teachingClassId: null,
+})
+
 const courses = ref([])
 const teachingClasses = ref([])
-const objectives = ref([])
 const context = ref(null)
 const contextWarning = ref('')
+const objectives = ref([])
+const loading = ref(false)
 
-const filters = reactive({ courseId: null, teachingClassId: null })
+const dialogVisible = ref(false)
+const dialogMode = ref('create')
+const submitting = ref(false)
+const formRef = ref(null)
 const form = reactive({
   coId: null,
   objectiveCode: '',
@@ -182,72 +215,94 @@ const rules = {
   description: [{ required: true, message: '请输入目标描述', trigger: 'blur' }],
 }
 
-const dialogVisible = ref(false)
-const dialogMode = ref('create')
-const formRef = ref(null)
-const loading = ref(false)
-const submitting = ref(false)
-
 async function loadCourses() {
   try {
-    courses.value = await listCoursesForInstructorApi()
+    courses.value = (await listCoursesForInstructorApi()) || []
   } catch {
+    courses.value = []
     ElMessage.error('加载课程列表失败')
   }
 }
 
-async function onCourseChange() {
+async function handleCourseChange() {
   filters.teachingClassId = null
-  teachingClasses.value = []
   context.value = null
   contextWarning.value = ''
-  if (!filters.courseId) return
+  objectives.value = []
+  teachingClasses.value = []
+
+  if (!filters.courseId) {
+    return
+  }
+
   try {
-    teachingClasses.value = await listTeachingClassesApi({ courseId: filters.courseId })
+    teachingClasses.value = (await listTeachingClassesApi({ courseId: filters.courseId })) || []
+    await loadObjectives()
   } catch {
-    ElMessage.error('加载教学班列表失败')
+    ElMessage.error('加载教学班失败')
   }
 }
 
-async function onContextChange() {
-  if (!filters.courseId || !filters.teachingClassId) return
+async function handleTeachingClassChange() {
+  if (!filters.courseId || !filters.teachingClassId) {
+    context.value = null
+    contextWarning.value = ''
+    await loadObjectives()
+    return
+  }
+
   try {
-    const ctx = await getContextApi({
+    context.value = await getContextApi({
       courseId: filters.courseId,
       teachingClassId: filters.teachingClassId,
     })
-    context.value = ctx
-    contextWarning.value = ctx && !ctx.hasSupportIndicatorPoints
-      ? '当前课程在该专业+年级下尚未配置支撑指标点，无法配置课程目标的权重关系。'
-      : ''
+    contextWarning.value = context.value?.blockReason || ''
     await loadObjectives()
   } catch {
-    ElMessage.error('加载上下文失败')
+    ElMessage.error('加载课程上下文失败')
   }
 }
 
 async function loadObjectives() {
-  if (!context.value) return
+  if (!filters.courseId) {
+    objectives.value = []
+    return
+  }
+
   loading.value = true
   try {
-    const data = await listCourseObjectivesApi({
-      courseId: filters.courseId,
-      teachingClassId: filters.teachingClassId,
-    })
-    for (const obj of data) {
-      const [ref, weight] = await Promise.all([
-        checkAssessmentPointReferencesApi({ coId: obj.coId })
-          .then((r) => r.isReferenced)
-          .catch(() => false),
-        checkWeightConfigurationApi({ coId: obj.coId })
-          .then((r) => r.isInConfiguration)
-          .catch(() => false),
-      ])
-      obj.isReferencedByAssessmentPoint = ref
-      obj.isInWeightConfiguration = weight
+    const [objectiveRows, assessmentPoints, weightRows] = await Promise.all([
+      listCourseObjectivesApi({
+        courseId: filters.courseId,
+        teachingClassId: filters.teachingClassId || undefined,
+      }),
+      listAssessmentPointsApi({ courseId: filters.courseId }).catch(() => []),
+      context.value?.gradeYear
+        ? getCourseWeightApi({
+            courseId: filters.courseId,
+            gradeYear: Number(context.value.gradeYear),
+          }).catch(() => [])
+        : Promise.resolve([]),
+    ])
+
+    const referencedObjectiveIds = new Set((assessmentPoints || []).map((item) => item.coId))
+    const configuredObjectiveIds = new Set(
+      (weightRows || [])
+        .filter((item) => Number(item.internalWeight) > 0)
+        .map((item) => item.coId),
+    )
+
+    objectives.value = (objectiveRows || []).map((item) => ({
+      ...item,
+      isReferencedByAssessmentPoint: referencedObjectiveIds.has(item.coId),
+      isInWeightConfiguration: configuredObjectiveIds.has(item.coId),
+    }))
+
+    if (context.value && !context.value.blockReason && context.value.gradeYear && (weightRows || []).length === 0) {
+      contextWarning.value = '当前课程在该专业和年级下尚未形成可配置的内部权重矩阵，请先确认宏观支撑矩阵已配置。'
     }
-    objectives.value = data
   } catch {
+    objectives.value = []
     ElMessage.error('加载课程目标失败')
   } finally {
     loading.value = false
@@ -261,25 +316,17 @@ function resetForm() {
   form.descriptionType = 'text'
 }
 
-function getDeleteConfirmTitle(row) {
-  if (row.isReferencedByAssessmentPoint || row.isInWeightConfiguration) {
-    const reasons = []
-    if (row.isReferencedByAssessmentPoint) reasons.push('已被考核点引用')
-    if (row.isInWeightConfiguration) reasons.push('已参与权重配置')
-    return `确认删除该课程目标吗？（${reasons.join('、')}）`
-  }
-  return '确认删除该课程目标吗？'
-}
-
 function openDialog(mode, row = null) {
   dialogMode.value = mode
   resetForm()
+
   if (mode === 'edit' && row) {
     form.coId = row.coId
     form.objectiveCode = row.objectiveCode
-    form.description = row.descriptionRich || row.description
+    form.description = row.descriptionRich || row.description || ''
     form.descriptionType = row.descriptionRich ? 'html' : 'text'
   }
+
   dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
@@ -291,13 +338,18 @@ function stripHtml(html) {
     .trim()
 }
 
-function insertTag(tag) {
-  const textarea = document.querySelector('.editor textarea')
-  if (!textarea) return
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const text = form.description.substring(start, end)
-  form.description = `${form.description.substring(0, start)}<${tag}>${text}</${tag}>${form.description.substring(end)}`
+function buildDeleteTitle(row) {
+  const reasons = []
+  if (row.isReferencedByAssessmentPoint) {
+    reasons.push('已被考核点引用')
+  }
+  if (row.isInWeightConfiguration) {
+    reasons.push('已参与内部权重配置')
+  }
+  if (!reasons.length) {
+    return '确认删除该课程目标吗？'
+  }
+  return `确认删除该课程目标吗？（${reasons.join('，')}）`
 }
 
 async function submitForm() {
@@ -305,22 +357,27 @@ async function submitForm() {
   submitting.value = true
   try {
     const payload = {
+      courseId: filters.courseId,
       objectiveCode: form.objectiveCode,
       description: form.descriptionType === 'html' ? stripHtml(form.description) : form.description,
       descriptionRich: form.descriptionType === 'html' ? form.description : undefined,
-      courseId: filters.courseId,
     }
+
     if (dialogMode.value === 'create') {
       await addCourseObjectiveApi(payload)
-      ElMessage.success('创建成功')
+      ElMessage.success('课程目标创建成功')
     } else {
-      await updateCourseObjectiveApi({ coId: form.coId, ...payload })
-      ElMessage.success('更新成功')
+      await updateCourseObjectiveApi({
+        coId: form.coId,
+        ...payload,
+      })
+      ElMessage.success('课程目标更新成功')
     }
+
     dialogVisible.value = false
     await loadObjectives()
   } catch {
-    ElMessage.error('操作失败')
+    ElMessage.error('课程目标保存失败')
   } finally {
     submitting.value = false
   }
@@ -329,19 +386,20 @@ async function submitForm() {
 async function deleteObjective(row) {
   try {
     await deleteCourseObjectiveApi({ coId: row.coId })
-    ElMessage.success('删除成功')
+    ElMessage.success('课程目标删除成功')
     await loadObjectives()
   } catch {
-    ElMessage.error('删除失败')
+    ElMessage.error('课程目标删除失败')
   }
 }
 
 onMounted(async () => {
   if (!isInstructor.value) {
-    ElMessage.error('无权访问此页面')
+    ElMessage.error('无权访问该页面')
     router.replace(DEFAULT_HOME_PATH)
     return
   }
+
   await loadCourses()
 })
 </script>
@@ -356,64 +414,39 @@ onMounted(async () => {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
-.page-header {
-  display: flex;
-  gap: 20px;
-}
-
 .page-header h1 {
-  margin: 4px 0 8px;
-  color: #1f2937;
-  font-size: 26px;
+  margin: 6px 0 8px;
+  font-size: 28px;
+  color: #0f172a;
 }
 
 .page-section {
   margin: 0;
   color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-summary {
   margin: 0;
   color: #64748b;
-  line-height: 1.75;
-  max-width: 600px;
+  line-height: 1.7;
+  max-width: 760px;
 }
 
 .page-content {
-  display: grid;
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .context-section,
 .objectives-section {
   padding: 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
-}
-
-.context-section h2,
-.objectives-section h2 {
-  margin: 0 0 16px;
-  color: #1f2937;
-  font-size: 18px;
-}
-
-.context-display {
-  padding: 16px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  margin-top: 12px;
-  line-height: 2;
-}
-
-.context-display .label {
-  font-weight: 600;
-  color: #475569;
-  margin-right: 4px;
+  background: #f8fafc;
 }
 
 .section-header {
@@ -423,92 +456,21 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.desc-preview {
-  max-height: 60px;
-  overflow: hidden;
-  line-height: 1.5;
+.section-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
 }
 
-.editor {
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-}
-
-.toolbar {
-  padding: 8px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #dcdfe6;
-}
-
-.textarea {
-  width: 100%;
-  min-height: 120px;
-  padding: 8px;
-  border: none;
-  font-family: monospace;
-  font-size: 14px;
-  resize: vertical;
-}
-
-.context-info {
+.selectors {
   margin-bottom: 16px;
 }
 
-.context-hint {
-  margin: 0;
-  padding: 8px 12px;
-  background: #fef3c7;
-  border-left: 4px solid #f59e0b;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #92400e;
+.context-panel {
+  background: #fff;
 }
 
-.version-badge {
-  font-weight: 600;
-  color: #d97706;
-  background: #fef3c7;
-  padding: 2px 8px;
-  border-radius: 3px;
-}
-
-.hint-label {
-  font-weight: 600;
-  color: #92400e;
-  margin-right: 8px;
-}
-
-.context-note {
-  margin: 12px 0 0;
-  padding: 12px;
-  background: #dbeafe;
-  border-left: 4px solid #3b82f6;
-  border-radius: 4px;
-  font-size: 13px;
-  color: #1e40af;
-  line-height: 1.6;
-}
-
-.context-selector-wrapper {
-  display: flex;
-  gap: 24px;
+.context-alert {
   margin-top: 16px;
-}
-
-.selector-group {
-  flex: 1;
-  padding: 16px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-}
-
-.group-label {
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
 }
 </style>
