@@ -1,13 +1,17 @@
 package com.oss.osscourse.dto.objectivecontribution;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "课程目标-指标点内部权重响应对象")
 public class ObjectiveIndicatorContributionResponse {
     @Schema(description = "关系ID", example = "1")
