@@ -145,17 +145,18 @@ import { Plus } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FormDialog from '@/components/common/FormDialog.vue'
-import { listCoursesApi } from '@/api/course'
 import {
   addAssessmentPointApi,
   deleteAssessmentPointApi,
   listAssessmentPointsApi,
   listCourseObjectivesApi,
+  listInstructorTeachingClassesApi,
   updateAssessmentPointApi,
 } from '@/api/assessment'
 
 const loading = ref(false)
 const loadError = ref('')
+const teachingClassOptions = ref([])
 const courseOptions = ref([])
 const objectiveOptions = ref([])
 const selectedCourseId = ref(null)
@@ -183,8 +184,17 @@ const formRules = {
 
 async function loadCourses() {
   try {
-    courseOptions.value = (await listCoursesApi()) || []
+    teachingClassOptions.value = (await listInstructorTeachingClassesApi()) || []
+    const seen = new Set()
+    courseOptions.value = teachingClassOptions.value.filter((row) => {
+      if (!row?.courseId || seen.has(row.courseId)) {
+        return false
+      }
+      seen.add(row.courseId)
+      return true
+    })
   } catch {
+    teachingClassOptions.value = []
     courseOptions.value = []
   }
 }

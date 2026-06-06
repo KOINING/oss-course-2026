@@ -1,6 +1,10 @@
 package com.oss.osscourse.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -11,6 +15,7 @@ public class MajorIndicatorAchievement {
     @TableId(value = "mia_id", type = IdType.AUTO)
     private Long miaId;
     private Long majorId;
+    private Integer gradeYear;
     private Long termId;
     private Long ipId;
     private Float finalAchievement;

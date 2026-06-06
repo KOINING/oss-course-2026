@@ -1,101 +1,219 @@
 <template>
   <div class="result-entry">
-    <div class="entry-cards">
-      <el-card class="entry-card">
-        <div class="entry-card__icon">
-          <el-icon :size="40" color="#2563eb"><DataAnalysis /></el-icon>
-        </div>
-        <div class="entry-card__body">
-          <h3>课程级结果查看</h3>
-          <p>
-            查看各教学班的课程级达成度计算结果，包括学生-课程目标达成度、班级课程目标平均达成度和课程级指标点达成度。
-          </p>
-        </div>
-        <div class="entry-card__status">
-          <el-tag v-if="courseResultAvailable" type="success" effect="light">已有计算结果</el-tag>
-          <el-tag v-else type="info" effect="light">暂无数据</el-tag>
-        </div>
-      </el-card>
-
-      <el-card class="entry-card">
-        <div class="entry-card__icon">
-          <el-icon :size="40" color="#16a34a"><TrendCharts /></el-icon>
-        </div>
-        <div class="entry-card__body">
-          <h3>专业级结果查看</h3>
-          <p>
-            查看专业级指标点达成度汇总结果。专业级汇总基于全部支撑课程的课程级结果，按专业-年级-学期维度聚合。
-          </p>
-        </div>
-        <div class="entry-card__status">
-          <el-tag v-if="majorResultAvailable" type="success" effect="light">已有汇总结果</el-tag>
-          <el-tag v-else type="info" effect="light">暂无数据</el-tag>
-        </div>
-      </el-card>
+    <div class="filter-bar">
+      <el-select v-model="filters.majorId" placeholder="选择专业" style="width: 200px" @change="handleMajorChange">
+        <el-option v-for="m in filterOptions.majors" :key="m.majorId" :label="m.majorName" :value="m.majorId" />
+      </el-select>
+      <el-select v-model="filters.gradeYear" placeholder="选择年级" style="width: 160px" @change="clearResults">
+        <el-option v-for="y in filterOptions.gradeYears" :key="y" :label="`${y}级`" :value="y" />
+      </el-select>
+      <el-select v-model="filters.termId" placeholder="选择学期" style="width: 200px" @change="loadResults">
+        <el-option v-for="t in filterOptions.terms" :key="t.termId" :label="t.termCode" :value="t.termId" />
+      </el-select>
+      <el-button :loading="loading" @click="loadResults">查询结果</el-button>
     </div>
 
-    <el-card class="entry-info-card">
-      <template #header>
-        <span class="info-card-title">说明</span>
-      </template>
-      <div class="info-content">
-        <p>
-          <strong>课程级计算结果</strong>由课程主讲教师在成绩导入后触发计算。
-          计算结果包括学生-课程目标达成度 (Cij)、班级课程目标平均达成度 (C̄j) 和课程级指标点达成度 (Ek)。
-        </p>
-        <p>
-          <strong>专业级汇总结果</strong>由专业负责人确认全部支撑课程均已锁定后触发。
-          汇总结果为专业级指标点达成度 (Gk)，基于课程级指标点达成度和宏观支撑权重计算。
-        </p>
-        <p>
-          详细报表和底稿导出将在<strong>模块 D：报表与底稿</strong>中提供。
-        </p>
+    <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
+
+    <EmptyState
+      v-else-if="!hasFilters"
+      description="请按专业、年级、学期三个维度查询课程级和专业级结果"
+    />
+
+    <template v-else>
+      <div class="entry-cards">
+        <el-card class="entry-card">
+          <div class="entry-card__icon">
+            <el-icon :size="40" color="#2563eb"><DataAnalysis /></el-icon>
+          </div>
+          <div class="entry-card__body">
+            <h3>课程级状态</h3>
+            <p>当前筛选范围内共有 {{ dashboard.courses.length }} 个教学班，其中 {{ lockedCount }} 个已锁定。</p>
+          </div>
+          <div class="entry-card__status">
+            <el-tag :type="dashboard.aggregationAllowed ? 'success' : 'warning'" effect="light">
+              {{ dashboard.aggregationAllowed ? '全部已锁定' : '仍有未锁定教学班' }}
+            </el-tag>
+          </div>
+        </el-card>
+
+        <el-card class="entry-card">
+          <div class="entry-card__icon">
+            <el-icon :size="40" color="#16a34a"><TrendCharts /></el-icon>
+          </div>
+          <div class="entry-card__body">
+            <h3>专业级结果</h3>
+            <p>{{ majorResult.message || '当前筛选条件下暂无专业级汇总结果。' }}</p>
+          </div>
+          <div class="entry-card__status">
+            <el-tag :type="majorResult.resultReady ? 'success' : 'info'" effect="light">
+              {{ majorResult.resultReady ? '已生成' : '未生成' }}
+            </el-tag>
+          </div>
+        </el-card>
       </div>
-    </el-card>
+
+      <el-card class="entry-info-card">
+        <template #header>
+          <span class="info-card-title">课程级状态明细</span>
+        </template>
+        <EmptyState
+          v-if="!dashboard.courses.length"
+          description="当前筛选条件下没有课程级状态数据"
+        />
+        <el-table v-else :data="dashboard.courses" border size="small">
+          <el-table-column prop="courseCode" label="课程代码" width="120" />
+          <el-table-column prop="courseName" label="课程名称" min-width="180" />
+          <el-table-column prop="classCode" label="教学班代码" width="140" />
+          <el-table-column prop="teacherName" label="任课教师" width="120" />
+          <el-table-column prop="calcStatus" label="状态" width="140">
+            <template #default="{ row }">
+              <el-tag :type="statusType(row.calcStatus)" effect="light">{{ statusLabel(row.calcStatus) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="blockReason" label="阻断原因" min-width="220">
+            <template #default="{ row }">{{ row.blockReason || '-' }}</template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-card class="entry-info-card">
+        <template #header>
+          <span class="info-card-title">专业级指标点结果</span>
+        </template>
+        <EmptyState
+          v-if="!majorResult.resultReady"
+          :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果'"
+        />
+        <el-table v-else :data="majorResult.indicatorAchievements || []" border size="small">
+          <el-table-column prop="ipCode" label="指标点" width="120" />
+          <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
+          <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="160">
+            <template #default="{ row }">{{ formatPercent(row.finalAchievement) }}</template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { DataAnalysis, TrendCharts } from '@element-plus/icons-vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import {
   getMacroDashboardDataApi,
+  getMajorCalcResultApi,
   listMajorGradeYearTermsApi,
 } from '@/api/assessment'
 
-const courseResultAvailable = ref(false)
-const majorResultAvailable = ref(false)
+const loading = ref(false)
+const loadError = ref('')
 
-async function checkAvailability() {
-  try {
-    const filterData = await listMajorGradeYearTermsApi()
-    const majors = filterData?.majors || []
-    const gradeYears = filterData?.gradeYears || []
-    const terms = filterData?.terms || []
+const filterOptions = reactive({
+  majors: [],
+  gradeYears: [],
+  terms: [],
+})
 
-    if (majors.length === 0 || gradeYears.length === 0 || terms.length === 0) {
-      return
-    }
+const filters = reactive({
+  majorId: null,
+  gradeYear: null,
+  termId: null,
+})
 
-    const dashboard = await getMacroDashboardDataApi({
-      majorId: majors[0].majorId,
-      gradeYear: gradeYears[0],
-      termId: terms[0].termId,
-    })
+const dashboard = reactive({
+  courses: [],
+  aggregationAllowed: false,
+})
 
-    const courses = dashboard?.courses || []
-    courseResultAvailable.value = courses.some(
-      (c) => c.calcStatus === 'calculating' || c.calcStatus === 'locked',
-    )
-    majorResultAvailable.value = dashboard?.aggregationAllowed === true
-  } catch {
-    courseResultAvailable.value = false
-    majorResultAvailable.value = false
+const majorResult = reactive({
+  resultReady: false,
+  message: '',
+  indicatorAchievements: [],
+})
+
+const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear && filters.termId))
+const lockedCount = computed(() => dashboard.courses.filter((item) => item.calcStatus === 'locked').length)
+
+function buildPayload() {
+  return {
+    majorId: filters.majorId,
+    gradeYear: filters.gradeYear,
+    termId: filters.termId,
   }
 }
 
+function statusType(status) {
+  const map = { unsubmitted: 'info', score_imported: 'warning', calculating: 'primary', locked: 'success' }
+  return map[status] || 'info'
+}
+
+function statusLabel(status) {
+  const map = { unsubmitted: '未提交', score_imported: '已提交未计算', calculating: '已计算未锁定', locked: '已锁定' }
+  return map[status] || status || '-'
+}
+
+async function loadFilterOptions() {
+  const data = await listMajorGradeYearTermsApi()
+  filterOptions.majors = data?.majors || []
+  filterOptions.gradeYears = data?.gradeYears || []
+  filterOptions.terms = data?.terms || []
+}
+
+function clearResults() {
+  dashboard.courses = []
+  dashboard.aggregationAllowed = false
+  majorResult.resultReady = false
+  majorResult.message = ''
+  majorResult.indicatorAchievements = []
+}
+
+function handleMajorChange() {
+  filters.gradeYear = null
+  filters.termId = null
+  clearResults()
+}
+
+async function loadResults() {
+  if (!hasFilters.value) {
+    clearResults()
+    return
+  }
+
+  loading.value = true
+  loadError.value = ''
+  try {
+    const [dashboardData, majorData] = await Promise.all([
+      getMacroDashboardDataApi(buildPayload()),
+      getMajorCalcResultApi(buildPayload()),
+    ])
+    dashboard.courses = dashboardData?.courses || []
+    dashboard.aggregationAllowed = dashboardData?.aggregationAllowed ?? false
+    majorResult.resultReady = majorData?.resultReady ?? false
+    majorResult.message = majorData?.message || ''
+    majorResult.indicatorAchievements = majorData?.indicatorAchievements || []
+  } catch (error) {
+    loadError.value = error.message || '加载结果失败'
+    clearResults()
+  } finally {
+    loading.value = false
+  }
+}
+
+function formatPercent(value) {
+  if (value === undefined || value === null) return '-'
+  return `${(Number(value) * 100).toFixed(2)}%`
+}
+
+async function loadAll() {
+  await loadFilterOptions()
+  await loadResults()
+}
+
 onMounted(() => {
-  checkAvailability()
+  loadFilterOptions()
 })
 </script>
 
@@ -106,32 +224,32 @@ onMounted(() => {
   gap: 16px;
 }
 
-.entry-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
 }
 
-.entry-card {
-  display: flex;
-  flex-direction: column;
-  border-radius: 14px;
+.entry-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .entry-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;
 }
 
 .entry-card__icon {
   text-align: center;
-  padding: 8px 0;
+  padding-top: 8px;
 }
 
 .entry-card__body h3 {
-  margin: 0 0 6px;
+  margin: 0;
   color: #1f2937;
   font-size: 16px;
 }
@@ -145,28 +263,14 @@ onMounted(() => {
 
 .entry-card__status {
   margin-top: auto;
-  text-align: center;
-  padding-top: 4px;
 }
 
 .entry-info-card {
   border-radius: 14px;
-  background: #f8fafc;
 }
 
 .info-card-title {
   font-weight: 600;
   color: #1f2937;
-}
-
-.info-content p {
-  margin: 0 0 8px;
-  color: #475569;
-  line-height: 1.7;
-  font-size: 14px;
-}
-
-.info-content p:last-child {
-  margin-bottom: 0;
 }
 </style>

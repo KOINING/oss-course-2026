@@ -18,7 +18,7 @@ function resolveProtectedComponent(item) {
   }
 
   if (item.routeName === ROUTE_NAMES.COURSE_OBJECTIVES) {
-    return () => import('@/views/requirements/CourseWeightView.vue')
+    return () => import('@/views/course-objectives/CourseObjectivesModuleView.vue')
   }
 
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {

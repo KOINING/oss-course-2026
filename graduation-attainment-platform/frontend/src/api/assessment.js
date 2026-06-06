@@ -1,68 +1,78 @@
+import axios from 'axios'
 import request from './request'
+import { getToken } from '@/utils/auth'
 
-// ==================== Assessment Point CRUD ====================
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-export function listAssessmentPointsApi(data = {}) {
-  return request.post('/assessment/listAssessmentPoints', data)
-}
-
-export function addAssessmentPointApi(data) {
-  return request.post('/assessment/addAssessmentPoint', data)
-}
-
-export function updateAssessmentPointApi(data) {
-  return request.post('/assessment/updateAssessmentPoint', data)
-}
-
-export function deleteAssessmentPointApi(data) {
-  return request.post('/assessment/deleteAssessmentPoint', data)
-}
-
-// ==================== Course Objective Lookup ====================
-
-export function listCourseObjectivesApi(data = {}) {
-  return request.post('/assessment/listCourseObjectives', data)
-}
-
-// ==================== Instructor Teaching Context ====================
-
-export function listInstructorTeachingClassesApi(data = {}) {
-  return request.post('/assessment/listTeachingClasses', data)
-}
-
-export function listStudentsByClassApi(data) {
-  return request.post('/assessment/listStudentsByClass', data)
-}
-
-// ==================== Template Preview ====================
-
-export function getTemplatePreviewDataApi(data) {
-  return request.post('/assessment/getTemplatePreviewData', data)
-}
-
-// ==================== Score Import ====================
-
-export function importScoresApi(formData) {
-  return request.post('/assessment/importScores', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+function authorizedAxios() {
+  const token = getToken()
+  return axios.create({
+    baseURL: apiBaseURL,
+    timeout: 20000,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 }
 
-export function getScoreImportContextApi(data) {
-  return request.post('/assessment/getScoreImportContext', data)
+export function listAssessmentPointsApi(data = {}) {
+  return request.get('/assessment-points', { params: data })
 }
 
-// ==================== Course Calculation ====================
+export function addAssessmentPointApi(data) {
+  return request.post('/assessment-points', data)
+}
+
+export function updateAssessmentPointApi(data) {
+  return request.put(`/assessment-points/${data.apId}`, data)
+}
+
+export function deleteAssessmentPointApi(data) {
+  return request.delete(`/assessment-points/${data.apId}`)
+}
+
+export function listCourseObjectivesApi(data = {}) {
+  return request.get('/course-objectives', { params: data })
+}
+
+export function listInstructorTeachingClassesApi(data = {}) {
+  return request.post('/teacherContext/listMyTeachingClasses', data)
+}
+
+export function listStudentsByClassApi(data) {
+  return request.post('/teacherContext/listMyClassStudents', data)
+}
+
+export function getTemplatePreviewDataApi(data) {
+  return request.post('/teacher/previewTemplate', null, {
+    params: { classId: data.classId },
+  })
+}
+
+export function downloadTemplateApi(classId) {
+  return authorizedAxios().get('/teacher/downloadTemplate', {
+    params: { classId },
+    responseType: 'blob',
+  })
+}
+
+export function importScorePreviewApi(data) {
+  return request.post('/teacher/importScorePreview', data)
+}
+
+export function saveScoresApi(data) {
+  return request.post('/teacher/saveScores', data)
+}
+
+export function getScoreImportContextApi(data) {
+  return request.post('/teacherContext/getScoreImportContext', data)
+}
 
 export function calculateCourseLevelApi(data) {
-  return request.post('/assessment/calculateCourseLevel', data)
+  return request.post('/teacher/calcCourseAchievement', data)
 }
 
 export function getCourseCalcResultApi(data) {
   return request.post('/assessment/getCourseCalcResult', data)
 }
-
-// ==================== Macro Dashboard ====================
 
 export function getMacroDashboardDataApi(data) {
   return request.post('/assessment/getMacroDashboard', data)
@@ -72,10 +82,8 @@ export function listMajorGradeYearTermsApi(data = {}) {
   return request.post('/assessment/listMajorGradeYearTerms', data)
 }
 
-// ==================== Major Aggregation ====================
-
 export function calculateMajorLevelApi(data) {
-  return request.post('/assessment/calculateMajorLevel', data)
+  return request.post('/teacher/calcMajorAchievement', data)
 }
 
 export function getMajorCalcResultApi(data) {

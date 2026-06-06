@@ -17,7 +17,7 @@
           <div class="context-info">
             <p class="context-hint">
               <span class="hint-label">当前配置版本：</span>
-              <span class="version-badge">{{ context ? `${context.majorName} - ${context.enrollmentYear}年级` : '未选择' }}</span>
+              <span class="version-badge">{{ context ? `${context.majorName} - ${context.gradeYear}年级` : '未选择' }}</span>
             </p>
             <p class="context-note">课程目标属于课程级配置，对该专业、该年级下的所有教学班通用</p>
           </div>
@@ -37,7 +37,7 @@
               <el-form :inline="true" :model="filters">
                 <el-form-item label="教学班">
                   <el-select v-model="filters.teachingClassId" @change="onContextChange" placeholder="请选择教学班" style="width: 200px">
-                    <el-option v-for="tc in teachingClasses" :key="tc.teachingClassId" :label="tc.teachingClassCode" :value="tc.teachingClassId" />
+                    <el-option v-for="tc in teachingClasses" :key="tc.classId" :label="tc.classCode" :value="tc.classId" />
                   </el-select>
                 </el-form-item>
               </el-form>
@@ -47,10 +47,10 @@
           <div v-if="context" class="context-display">
             <el-row :gutter="20">
               <el-col :span="4"><span class="label">专业:</span> {{ context.majorName }}</el-col>
-              <el-col :span="4"><span class="label">年级:</span> {{ context.enrollmentYear }}</el-col>
+              <el-col :span="4"><span class="label">年级:</span> {{ context.gradeYear }}</el-col>
               <el-col :span="4"><span class="label">课程:</span> {{ context.courseName }}</el-col>
-              <el-col :span="4"><span class="label">教学班:</span> {{ context.teachingClassCode }}</el-col>
-              <el-col :span="4"><span class="label">学期:</span> {{ context.semesterName }}</el-col>
+              <el-col :span="4"><span class="label">教学班:</span> {{ context.classCode }}</el-col>
+              <el-col :span="4"><span class="label">学期:</span> {{ context.termCode }}</el-col>
             </el-row>
           </div>
 
@@ -67,7 +67,6 @@
 
           <el-table v-else v-loading="loading" :data="objectives" border style="margin-top: 16px">
             <el-table-column prop="objectiveCode" label="编号" width="100" />
-            <el-table-column prop="objectiveName" label="名称" width="150" />
             <el-table-column label="描述" min-width="200">
               <template #default="{ row }">
                 <div v-html="row.description" class="desc-preview" />
@@ -112,9 +111,6 @@
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="目标编号" prop="objectiveCode">
           <el-input v-model.trim="form.objectiveCode" placeholder="请输入目标编号" />
-        </el-form-item>
-        <el-form-item label="目标名称" prop="objectiveName">
-          <el-input v-model.trim="form.objectiveName" placeholder="请输入目标名称" />
         </el-form-item>
         <el-form-item label="描述类型" prop="descriptionType">
           <el-radio-group v-model="form.descriptionType">
@@ -175,16 +171,14 @@ const contextWarning = ref('')
 
 const filters = reactive({ courseId: null, teachingClassId: null })
 const form = reactive({
-  objectiveId: null,
+  coId: null,
   objectiveCode: '',
-  objectiveName: '',
   description: '',
   descriptionType: 'text',
 })
 
 const rules = {
   objectiveCode: [{ required: true, message: '请输入目标编号', trigger: 'blur' }],
-  objectiveName: [{ required: true, message: '请输入目标名称', trigger: 'blur' }],
   description: [{ required: true, message: '请输入目标描述', trigger: 'blur' }],
 }
 
@@ -223,7 +217,7 @@ async function onContextChange() {
       teachingClassId: filters.teachingClassId,
     })
     context.value = ctx
-    contextWarning.value = !ctx.hasSupportIndicatorPoints
+    contextWarning.value = ctx && !ctx.hasSupportIndicatorPoints
       ? '当前课程在该专业+年级下尚未配置支撑指标点，无法配置课程目标的权重关系。'
       : ''
     await loadObjectives()
@@ -242,10 +236,10 @@ async function loadObjectives() {
     })
     for (const obj of data) {
       const [ref, weight] = await Promise.all([
-        checkAssessmentPointReferencesApi({ objectiveId: obj.objectiveId })
+        checkAssessmentPointReferencesApi({ coId: obj.coId })
           .then((r) => r.isReferenced)
           .catch(() => false),
-        checkWeightConfigurationApi({ objectiveId: obj.objectiveId })
+        checkWeightConfigurationApi({ coId: obj.coId })
           .then((r) => r.isInConfiguration)
           .catch(() => false),
       ])
@@ -261,9 +255,8 @@ async function loadObjectives() {
 }
 
 function resetForm() {
-  form.objectiveId = null
+  form.coId = null
   form.objectiveCode = ''
-  form.objectiveName = ''
   form.description = ''
   form.descriptionType = 'text'
 }
@@ -282,14 +275,20 @@ function openDialog(mode, row = null) {
   dialogMode.value = mode
   resetForm()
   if (mode === 'edit' && row) {
-    form.objectiveId = row.objectiveId
+    form.coId = row.coId
     form.objectiveCode = row.objectiveCode
-    form.objectiveName = row.objectiveName
-    form.description = row.description
-    form.descriptionType = row.descriptionType || 'text'
+    form.description = row.descriptionRich || row.description
+    form.descriptionType = row.descriptionRich ? 'html' : 'text'
   }
   dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
+}
+
+function stripHtml(html) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function insertTag(tag) {
@@ -307,17 +306,15 @@ async function submitForm() {
   try {
     const payload = {
       objectiveCode: form.objectiveCode,
-      objectiveName: form.objectiveName,
-      description: form.description,
-      descriptionType: form.descriptionType,
+      description: form.descriptionType === 'html' ? stripHtml(form.description) : form.description,
+      descriptionRich: form.descriptionType === 'html' ? form.description : undefined,
       courseId: filters.courseId,
-      teachingClassId: filters.teachingClassId,
     }
     if (dialogMode.value === 'create') {
       await addCourseObjectiveApi(payload)
       ElMessage.success('创建成功')
     } else {
-      await updateCourseObjectiveApi({ objectiveId: form.objectiveId, ...payload })
+      await updateCourseObjectiveApi({ coId: form.coId, ...payload })
       ElMessage.success('更新成功')
     }
     dialogVisible.value = false
@@ -331,7 +328,7 @@ async function submitForm() {
 
 async function deleteObjective(row) {
   try {
-    await deleteCourseObjectiveApi({ objectiveId: row.objectiveId })
+    await deleteCourseObjectiveApi({ coId: row.coId })
     ElMessage.success('删除成功')
     await loadObjectives()
   } catch {
