@@ -11,4 +11,7 @@ public class CourseObjectiveQueryRequest {
 
     @Schema(description = "所属课程ID", example = "1")
     private Long courseId;
+
+    @Schema(description = "教学班ID，用于根据教学班反查课程", example = "1")
+    private Long teachingClassId;
 }

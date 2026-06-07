@@ -10,11 +10,13 @@ import com.oss.osscourse.dto.teachercontext.TeacherTeachingClassResponse;
 import com.oss.osscourse.entity.AssessmentPoint;
 import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.CourseObjective;
+import com.oss.osscourse.entity.ObjectiveIndicatorContribution;
 import com.oss.osscourse.entity.Teacher;
 import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.AssessmentPointMapper;
 import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseObjectiveMapper;
+import com.oss.osscourse.mapper.ObjectiveIndicatorContributionMapper;
 import com.oss.osscourse.mapper.StudentClassMapper;
 import com.oss.osscourse.mapper.TeacherMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
@@ -36,6 +38,7 @@ public class TeacherContextServiceImpl implements TeacherContextService {
     private final CourseMajorMapper courseMajorMapper;
     private final CourseObjectiveMapper courseObjectiveMapper;
     private final AssessmentPointMapper assessmentPointMapper;
+    private final ObjectiveIndicatorContributionMapper oicMapper;
 
     @Override
     public List<TeacherTeachingClassResponse> listMyTeachingClasses(TeacherTeachingClassQueryRequest request,
@@ -89,6 +92,7 @@ public class TeacherContextServiceImpl implements TeacherContextService {
                 new LambdaQueryWrapper<CourseObjective>()
                         .eq(CourseObjective::getCourseId, teachingClass.getCourseId()));
         Long assessmentPointCount = countAssessmentPoints(teachingClass.getCourseId());
+        Long internalWeightCount = countInternalWeights(teachingClass.getCourseId());
 
         if (studentCount == null || studentCount == 0) {
             blockReasons.add("当前教学班暂无学生名单，不能生成成绩模板或导入成绩");
@@ -99,6 +103,9 @@ public class TeacherContextServiceImpl implements TeacherContextService {
         if (assessmentPointCount == null || assessmentPointCount == 0) {
             blockReasons.add("当前课程未配置考核点，不能生成成绩模板或导入成绩");
         }
+        if (internalWeightCount == null || internalWeightCount == 0) {
+            blockReasons.add("当前课程未配置内部权重 w，不能生成成绩模板或导入成绩");
+        }
         if ("locked".equals(teachingClass.getCalcStatus())) {
             blockReasons.add("当前课程级计算状态为 locked，不能导入成绩");
         }
@@ -108,7 +115,8 @@ public class TeacherContextServiceImpl implements TeacherContextService {
                 && Boolean.TRUE.equals(context.getProgramMatched())
                 && studentCount != null && studentCount > 0
                 && objectiveCount != null && objectiveCount > 0
-                && assessmentPointCount != null && assessmentPointCount > 0;
+                && assessmentPointCount != null && assessmentPointCount > 0
+                && internalWeightCount != null && internalWeightCount > 0;
         boolean canImportScore = canGenerateTemplate && !"locked".equals(teachingClass.getCalcStatus());
 
         String permissionBlockReason = null;
@@ -132,6 +140,7 @@ public class TeacherContextServiceImpl implements TeacherContextService {
                 .studentCount(studentCount == null ? 0 : studentCount)
                 .courseObjectiveCount(objectiveCount == null ? 0 : objectiveCount)
                 .assessmentPointCount(assessmentPointCount == null ? 0 : assessmentPointCount)
+                .internalWeightCount(internalWeightCount == null ? 0 : internalWeightCount)
                 .calcStatus(teachingClass.getCalcStatus())
                 .canGenerateTemplate(canGenerateTemplate)
                 .canImportScore(canImportScore)
@@ -205,6 +214,18 @@ public class TeacherContextServiceImpl implements TeacherContextService {
         List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
         return assessmentPointMapper.selectCount(new LambdaQueryWrapper<AssessmentPoint>()
                 .in(AssessmentPoint::getCoId, coIds));
+    }
+
+    private Long countInternalWeights(Long courseId) {
+        List<CourseObjective> objectives = courseObjectiveMapper.selectList(
+                new LambdaQueryWrapper<CourseObjective>()
+                        .eq(CourseObjective::getCourseId, courseId));
+        if (objectives.isEmpty()) {
+            return 0L;
+        }
+        List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
+        return oicMapper.selectCount(new LambdaQueryWrapper<ObjectiveIndicatorContribution>()
+                .in(ObjectiveIndicatorContribution::getCoId, coIds));
     }
 
     private boolean hasInstructorRole(List<String> roles) {

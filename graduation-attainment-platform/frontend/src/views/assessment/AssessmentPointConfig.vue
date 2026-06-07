@@ -1,100 +1,154 @@
 <template>
-  <div class="ap-config">
-    <div class="filter-bar">
-      <el-select
-        v-model="selectedCourseId"
-        placeholder="选择课程"
-        clearable
-        style="width: 240px"
-        @change="handleCourseChange"
-      >
-        <el-option
-          v-for="c in courseOptions"
-          :key="c.courseId"
-          :label="`${c.courseCode} - ${c.courseName}`"
-          :value="c.courseId"
-        />
-      </el-select>
-      <el-select
-        v-model="filters.coId"
-        placeholder="按课程目标筛选"
-        clearable
-        style="width: 240px"
-        @change="loadAssessmentPoints"
-      >
-        <el-option
-          v-for="obj in objectiveOptions"
-          :key="obj.coId"
-          :label="`${obj.objectiveCode}: ${obj.coDescription}`"
-          :value="obj.coId"
-        />
-      </el-select>
-    </div>
-
-    <div class="table-toolbar">
-      <el-button type="primary" :disabled="!selectedCourseId" @click="openDialog('create')">
-        <el-icon><Plus /></el-icon>
-        新增考核点
-      </el-button>
-    </div>
-
-    <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
-
-    <EmptyState
-      v-else-if="!loading && points.length === 0 && selectedCourseId"
-      description="暂无考核点数据，请先选择一个课程并新增考核点"
-    />
-
-    <EmptyState
-      v-else-if="!selectedCourseId"
-      description="请先选择一门课程以查看考核点"
-    />
-
-    <el-table
-      v-else
-      v-loading="loading"
-      :data="points"
-      border
-      stripe
-    >
-      <el-table-column prop="apId" label="ID" width="70" />
-      <el-table-column prop="apName" label="考核点名称" min-width="160" />
-      <el-table-column label="所属课程目标" min-width="220">
-        <template #default="{ row }">
-          <div class="objective-cell">
-            <el-tag type="info" effect="plain" size="small">{{ row.objectiveCode }}</el-tag>
-            <span class="objective-desc">{{ row.coDescription || '-' }}</span>
+  <div class="assessment-point-page">
+    <el-card class="page-card">
+      <template #header>
+        <div class="page-header">
+          <div>
+            <p class="page-section">模块 B：课程目标与考核点</p>
+            <h1>考核点配置</h1>
+            <p class="page-summary">
+              基于当前课程和教学班配置考核点，明确每个考核点的满分和唯一绑定的课程目标，
+              为成绩模板生成、成绩导入和课程级计算提供稳定输入。
+            </p>
           </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="满分" width="100" align="center">
-        <template #default="{ row }">
-          <span class="full-score">{{ row.fullScore }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="100" align="center">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'info' : 'success'" effect="plain" size="small">
-            {{ row.status === 0 ? '停用' : '启用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
-        <template #default="{ row }">
-          <div class="table-actions">
-            <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
-            <el-popconfirm
-              title="确认删除该考核点吗？若已产生成绩数据则无法删除"
-              @confirm="handleDelete(row.apId)"
-            >
-              <template #reference>
-                <el-button link type="danger">删除</el-button>
+        </div>
+      </template>
+
+      <div class="page-content">
+        <section class="context-section">
+          <div class="section-header">
+            <h2>课程上下文</h2>
+          </div>
+
+          <el-form :inline="true">
+            <el-form-item label="课程">
+              <el-select
+                v-model="selectedCourseId"
+                placeholder="选择课程"
+                style="width: 240px"
+                @change="handleCourseChange"
+              >
+                <el-option
+                  v-for="course in courseOptions"
+                  :key="course.courseId"
+                  :label="`${course.courseCode} - ${course.courseName}`"
+                  :value="course.courseId"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="教学班">
+              <el-select
+                v-model="selectedClassId"
+                placeholder="选择教学班"
+                style="width: 260px"
+                :disabled="!selectedCourseId"
+                @change="handleClassChange"
+              >
+                <el-option
+                  v-for="item in currentClassOptions"
+                  :key="item.classId"
+                  :label="`${item.classCode} - ${item.className || item.courseName}`"
+                  :value="item.classId"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="课程目标筛选">
+              <el-select
+                v-model="filters.coId"
+                placeholder="按课程目标筛选"
+                clearable
+                style="width: 260px"
+                :disabled="!selectedCourseId"
+                @change="loadAssessmentPoints"
+              >
+                <el-option
+                  v-for="obj in objectiveOptions"
+                  :key="obj.coId"
+                  :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
+                  :value="obj.coId"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+
+          <el-descriptions v-if="contextInfo" :column="5" border class="context-panel">
+            <el-descriptions-item label="专业">{{ contextInfo.majorName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="年级">{{ contextInfo.gradeYear || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="课程">{{ contextInfo.courseName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="教学班">{{ contextInfo.classCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="学期">{{ contextInfo.termCode || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </section>
+
+        <section class="points-section">
+          <div class="section-header">
+            <div>
+              <h2>考核点列表</h2>
+              <p class="section-summary">
+                每个考核点必须绑定唯一课程目标，并作为成绩模板中的动态列参与后续成绩导入和课程级计算。
+              </p>
+            </div>
+            <el-button type="primary" :disabled="!selectedCourseId" @click="openDialog('create')">
+              <el-icon><Plus /></el-icon>
+              新增考核点
+            </el-button>
+          </div>
+
+          <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
+
+          <EmptyState
+            v-else-if="!loading && !selectedCourseId"
+            description="当前没有可用课程"
+          />
+
+          <EmptyState
+            v-else-if="!loading && points.length === 0"
+            description="当前课程暂无考核点，请先新增考核点"
+          />
+
+          <el-table
+            v-else
+            v-loading="loading"
+            :data="points"
+            border
+            stripe
+          >
+            <el-table-column prop="apId" label="ID" width="70" />
+            <el-table-column prop="apName" label="考核点名称" min-width="180" />
+            <el-table-column label="所属课程目标" min-width="240">
+              <template #default="{ row }">
+                <div class="objective-cell">
+                  <el-tag type="info" effect="light" size="small">{{ row.objectiveCode }}</el-tag>
+                  <span class="objective-desc">{{ row.coDescription || '-' }}</span>
+                </div>
               </template>
-            </el-popconfirm>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
+            </el-table-column>
+            <el-table-column label="满分" width="100" align="center">
+              <template #default="{ row }">
+                <span class="full-score">{{ row.fullScore }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="160" fixed="right">
+              <template #default="{ row }">
+                <div class="table-actions">
+                  <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
+                  <el-popconfirm
+                    title="确认删除该考核点吗？若已产生关联成绩数据则无法删除。"
+                    @confirm="handleDelete(row.apId)"
+                  >
+                    <template #reference>
+                      <el-button link type="danger">删除</el-button>
+                    </template>
+                  </el-popconfirm>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </section>
+      </div>
+    </el-card>
 
     <FormDialog
       v-model="dialogVisible"
@@ -128,7 +182,7 @@
             <el-option
               v-for="obj in objectiveOptions"
               :key="obj.coId"
-              :label="`${obj.objectiveCode}: ${obj.coDescription}`"
+              :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
               :value="obj.coId"
             />
           </el-select>
@@ -139,26 +193,33 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FormDialog from '@/components/common/FormDialog.vue'
-import { listCoursesApi } from '@/api/course'
 import {
   addAssessmentPointApi,
   deleteAssessmentPointApi,
   listAssessmentPointsApi,
   listCourseObjectivesApi,
+  listInstructorTeachingClassesApi,
   updateAssessmentPointApi,
 } from '@/api/assessment'
 
+const route = useRoute()
+const router = useRouter()
+
 const loading = ref(false)
 const loadError = ref('')
+const teachingClassOptions = ref([])
 const courseOptions = ref([])
 const objectiveOptions = ref([])
 const selectedCourseId = ref(null)
+const selectedClassId = ref(null)
+const contextInfo = ref(null)
 const points = ref([])
 
 const filters = reactive({ coId: null })
@@ -181,10 +242,34 @@ const formRules = {
   coId: [{ required: true, message: '请选择课程目标', trigger: 'change' }],
 }
 
+const currentClassOptions = computed(() =>
+  teachingClassOptions.value.filter((item) => item.courseId === selectedCourseId.value),
+)
+
 async function loadCourses() {
   try {
-    courseOptions.value = (await listCoursesApi()) || []
+    teachingClassOptions.value = (await listInstructorTeachingClassesApi()) || []
+    const seen = new Set()
+    courseOptions.value = teachingClassOptions.value.filter((row) => {
+      if (!row?.courseId || seen.has(row.courseId)) {
+        return false
+      }
+      seen.add(row.courseId)
+      return true
+    })
+
+    if (!courseOptions.value.length) {
+      return
+    }
+
+    const preferredCourseId = Number(route.query.courseId) || courseOptions.value[0].courseId
+    selectedCourseId.value = courseOptions.value.some((item) => item.courseId === preferredCourseId)
+      ? preferredCourseId
+      : courseOptions.value[0].courseId
+
+    await handleCourseChange(selectedCourseId.value)
   } catch {
+    teachingClassOptions.value = []
     courseOptions.value = []
   }
 }
@@ -212,18 +297,51 @@ async function loadAssessmentPoints() {
     const params = { courseId: selectedCourseId.value }
     if (filters.coId) params.coId = filters.coId
     points.value = (await listAssessmentPointsApi(params)) || []
-  } catch (e) {
-    loadError.value = e.message || '加载考核点失败'
+  } catch (error) {
+    loadError.value = error.message || '加载考核点失败'
     points.value = []
   } finally {
     loading.value = false
   }
 }
 
-function handleCourseChange(courseId) {
+async function handleCourseChange(courseId = selectedCourseId.value) {
+  selectedCourseId.value = courseId || null
   filters.coId = null
-  loadObjectives(courseId)
-  loadAssessmentPoints()
+  contextInfo.value = null
+  points.value = []
+  await loadObjectives(selectedCourseId.value)
+
+  const classes = currentClassOptions.value
+  if (!classes.length) {
+    selectedClassId.value = null
+    await loadAssessmentPoints()
+    return
+  }
+
+  const preferredClassId = Number(route.query.teachingClassId) || classes[0].classId
+  selectedClassId.value = classes.some((item) => item.classId === preferredClassId)
+    ? preferredClassId
+    : classes[0].classId
+  handleClassChange(selectedClassId.value)
+  await loadAssessmentPoints()
+}
+
+function handleClassChange(classId = selectedClassId.value) {
+  selectedClassId.value = classId || null
+  contextInfo.value = currentClassOptions.value.find((item) => item.classId === selectedClassId.value) || null
+  syncQuery()
+}
+
+function syncQuery() {
+  router.replace({
+    query: {
+      ...route.query,
+      tab: 'assessment-points',
+      courseId: selectedCourseId.value || undefined,
+      teachingClassId: selectedClassId.value || undefined,
+    },
+  })
 }
 
 function resetForm() {
@@ -276,7 +394,7 @@ async function handleDelete(apId) {
     ElMessage.success('考核点已删除')
     await loadAssessmentPoints()
   } catch {
-    // error handled by interceptor
+    // handled by interceptor
   }
 }
 
@@ -294,22 +412,72 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.ap-config {
+.assessment-point-page {
+  padding: 20px;
+}
+
+.page-card {
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.page-header h1 {
+  margin: 6px 0 8px;
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.page-section {
+  margin: 0;
+  color: #2563eb;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-summary {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.page-content {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.context-section,
+.points-section {
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
+  margin-bottom: 16px;
 }
 
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+.section-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
 }
 
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.section-summary {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.context-panel {
+  margin-top: 16px;
+  background: #fff;
 }
 
 .objective-cell {
@@ -323,7 +491,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 220px;
 }
 
 .full-score {

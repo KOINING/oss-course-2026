@@ -10,19 +10,15 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("major_indicator_achievement")
-public class MajorIndicatorAchievement {
-    @TableId(value = "mia_id", type = IdType.AUTO)
-    private Long miaId;
-    private Long majorId;
-    private Integer gradeYear;
-    private Long termId;
-    private Long ipId;
-    private Float finalAchievement;
+@TableName("unlock_audit_log")
+public class UnlockAuditLog {
+    @TableId(value = "ulog_id", type = IdType.AUTO)
+    private Long ulogId;
+    private Long classId;
+    private Long requestBy;
+    private Long approvedBy;
+    private String reason;
 
     @TableField(value = "created_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
-
-    @TableField(value = "updated_at", insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
-    private LocalDateTime updatedAt;
 }

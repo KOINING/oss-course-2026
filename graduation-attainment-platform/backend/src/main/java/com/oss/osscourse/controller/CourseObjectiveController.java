@@ -33,24 +33,27 @@ public class CourseObjectiveController {
     private final CourseObjectiveService courseObjectiveService;
 
     @GetMapping
-    @Operation(summary = "查询课程目标列表", description = "支持按课程目标编号（模糊）、所属课程ID筛选。列表仅返回纯文本描述，不返回富文本。")
+    @Operation(summary = "查询课程目标列表", description = "支持按课程目标编号、课程ID或教学班ID筛选")
     public Result<List<CourseObjectiveResponse>> list(
             @Parameter(description = "课程目标编号，模糊查询")
             @RequestParam(required = false) String objectiveCode,
             @Parameter(description = "所属课程ID")
             @RequestParam(required = false) Long courseId,
+            @Parameter(description = "教学班ID，允许前端携带上下文参数")
+            @RequestParam(required = false) Long teachingClassId,
             @RequestAttribute("roles") List<String> roles,
             @RequestAttribute("permissions") List<String> permissions) {
 
         CourseObjectiveQueryRequest request = new CourseObjectiveQueryRequest();
         request.setObjectiveCode(objectiveCode);
         request.setCourseId(courseId);
+        request.setTeachingClassId(teachingClassId);
 
         return Result.ok(courseObjectiveService.list(request, roles, permissions));
     }
 
     @GetMapping("/{coId}")
-    @Operation(summary = "查询课程目标详情", description = "根据课程目标ID查询详情，返回纯文本描述和富文本描述。")
+    @Operation(summary = "查询课程目标详情", description = "根据课程目标ID查询详情，返回纯文本描述和富文本描述")
     public Result<CourseObjectiveResponse> getById(
             @Parameter(description = "课程目标ID", required = true)
             @PathVariable Long coId,
@@ -61,7 +64,7 @@ public class CourseObjectiveController {
     }
 
     @PostMapping
-    @Operation(summary = "新增课程目标", description = "创建新的课程目标。若提供 descriptionRich（富文本），将存入数据库用于详情展示。")
+    @Operation(summary = "新增课程目标", description = "创建新的课程目标")
     public Result<Void> create(
             @Parameter(description = "新增课程目标请求", required = true)
             @Valid @RequestBody CourseObjectiveCreateRequest request,
@@ -73,7 +76,7 @@ public class CourseObjectiveController {
     }
 
     @PutMapping("/{coId}")
-    @Operation(summary = "更新课程目标", description = "更新指定的课程目标。若提供 descriptionRich（富文本），将存入数据库用于详情展示。")
+    @Operation(summary = "更新课程目标", description = "更新指定的课程目标")
     public Result<Void> update(
             @Parameter(description = "课程目标ID", required = true)
             @PathVariable Long coId,
@@ -88,7 +91,7 @@ public class CourseObjectiveController {
     }
 
     @DeleteMapping("/{coId}")
-    @Operation(summary = "删除课程目标", description = "删除指定的课程目标。若已被考核点或内部权重引用则拒绝删除。")
+    @Operation(summary = "删除课程目标", description = "删除指定的课程目标")
     public Result<Void> delete(
             @Parameter(description = "课程目标ID", required = true)
             @PathVariable Long coId,

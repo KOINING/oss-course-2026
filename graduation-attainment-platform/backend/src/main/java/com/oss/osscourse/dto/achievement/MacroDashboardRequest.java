@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-@Schema(description = "专业级达成度汇总请求")
-public class MajorCalcRequest {
+@Schema(description = "专业级宏观看板查询请求")
+public class MacroDashboardRequest {
 
     @NotNull(message = "专业ID不能为空")
     @Schema(description = "专业ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
