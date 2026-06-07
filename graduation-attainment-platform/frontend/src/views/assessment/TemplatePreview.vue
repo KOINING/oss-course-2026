@@ -22,8 +22,19 @@
         <el-tag type="success" effect="plain">{{ contextInfo.courseName || '-' }}</el-tag>
       </div>
 
+      <el-tag v-if="scoreContext?.calcStatus" :type="calcStatusType" effect="light">
+        {{ calcStatusLabel }}
+      </el-tag>
+
       <div class="context-actions">
         <el-button :disabled="!selectedClassId" @click="loadPreview">刷新</el-button>
+        <el-button
+          v-if="scoreContext?.calcStatus === 'locked'"
+          :disabled="objectiveDashboard?.unlockRequested"
+          @click="requestUnlock"
+        >
+          {{ objectiveDashboard?.unlockRequested ? '解锁申请已提交' : '申请解锁' }}
+        </el-button>
         <el-button
           type="warning"
           :loading="calculating"
@@ -68,6 +79,22 @@
         </template>
       </el-alert>
 
+      <el-alert
+        v-if="scoreContext?.calcStatus === 'locked'"
+        type="success"
+        :closable="false"
+        show-icon
+      >
+        <template #title>当前教学班已锁定</template>
+        <template #default>
+          当前显示成绩与课程级结果仅允许查看。
+          <span v-if="objectiveDashboard?.unlockRequested">
+            已提交解锁申请：{{ objectiveDashboard.unlockRequestReason || '等待专业负责人或教务管理员审批' }}
+          </span>
+          <span v-else>如需更改成绩，请先提交解锁申请，由专业负责人或教务管理员审批后再重新导入成绩并计算。</span>
+        </template>
+      </el-alert>
+
       <ErrorState v-if="previewError" :message="previewError" @retry="loadPreview" />
 
       <EmptyState
@@ -104,7 +131,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ObjectiveAchievementDashboard from '@/components/assessment/ObjectiveAchievementDashboard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
@@ -116,6 +143,7 @@ import {
   getScoreImportContextApi,
   getTemplatePreviewDataApi,
   listInstructorTeachingClassesApi,
+  requestUnlockApi,
 } from '@/api/assessment'
 
 const classLoading = ref(false)
@@ -131,7 +159,6 @@ const students = ref([])
 const assessmentPoints = ref([])
 const contextInfo = ref(null)
 const scoreContext = ref(null)
-const courseCalcResult = ref(null)
 const objectiveDashboard = ref(null)
 
 const expectedScoreCount = computed(() => students.value.length * assessmentPoints.value.length)
@@ -147,6 +174,24 @@ const canCalculate = computed(() =>
   && expectedScoreCount.value > 0
   && filledScoreCount.value === expectedScoreCount.value,
 )
+const calcStatusLabel = computed(() => {
+  const map = {
+    unsubmitted: '未提交',
+    score_imported: '已提交未计算',
+    calculating: '已计算未锁定',
+    locked: '已锁定',
+  }
+  return map[scoreContext.value?.calcStatus] || scoreContext.value?.calcStatus || '未提交'
+})
+const calcStatusType = computed(() => {
+  const map = {
+    unsubmitted: 'info',
+    score_imported: 'warning',
+    calculating: 'primary',
+    locked: 'success',
+  }
+  return map[scoreContext.value?.calcStatus] || 'info'
+})
 
 async function loadClasses() {
   classLoading.value = true
@@ -219,7 +264,6 @@ async function handleClassChange() {
   students.value = []
   assessmentPoints.value = []
   previewError.value = ''
-  courseCalcResult.value = null
   objectiveDashboard.value = null
   await loadPreview()
 }
@@ -271,7 +315,7 @@ async function calculateCourse() {
   if (!canCalculate.value) return
   calculating.value = true
   try {
-    courseCalcResult.value = await calculateCourseLevelApi({ classId: selectedClassId.value })
+    await calculateCourseLevelApi({ classId: selectedClassId.value })
     await loadPreview()
     await loadObjectiveDashboard()
     ElMessage.success('课程级计算完成，当前教学班已锁定')
@@ -279,6 +323,28 @@ async function calculateCourse() {
     ElMessage.error(error.message || '课程级计算失败')
   } finally {
     calculating.value = false
+  }
+}
+
+async function requestUnlock() {
+  if (!selectedClassId.value || scoreContext.value?.calcStatus !== 'locked') return
+  try {
+    const { value } = await ElMessageBox.prompt('请填写申请解锁原因', '申请解锁', {
+      confirmButtonText: '提交申请',
+      cancelButtonText: '取消',
+      inputType: 'textarea',
+      inputPlaceholder: '例如：录入成绩后发现期中测试分值有误，需要更正',
+      inputValidator: (input) => (input?.trim() ? true : '请填写解锁原因'),
+    })
+    await requestUnlockApi({
+      classId: selectedClassId.value,
+      reason: value.trim(),
+    })
+    ElMessage.success('解锁申请已提交')
+    await loadObjectiveDashboard()
+  } catch (error) {
+    if (error === 'cancel') return
+    ElMessage.error(error?.message || '提交解锁申请失败')
   }
 }
 

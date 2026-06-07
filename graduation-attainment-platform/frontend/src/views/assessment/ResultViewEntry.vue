@@ -1,14 +1,31 @@
 <template>
   <div class="result-entry">
     <div class="filter-bar">
-      <el-select v-model="filters.majorId" placeholder="选择专业" style="width: 200px" @change="handleMajorChange">
-        <el-option v-for="m in filterOptions.majors" :key="m.majorId" :label="m.majorName" :value="m.majorId" />
+      <el-select v-model="filters.majorId" placeholder="选择专业" style="width: 220px" @change="handleMajorChange">
+        <el-option
+          v-for="major in filterOptions.majors"
+          :key="major.majorId"
+          :label="major.majorName"
+          :value="major.majorId"
+        />
       </el-select>
-      <el-select v-model="filters.gradeYear" placeholder="选择年级" style="width: 160px" @change="clearResults">
-        <el-option v-for="y in filterOptions.gradeYears" :key="y" :label="`${y}级`" :value="y" />
+      <el-select
+        v-model="filters.gradeYear"
+        placeholder="选择年级"
+        style="width: 160px"
+        :disabled="!filters.majorId"
+        @change="handleGradeYearChange"
+      >
+        <el-option v-for="year in currentGradeYears" :key="year" :label="`${year}级`" :value="year" />
       </el-select>
-      <el-select v-model="filters.termId" placeholder="选择学期" style="width: 200px" @change="loadResults">
-        <el-option v-for="t in filterOptions.terms" :key="t.termId" :label="t.termCode" :value="t.termId" />
+      <el-select
+        v-model="filters.termId"
+        placeholder="选择学期"
+        style="width: 220px"
+        :disabled="!filters.majorId || !filters.gradeYear"
+        @change="loadResults"
+      >
+        <el-option v-for="term in currentTerms" :key="term.termId" :label="term.termCode" :value="term.termId" />
       </el-select>
       <el-button :loading="loading" @click="loadResults">查询结果</el-button>
     </div>
@@ -17,7 +34,7 @@
 
     <EmptyState
       v-else-if="!hasFilters"
-      description="请按专业、年级、学期三个维度查询课程级和专业级结果"
+      description="请按专业、年级、学期三个维度查询课程级状态和专业级结果。"
     />
 
     <template v-else>
@@ -59,7 +76,7 @@
         </template>
         <EmptyState
           v-if="!dashboard.courses.length"
-          description="当前筛选条件下没有课程级状态数据"
+          description="当前筛选条件下没有课程级状态数据。"
         />
         <el-table v-else :data="dashboard.courses" border size="small">
           <el-table-column prop="courseCode" label="课程代码" width="120" />
@@ -83,13 +100,13 @@
         </template>
         <EmptyState
           v-if="!majorResult.resultReady"
-          :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果'"
+          :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果。'"
         />
         <el-table v-else :data="majorResult.indicatorAchievements || []" border size="small">
           <el-table-column prop="ipCode" label="指标点" width="120" />
           <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
-          <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="160">
-            <template #default="{ row }">{{ formatPercent(row.finalAchievement) }}</template>
+          <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="180">
+            <template #default="{ row }">{{ formatDecimal(row.finalAchievement) }}</template>
           </el-table-column>
         </el-table>
       </el-card>
@@ -113,8 +130,6 @@ const loadError = ref('')
 
 const filterOptions = reactive({
   majors: [],
-  gradeYears: [],
-  terms: [],
 })
 
 const filters = reactive({
@@ -135,6 +150,12 @@ const majorResult = reactive({
 })
 
 const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear && filters.termId))
+const selectedMajor = computed(() => filterOptions.majors.find((item) => item.majorId === filters.majorId) || null)
+const selectedGradeScope = computed(() =>
+  selectedMajor.value?.gradeYearScopes?.find((item) => item.gradeYear === filters.gradeYear) || null,
+)
+const currentGradeYears = computed(() => (selectedMajor.value?.gradeYearScopes || []).map((item) => item.gradeYear))
+const currentTerms = computed(() => selectedGradeScope.value?.terms || [])
 const lockedCount = computed(() => dashboard.courses.filter((item) => item.calcStatus === 'locked').length)
 
 function buildPayload() {
@@ -151,15 +172,33 @@ function statusType(status) {
 }
 
 function statusLabel(status) {
-  const map = { unsubmitted: '未提交', score_imported: '已提交未计算', calculating: '已计算未锁定', locked: '已锁定' }
+  const map = {
+    unsubmitted: '未提交',
+    score_imported: '已提交未计算',
+    calculating: '已计算未锁定',
+    locked: '已锁定',
+  }
   return map[status] || status || '-'
 }
 
 async function loadFilterOptions() {
   const data = await listMajorGradeYearTermsApi()
   filterOptions.majors = data?.majors || []
-  filterOptions.gradeYears = data?.gradeYears || []
-  filterOptions.terms = data?.terms || []
+  if (!filters.majorId && filterOptions.majors.length) {
+    filters.majorId = filterOptions.majors[0].majorId
+  }
+  hydrateDependentFilters()
+}
+
+function hydrateDependentFilters() {
+  const years = currentGradeYears.value
+  if (!years.includes(filters.gradeYear)) {
+    filters.gradeYear = years[0] || null
+  }
+  const terms = currentTerms.value
+  if (!terms.some((item) => item.termId === filters.termId)) {
+    filters.termId = terms[0]?.termId || null
+  }
 }
 
 function clearResults() {
@@ -171,9 +210,15 @@ function clearResults() {
 }
 
 function handleMajorChange() {
-  filters.gradeYear = null
-  filters.termId = null
+  hydrateDependentFilters()
   clearResults()
+  loadResults()
+}
+
+function handleGradeYearChange() {
+  hydrateDependentFilters()
+  clearResults()
+  loadResults()
 }
 
 async function loadResults() {
@@ -202,9 +247,9 @@ async function loadResults() {
   }
 }
 
-function formatPercent(value) {
+function formatDecimal(value) {
   if (value === undefined || value === null) return '-'
-  return `${(Number(value) * 100).toFixed(2)}%`
+  return Number(value).toFixed(4)
 }
 
 async function loadAll() {
@@ -213,7 +258,7 @@ async function loadAll() {
 }
 
 onMounted(() => {
-  loadFilterOptions()
+  loadAll()
 })
 </script>
 

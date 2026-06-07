@@ -24,11 +24,26 @@ public class CourseObjectiveDashboardResponse {
     @Schema(description = "课程名称", example = "数据结构")
     private String courseName;
 
+    @Schema(description = "教学班计算状态", example = "locked")
+    private String calcStatus;
+
+    @Schema(description = "当前教学班是否已锁定", example = "true")
+    private Boolean locked;
+
+    @Schema(description = "是否已提交解锁申请", example = "false")
+    private Boolean unlockRequested;
+
+    @Schema(description = "当前待处理解锁申请原因")
+    private String unlockRequestReason;
+
     @Schema(description = "是否已有课程级计算结果", example = "true")
     private Boolean resultReady;
 
     @Schema(description = "课程目标汇总")
     private List<ObjectiveSummary> objectiveSummaries;
+
+    @Schema(description = "课程级毕业要求指标点达成度 Ek")
+    private List<IndicatorAchievement> indicatorAchievements;
 
     @Schema(description = "学生目标达成明细")
     private List<StudentObjectiveRow> studentRows;
@@ -42,6 +57,18 @@ public class CourseObjectiveDashboardResponse {
         private String objectiveCode;
         private String description;
         private Float averageAchievement;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IndicatorAchievement {
+        private Long ipId;
+        private String ipCode;
+        private String ipDescription;
+        private Float achievement;
+        private Boolean locked;
     }
 
     @Data

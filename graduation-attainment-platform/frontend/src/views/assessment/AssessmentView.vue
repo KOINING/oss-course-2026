@@ -4,9 +4,9 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ route.meta.moduleTitle }}</p>
-            <h1>{{ route.meta.title }}</h1>
-            <p class="page-summary">{{ route.meta.summary }}</p>
+            <p class="page-section">{{ pageSection }}</p>
+            <h1>{{ pageTitle }}</h1>
+            <p class="page-summary">{{ pageSummary }}</p>
           </div>
         </div>
       </template>
@@ -24,10 +24,10 @@
         </el-tabs>
 
         <el-tabs v-else-if="isDirectorOrAcademic" v-model="directorTab" class="assessment-tabs">
-          <el-tab-pane label="宏观看板" name="dashboard" lazy>
+          <el-tab-pane label="专业级计算看板" name="dashboard" lazy>
             <MacroDashboard />
           </el-tab-pane>
-          <el-tab-pane label="结果查看" name="results" lazy>
+          <el-tab-pane label="专业级结果查看" name="results" lazy>
             <ResultViewEntry />
           </el-tab-pane>
         </el-tabs>
@@ -57,6 +57,29 @@ const isDirectorOrAcademic = computed(() =>
   userStore.roleCodes.some((r) => ['program_director', 'academic_affairs'].includes(r)),
 )
 const hasAnyAccess = computed(() => isInstructor.value || isDirectorOrAcademic.value)
+const pageSection = computed(() => route.meta.moduleTitle || '模块 C')
+const pageTitle = computed(() => {
+  if (isInstructor.value) {
+    return instructorTab.value === 'template' ? '课程成绩预览与课程级结果' : '课程成绩录入'
+  }
+  if (isDirectorOrAcademic.value) {
+    return directorTab.value === 'dashboard' ? '专业级全局达成度计算看板' : '专业级达成度结果查看'
+  }
+  return route.meta.title
+})
+const pageSummary = computed(() => {
+  if (isInstructor.value) {
+    return instructorTab.value === 'template'
+      ? '查看当前教学班成绩、锁定状态、课程目标级达成度以及课程级毕业要求指标点达成度，并在满足条件后执行课程级计算。'
+      : '按系统模板导入和保存原始成绩，为课程级达成度计算提供可追溯的数据输入。'
+  }
+  if (isDirectorOrAcademic.value) {
+    return directorTab.value === 'dashboard'
+      ? '按专业、年级、学期查看所有支撑课程的锁定状态，处理解锁申请，并在全部课程锁定后执行专业级全局达成度计算。'
+      : '查看已持久化的专业级毕业要求指标点达成度结果，作为后续报表与分析模块的统一输出口径。'
+  }
+  return route.meta.summary
+})
 </script>
 
 <style scoped>

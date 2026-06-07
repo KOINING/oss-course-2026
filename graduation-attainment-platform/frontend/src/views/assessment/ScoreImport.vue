@@ -162,7 +162,7 @@
               <el-table-column prop="objectiveCode" label="课程目标" width="120" />
               <el-table-column prop="description" label="目标描述" min-width="220" />
               <el-table-column prop="averageAchievement" label="班级平均达成度" width="160">
-                <template #default="{ row }">{{ formatPercent(row.averageAchievement) }}</template>
+                <template #default="{ row }">{{ formatDecimal(row.averageAchievement) }}</template>
               </el-table-column>
             </el-table>
 
@@ -175,7 +175,7 @@
               <el-table-column prop="ipCode" label="指标点" width="120" />
               <el-table-column prop="ipDescription" label="指标点描述" min-width="220" />
               <el-table-column prop="achievement" label="课程级达成度 Ek" width="160">
-                <template #default="{ row }">{{ formatPercent(row.achievement) }}</template>
+                <template #default="{ row }">{{ formatDecimal(row.achievement) }}</template>
               </el-table-column>
             </el-table>
           </el-card>
@@ -411,9 +411,9 @@ async function saveImportedScores() {
   }
 }
 
-function formatPercent(value) {
+function formatDecimal(value) {
   if (value === undefined || value === null) return '-'
-  return `${(Number(value) * 100).toFixed(2)}%`
+  return Number(value).toFixed(4)
 }
 
 loadClasses()

@@ -79,6 +79,10 @@ export function getCourseObjectiveDashboardApi(data) {
   })
 }
 
+export function requestUnlockApi(data) {
+  return request.post('/teacher/requestUnlock', data)
+}
+
 export function getCourseCalcResultApi(data) {
   return request.post('/assessment/getCourseCalcResult', data)
 }
@@ -97,4 +101,8 @@ export function calculateMajorLevelApi(data) {
 
 export function getMajorCalcResultApi(data) {
   return request.post('/assessment/getMajorCalcResult', data)
+}
+
+export function approveUnlockApi(data) {
+  return request.post('/assessment/approveUnlock', data)
 }

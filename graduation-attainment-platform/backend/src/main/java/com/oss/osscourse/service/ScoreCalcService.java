@@ -6,10 +6,13 @@ import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
 import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
+import com.oss.osscourse.dto.achievement.UnlockRequestCreateRequest;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
 import com.oss.osscourse.dto.score.ScoreImportRequest;
 import com.oss.osscourse.dto.score.ScoreSaveRequest;
 import com.oss.osscourse.dto.score.ScoreTemplatePreviewResponse;
+
+import java.util.List;
 
 public interface ScoreCalcService {
 
@@ -24,6 +27,8 @@ public interface ScoreCalcService {
     CourseCalcResponse calcCourseAchievement(CourseCalcRequest request);
 
     CourseObjectiveDashboardResponse getCourseObjectiveDashboard(Long classId);
+
+    void requestUnlock(UnlockRequestCreateRequest request, Long userId, List<String> roles);
 
     MajorCalcResponse calcMajorAchievement(MajorCalcRequest request);
 

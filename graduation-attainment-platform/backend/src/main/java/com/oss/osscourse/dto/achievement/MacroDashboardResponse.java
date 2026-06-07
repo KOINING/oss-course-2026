@@ -42,5 +42,8 @@ public class MacroDashboardResponse {
         private Long scoreCount;
         private String calcStatus;
         private String blockReason;
+        private Boolean unlockRequested;
+        private String unlockReason;
+        private String unlockRequestedBy;
     }
 }

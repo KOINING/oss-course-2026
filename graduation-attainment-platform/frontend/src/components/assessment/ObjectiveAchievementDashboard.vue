@@ -6,6 +6,36 @@
     />
 
     <template v-else>
+      <el-card shadow="never" class="status-card">
+        <template #header>
+          <div class="card-title">课程级计算状态</div>
+        </template>
+        <div class="status-grid">
+          <div class="status-main">
+            <el-tag :type="calcStatusType" effect="light" size="large">
+              {{ calcStatusLabel }}
+            </el-tag>
+            <span class="status-hint">
+              {{ lockHint }}
+            </span>
+          </div>
+          <el-descriptions :column="2" border size="small">
+            <el-descriptions-item label="课程">
+              {{ dashboard.courseName || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="教学班">
+              {{ dashboard.className || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="计算状态">
+              {{ calcStatusLabel }}
+            </el-descriptions-item>
+            <el-descriptions-item label="是否锁定">
+              {{ dashboard.locked ? '已锁定' : '未锁定' }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </el-card>
+
       <div class="dashboard-grid">
         <el-card shadow="never" class="chart-card">
           <template #header>
@@ -24,6 +54,28 @@
 
       <el-card shadow="never" class="detail-card">
         <template #header>
+          <div class="card-title">课程级毕业要求指标点达成度 Ek</div>
+        </template>
+        <el-table :data="dashboard.indicatorAchievements || []" border size="small">
+          <el-table-column prop="ipCode" label="指标点" width="140" />
+          <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
+          <el-table-column label="达成度 Ek" width="160" align="center">
+            <template #default="{ row }">
+              {{ formatDecimal(row.achievement) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="锁定状态" width="140" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.locked ? 'success' : 'warning'" effect="plain" size="small">
+                {{ row.locked ? '已锁定' : '未锁定' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-card shadow="never" class="detail-card">
+        <template #header>
           <div class="card-title">学生目标达成明细</div>
         </template>
         <el-table :data="dashboard.studentRows || []" border size="small" max-height="420">
@@ -37,7 +89,7 @@
             align="center"
           >
             <template #default="{ row }">
-              {{ formatPercent(row.achievements?.[index]) }}
+              {{ formatDecimal(row.achievements?.[index]) }}
             </template>
           </el-table-column>
         </el-table>
@@ -75,10 +127,33 @@ const heatmapData = computed(() => {
     (row.achievements || []).map((value, colIndex) => [colIndex, rowIndex, value == null ? '-' : Number(value)]),
   )
 })
+const calcStatusLabel = computed(() => {
+  const map = {
+    unsubmitted: '未提交',
+    score_imported: '已提交未计算',
+    calculating: '已计算未锁定',
+    locked: '已锁定',
+  }
+  return map[props.dashboard?.calcStatus] || props.dashboard?.calcStatus || '未提交'
+})
+const calcStatusType = computed(() => {
+  const map = {
+    unsubmitted: 'info',
+    score_imported: 'warning',
+    calculating: 'primary',
+    locked: 'success',
+  }
+  return map[props.dashboard?.calcStatus] || 'info'
+})
+const lockHint = computed(() => (
+  props.dashboard?.locked
+    ? '当前教学班成绩与课程级结果已锁定。教师可提交解锁申请，待专业负责人或教务管理员审批后再重新导入和计算。'
+    : '当前教学班尚未锁定。教师可继续核对成绩，确认完整后再执行计算并锁定。'
+))
 
-function formatPercent(value) {
+function formatDecimal(value) {
   if (value === undefined || value === null || value === '') return '-'
-  return `${(Number(value) * 100).toFixed(2)}%`
+  return Number(value).toFixed(4)
 }
 
 function renderSummaryChart() {
@@ -92,7 +167,7 @@ function renderSummaryChart() {
       formatter: (params) => {
         const item = params?.[0]
         if (!item) return ''
-        return `${item.axisValue}<br/>班级平均达成度：${formatPercent(item.value)}`
+        return `${item.axisValue}<br/>班级平均达成度：${formatDecimal(item.value)}`
       },
     },
     xAxis: {
@@ -104,9 +179,7 @@ function renderSummaryChart() {
       type: 'value',
       min: 0,
       max: 1,
-      axisLabel: {
-        formatter: (value) => `${Math.round(value * 100)}%`,
-      },
+      axisLabel: { formatter: (value) => Number(value).toFixed(2) },
     },
     series: [
       {
@@ -120,7 +193,7 @@ function renderSummaryChart() {
         label: {
           show: true,
           position: 'top',
-          formatter: ({ value }) => formatPercent(value),
+          formatter: ({ value }) => formatDecimal(value),
         },
       },
     ],
@@ -142,7 +215,7 @@ function renderHeatmapChart() {
       position: 'top',
       formatter: (params) => {
         const [objectiveIndex, studentIndex, value] = params.data
-        return `${studentLabels.value[studentIndex]}<br/>${objectiveLabels.value[objectiveIndex]}：${formatPercent(value === '-' ? null : value)}`
+        return `${studentLabels.value[studentIndex]}<br/>${objectiveLabels.value[objectiveIndex]}：${formatDecimal(value === '-' ? null : value)}`
       },
     },
     xAxis: {
@@ -166,7 +239,7 @@ function renderHeatmapChart() {
       inRange: {
         color: ['#fef3c7', '#f59e0b', '#2563eb'],
       },
-      formatter: (value) => `${Math.round(Number(value) * 100)}%`,
+      formatter: (value) => Number(value).toFixed(4),
     },
     series: [
       {
@@ -174,7 +247,7 @@ function renderHeatmapChart() {
         data: heatmapData.value,
         label: {
           show: true,
-          formatter: ({ data }) => formatPercent(data[2] === '-' ? null : data[2]),
+          formatter: ({ data }) => formatDecimal(data[2] === '-' ? null : data[2]),
           color: '#111827',
           fontSize: 11,
         },
@@ -221,15 +294,33 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
+.status-card,
+.chart-card,
+.detail-card {
+  border-radius: 8px;
+}
+
+.status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-hint {
+  color: #475569;
+  line-height: 1.6;
+}
+
 @media (max-width: 1100px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
-}
-
-.chart-card,
-.detail-card {
-  border-radius: 8px;
 }
 
 .card-title {

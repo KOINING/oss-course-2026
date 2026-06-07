@@ -7,6 +7,7 @@ import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
 import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
+import com.oss.osscourse.dto.achievement.UnlockRequestCreateRequest;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
 import com.oss.osscourse.dto.score.ScoreImportRequest;
 import com.oss.osscourse.dto.score.ScoreSaveRequest;
@@ -86,6 +87,16 @@ public class ScoreCalcController {
     public Result<CourseObjectiveDashboardResponse> getCourseObjectiveDashboard(
             @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
         return Result.ok(scoreCalcService.getCourseObjectiveDashboard(classId));
+    }
+
+    @PostMapping("/requestUnlock")
+    @Operation(summary = "教师申请解锁教学班成绩")
+    public Result<Void> requestUnlock(
+            @Valid @RequestBody UnlockRequestCreateRequest request,
+            @RequestAttribute("userId") Long userId,
+            @RequestAttribute("roles") List<String> roles) {
+        scoreCalcService.requestUnlock(request, userId, roles);
+        return Result.ok("解锁申请已提交", null);
     }
 
     @PostMapping("/calcMajorAchievement")

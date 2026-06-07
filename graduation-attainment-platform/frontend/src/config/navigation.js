@@ -75,33 +75,11 @@ export const NAVIGATION_SECTIONS = [
         label: '教学班管理',
         path: '/teaching-class',
         routeName: ROUTE_NAMES.TEACHING_CLASS,
-        roles: ['academic_affairs'],
+        roles: ['admin', 'academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
           '管理课程对应的教学班信息，并承接教学班学生关联查看、移除与批量导入。',
         entities: ['TeachingClass', 'StudentClass'],
-      },
-      {
-        key: 'student-list',
-        label: '学生基础信息管理',
-        path: '/student-list',
-        routeName: ROUTE_NAMES.STUDENT_LIST,
-        roles: ['academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
-        summary:
-          '维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态，不直接维护教学班学生关联。',
-        entities: ['Student'],
-      },
-      {
-        key: 'teaching-class',
-        label: '教学班管理',
-        path: '/teaching-class',
-        routeName: ROUTE_NAMES.TEACHING_CLASS,
-        roles: ['admin', 'academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
-        summary:
-          '管理课程的教学班信息，包括班级编号、授课教师、班级容量等。',
-        entities: ['TeachingClass'],
       },
       {
         key: 'student-list',
@@ -111,7 +89,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['admin', 'academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。',
+          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等，并承接学生名单导入与核对。',
         entities: ['Student'],
       },
       {
@@ -203,13 +181,13 @@ export const NAVIGATION_SECTIONS = [
     children: [
       {
         key: 'assessment',
-        label: '成绩录入与计算',
+        label: '达成度计算与看板',
         path: '/assessment',
         routeName: ROUTE_NAMES.ASSESSMENT,
         roles: ['academic_affairs', 'program_director', 'instructor'],
-        moduleTitle: '模块 C：成绩录入与直接评价',
+        moduleTitle: '模块 C：课程与专业达成度计算',
         summary:
-          '承接班级与学生数据、原始成绩导入、课程级计算和专业级汇总，是平台达成度分析的执行中心。',
+          '承接原始成绩导入、课程级达成度计算、专业级全局汇总与结果看板，是平台达成度分析的执行中心。',
         entities: [
           'TeachingClass',
           'Student',

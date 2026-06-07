@@ -5,6 +5,7 @@ import com.oss.osscourse.dto.achievement.AssessmentFilterOptionsResponse;
 import com.oss.osscourse.dto.achievement.MacroDashboardRequest;
 import com.oss.osscourse.dto.achievement.MacroDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcResultResponse;
+import com.oss.osscourse.dto.achievement.UnlockRequestApproveRequest;
 import com.oss.osscourse.service.AssessmentQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,6 +53,17 @@ public class AssessmentQueryController {
             @RequestAttribute("roles") List<String> roles) {
         ensureAccess(roles);
         return Result.ok(assessmentQueryService.getMajorCalcResult(request));
+    }
+
+    @PostMapping("/approveUnlock")
+    @Operation(summary = "专业负责人或教务执行教学班解锁")
+    public Result<Void> approveUnlock(
+            @Valid @RequestBody UnlockRequestApproveRequest request,
+            @RequestAttribute("userId") Long userId,
+            @RequestAttribute("roles") List<String> roles) {
+        ensureAccess(roles);
+        assessmentQueryService.approveUnlock(request, userId);
+        return Result.ok("教学班已解锁", null);
     }
 
     private void ensureAccess(List<String> roles) {

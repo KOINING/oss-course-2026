@@ -31,6 +31,16 @@ public class AssessmentFilterOptionsResponse {
     public static class MajorOption {
         private Long majorId;
         private String majorName;
+        private List<GradeYearScope> gradeYearScopes;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GradeYearScope {
+        private Integer gradeYear;
+        private List<TermOption> terms;
     }
 
     @Data

@@ -8,6 +8,7 @@ import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
 import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
+import com.oss.osscourse.dto.achievement.UnlockRequestCreateRequest;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
 import com.oss.osscourse.dto.score.ScoreImportRequest;
 import com.oss.osscourse.dto.score.ScoreSaveRequest;
@@ -28,7 +29,9 @@ import com.oss.osscourse.entity.Student;
 import com.oss.osscourse.entity.StudentAssessmentScore;
 import com.oss.osscourse.entity.StudentClass;
 import com.oss.osscourse.entity.StudentObjectiveAchievement;
+import com.oss.osscourse.entity.Teacher;
 import com.oss.osscourse.entity.TeachingClass;
+import com.oss.osscourse.entity.UnlockAuditLog;
 import com.oss.osscourse.mapper.AcademicTermMapper;
 import com.oss.osscourse.mapper.AssessmentPointMapper;
 import com.oss.osscourse.mapper.CourseIndicatorAchievementMapper;
@@ -46,6 +49,8 @@ import com.oss.osscourse.mapper.StudentClassMapper;
 import com.oss.osscourse.mapper.StudentMapper;
 import com.oss.osscourse.mapper.StudentObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
+import com.oss.osscourse.mapper.TeacherMapper;
+import com.oss.osscourse.mapper.UnlockAuditLogMapper;
 import com.oss.osscourse.service.ScoreCalcService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
@@ -107,6 +112,8 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     private final AcademicTermMapper academicTermMapper;
     private final CourseMajorMapper courseMajorMapper;
     private final IndicatorPointMapper indicatorPointMapper;
+    private final TeacherMapper teacherMapper;
+    private final UnlockAuditLogMapper unlockAuditLogMapper;
 
     @Override
     public ScoreTemplatePreviewResponse previewTemplate(Long classId) {
@@ -658,6 +665,35 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         .build())
                 .toList();
 
+        List<CourseIndicatorAchievement> courseIndicatorAchievements = ciaMapper.selectList(
+                        new LambdaQueryWrapper<CourseIndicatorAchievement>()
+                                .eq(CourseIndicatorAchievement::getClassId, classId));
+        List<Long> indicatorIds = courseIndicatorAchievements.stream()
+                .map(CourseIndicatorAchievement::getIpId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, IndicatorPoint> indicatorPointMap = indicatorIds.isEmpty()
+                ? Map.of()
+                : indicatorPointMapper.selectBatchIds(indicatorIds).stream()
+                .collect(Collectors.toMap(IndicatorPoint::getIpId, item -> item));
+
+        List<CourseObjectiveDashboardResponse.IndicatorAchievement> indicatorAchievements = courseIndicatorAchievements
+                .stream()
+                .map(item -> {
+                    IndicatorPoint indicatorPoint = indicatorPointMap.get(item.getIpId());
+                    return CourseObjectiveDashboardResponse.IndicatorAchievement.builder()
+                            .ipId(item.getIpId())
+                            .ipCode(indicatorPoint == null ? "" : indicatorPoint.getIpCode())
+                            .ipDescription(indicatorPoint == null ? "" : indicatorPoint.getIpDescription())
+                            .achievement(item.getAchievement())
+                            .locked(Boolean.TRUE.equals(item.getIsLocked()))
+                            .build();
+                })
+                .toList();
+
+        UnlockAuditLog pendingUnlockRequest = findPendingUnlockRequest(classId);
+
         List<StudentClass> studentClasses = listStudentsInClass(classId);
         List<Long> studentIds = studentClasses.stream().map(StudentClass::getStudentId).toList();
         Map<Long, Student> studentMap = studentIds.isEmpty()
@@ -701,10 +737,38 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .classId(classId)
                 .className(teachingClass.getClassName())
                 .courseName(course == null ? null : course.getCourseName())
-                .resultReady(!averageMap.isEmpty() || !studentAchievementMap.isEmpty())
+                .calcStatus(teachingClass.getCalcStatus())
+                .locked("locked".equals(teachingClass.getCalcStatus()))
+                .unlockRequested(pendingUnlockRequest != null)
+                .unlockRequestReason(pendingUnlockRequest == null ? null : pendingUnlockRequest.getReason())
+                .resultReady(!averageMap.isEmpty() || !studentAchievementMap.isEmpty() || !indicatorAchievements.isEmpty())
                 .objectiveSummaries(objectiveSummaries)
+                .indicatorAchievements(indicatorAchievements)
                 .studentRows(studentRows)
                 .build();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void requestUnlock(UnlockRequestCreateRequest request, Long userId, List<String> roles) {
+        Teacher teacher = resolveCurrentTeacher(userId, roles);
+        TeachingClass teachingClass = requireTeachingClass(request.getClassId());
+        if (!teacher.getId().equals(teachingClass.getTeacherId())) {
+            throw new BusinessException(403, "只能对当前教师负责的教学班提交解锁申请");
+        }
+        if (!"locked".equals(teachingClass.getCalcStatus())) {
+            throw new BusinessException(400, "当前教学班尚未锁定，无需申请解锁");
+        }
+        if (findPendingUnlockRequest(request.getClassId()) != null) {
+            throw new BusinessException(400, "当前教学班已存在待处理的解锁申请");
+        }
+
+        UnlockAuditLog entity = new UnlockAuditLog();
+        entity.setClassId(request.getClassId());
+        entity.setRequestBy(teacher.getId());
+        entity.setApprovedBy(0L);
+        entity.setReason(request.getReason().trim());
+        unlockAuditLogMapper.insert(entity);
     }
 
     @Override
@@ -876,6 +940,30 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(404, "教学班不存在");
         }
         return teachingClass;
+    }
+
+    private Teacher resolveCurrentTeacher(Long userId, List<String> roles) {
+        if (userId == null) {
+            throw new BusinessException(401, "当前登录信息缺少用户ID");
+        }
+        if (roles == null || roles.stream().noneMatch("instructor"::equals)) {
+            throw new BusinessException(403, "当前账号不是课程主讲教师");
+        }
+        Teacher teacher = teacherMapper.selectOne(new LambdaQueryWrapper<Teacher>()
+                .eq(Teacher::getUserId, userId)
+                .eq(Teacher::getStatus, 1));
+        if (teacher == null) {
+            throw new BusinessException(403, "当前登录用户未绑定启用状态的教师身份");
+        }
+        return teacher;
+    }
+
+    private UnlockAuditLog findPendingUnlockRequest(Long classId) {
+        return unlockAuditLogMapper.selectOne(new LambdaQueryWrapper<UnlockAuditLog>()
+                .eq(UnlockAuditLog::getClassId, classId)
+                .eq(UnlockAuditLog::getApprovedBy, 0L)
+                .orderByDesc(UnlockAuditLog::getUlogId)
+                .last("LIMIT 1"));
     }
 
     private List<StudentClass> listStudentsInClass(Long classId) {

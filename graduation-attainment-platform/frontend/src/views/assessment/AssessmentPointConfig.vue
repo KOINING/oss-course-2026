@@ -1,116 +1,120 @@
 <template>
   <div class="ap-config">
-    <div class="filter-bar">
-      <el-select
-        v-model="selectedCourseId"
-        placeholder="选择课程"
-        style="width: 240px"
-        @change="handleCourseChange"
+    <el-card shadow="never" class="surface-card">
+      <div class="filter-bar">
+        <el-select
+          v-model="selectedCourseId"
+          placeholder="选择课程"
+          style="width: 240px"
+          @change="handleCourseChange"
+        >
+          <el-option
+            v-for="course in courseOptions"
+            :key="course.courseId"
+            :label="`${course.courseCode} - ${course.courseName}`"
+            :value="course.courseId"
+          />
+        </el-select>
+
+        <el-select
+          v-model="selectedClassId"
+          placeholder="选择教学班"
+          style="width: 260px"
+          :disabled="!selectedCourseId"
+          @change="handleClassChange"
+        >
+          <el-option
+            v-for="item in currentClassOptions"
+            :key="item.classId"
+            :label="`${item.classCode} - ${item.className || item.courseName}`"
+            :value="item.classId"
+          />
+        </el-select>
+
+        <el-select
+          v-model="filters.coId"
+          placeholder="按课程目标筛选"
+          clearable
+          style="width: 260px"
+          :disabled="!selectedCourseId"
+          @change="loadAssessmentPoints"
+        >
+          <el-option
+            v-for="obj in objectiveOptions"
+            :key="obj.coId"
+            :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
+            :value="obj.coId"
+          />
+        </el-select>
+      </div>
+
+      <div v-if="contextInfo" class="context-info">
+        <el-tag type="info" effect="plain">{{ contextInfo.majorName || '-' }}</el-tag>
+        <el-tag type="info" effect="plain">{{ contextInfo.gradeYear ? `${contextInfo.gradeYear}级` : '-' }}</el-tag>
+        <el-tag type="info" effect="plain">{{ contextInfo.termCode || '-' }}</el-tag>
+        <el-tag type="success" effect="plain">{{ contextInfo.classCode || '-' }}</el-tag>
+      </div>
+
+      <div class="table-toolbar">
+        <el-button type="primary" :disabled="!selectedCourseId" @click="openDialog('create')">
+          <el-icon><Plus /></el-icon>
+          新增考核点
+        </el-button>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="surface-card">
+      <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
+
+      <EmptyState
+        v-else-if="!loading && !selectedCourseId"
+        description="当前没有可用课程"
+      />
+
+      <EmptyState
+        v-else-if="!loading && points.length === 0"
+        description="暂无考核点数据，请先新增考核点"
+      />
+
+      <el-table
+        v-else
+        v-loading="loading"
+        :data="points"
+        border
+        stripe
       >
-        <el-option
-          v-for="course in courseOptions"
-          :key="course.courseId"
-          :label="`${course.courseCode} - ${course.courseName}`"
-          :value="course.courseId"
-        />
-      </el-select>
-
-      <el-select
-        v-model="selectedClassId"
-        placeholder="选择教学班"
-        style="width: 260px"
-        :disabled="!selectedCourseId"
-        @change="handleClassChange"
-      >
-        <el-option
-          v-for="item in currentClassOptions"
-          :key="item.classId"
-          :label="`${item.classCode} - ${item.className || item.courseName}`"
-          :value="item.classId"
-        />
-      </el-select>
-
-      <el-select
-        v-model="filters.coId"
-        placeholder="按课程目标筛选"
-        clearable
-        style="width: 260px"
-        :disabled="!selectedCourseId"
-        @change="loadAssessmentPoints"
-      >
-        <el-option
-          v-for="obj in objectiveOptions"
-          :key="obj.coId"
-          :label="`${obj.objectiveCode}: ${obj.description || obj.coDescription || ''}`"
-          :value="obj.coId"
-        />
-      </el-select>
-    </div>
-
-    <div v-if="contextInfo" class="context-info">
-      <el-tag type="info" effect="plain">{{ contextInfo.majorName || '-' }}</el-tag>
-      <el-tag type="info" effect="plain">{{ contextInfo.gradeYear ? `${contextInfo.gradeYear}级` : '-' }}</el-tag>
-      <el-tag type="info" effect="plain">{{ contextInfo.termCode || '-' }}</el-tag>
-      <el-tag type="success" effect="plain">{{ contextInfo.classCode || '-' }}</el-tag>
-    </div>
-
-    <div class="table-toolbar">
-      <el-button type="primary" :disabled="!selectedCourseId" @click="openDialog('create')">
-        <el-icon><Plus /></el-icon>
-        新增考核点
-      </el-button>
-    </div>
-
-    <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
-
-    <EmptyState
-      v-else-if="!loading && !selectedCourseId"
-      description="当前没有可用课程"
-    />
-
-    <EmptyState
-      v-else-if="!loading && points.length === 0"
-      description="暂无考核点数据，请先新增考核点"
-    />
-
-    <el-table
-      v-else
-      v-loading="loading"
-      :data="points"
-      border
-      stripe
-    >
-      <el-table-column prop="apId" label="ID" width="70" />
-      <el-table-column prop="apName" label="考核点名称" min-width="180" />
-      <el-table-column label="所属课程目标" min-width="240">
-        <template #default="{ row }">
-          <div class="objective-cell">
-            <el-tag type="info" effect="plain" size="small">{{ row.objectiveCode }}</el-tag>
-            <span class="objective-desc">{{ row.coDescription || '-' }}</span>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="满分" width="100" align="center">
-        <template #default="{ row }">
-          <span class="full-score">{{ row.fullScore }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
-        <template #default="{ row }">
-          <div class="table-actions">
-            <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
-            <el-popconfirm
-              title="确认删除该考核点吗？若已产生成绩数据则无法删除"
-              @confirm="handleDelete(row.apId)"
-            >
-              <template #reference>
-                <el-button link type="danger">删除</el-button>
-              </template>
-            </el-popconfirm>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column prop="apId" label="ID" width="70" />
+        <el-table-column prop="apName" label="考核点名称" min-width="180" />
+        <el-table-column label="所属课程目标" min-width="240">
+          <template #default="{ row }">
+            <div class="objective-cell">
+              <el-tag type="info" effect="plain" size="small">{{ row.objectiveCode }}</el-tag>
+              <span class="objective-desc">{{ row.coDescription || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="满分" width="100" align="center">
+          <template #default="{ row }">
+            <span class="full-score">{{ row.fullScore }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button link type="primary" @click="openDialog('edit', row)">编辑</el-button>
+              <el-popconfirm
+                title="确认删除该考核点吗？若已产生成绩数据则无法删除"
+                @confirm="handleDelete(row.apId)"
+              >
+                <template #reference>
+                  <el-button link type="danger">删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <FormDialog
       v-model="dialogVisible"
@@ -380,6 +384,10 @@ onMounted(() => {
   gap: 16px;
 }
 
+.surface-card {
+  border-radius: 8px;
+}
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -396,6 +404,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: 12px;
 }
 
 .objective-cell {
