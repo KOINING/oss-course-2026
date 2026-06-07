@@ -14,7 +14,7 @@
       <el-table-column
         v-for="(ap, index) in headers"
         :key="ap.apId"
-        :min-width="150"
+        :min-width="editable ? 170 : 150"
         align="center"
       >
         <template #header>
@@ -26,8 +26,20 @@
             </div>
           </div>
         </template>
-        <template #default="{ row }">
-          <span :class="row.scores?.[index] == null ? 'score-empty' : 'score-value'">
+        <template #default="{ row, $index }">
+          <div v-if="editable" class="editable-cell">
+            <el-input-number
+              :model-value="normalizeValue(row.scores?.[index])"
+              :min="0"
+              :max="normalizeValue(ap.fullScore)"
+              :step="0.1"
+              :precision="2"
+              controls-position="right"
+              class="score-input"
+              @update:model-value="(value) => emitUpdate($index, index, value)"
+            />
+          </div>
+          <span v-else :class="row.scores?.[index] == null ? 'score-empty' : 'score-value'">
             {{ row.scores?.[index] == null ? '-' : formatScore(row.scores[index]) }}
           </span>
         </template>
@@ -50,14 +62,36 @@ const props = defineProps({
     type: Number,
     default: 620,
   },
+  editable: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-function formatScore(value) {
+const emit = defineEmits(['update-score'])
+
+function normalizeValue(value) {
   if (value === undefined || value === null || value === '') {
-    return '-'
+    return null
   }
   const number = Number(value)
+  return Number.isNaN(number) ? null : number
+}
+
+function formatScore(value) {
+  const number = normalizeValue(value)
+  if (number === null) {
+    return '-'
+  }
   return Number.isInteger(number) ? `${number}` : number.toFixed(1)
+}
+
+function emitUpdate(rowIndex, columnIndex, value) {
+  emit('update-score', {
+    rowIndex,
+    columnIndex,
+    value: value === undefined || value === '' ? null : value,
+  })
 }
 
 function getSummary() {
@@ -89,6 +123,15 @@ function getSummary() {
   color: #6b7280;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.editable-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.score-input {
+  width: 128px;
 }
 
 .score-empty {

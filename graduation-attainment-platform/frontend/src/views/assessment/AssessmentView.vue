@@ -54,10 +54,11 @@ const directorTab = ref('dashboard')
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))
 const isDirectorOrAcademic = computed(() =>
-  userStore.roleCodes.some((r) => ['program_director', 'academic_affairs'].includes(r)),
+  userStore.roleCodes.some((role) => ['program_director', 'academic_affairs'].includes(role)),
 )
 const hasAnyAccess = computed(() => isInstructor.value || isDirectorOrAcademic.value)
 const pageSection = computed(() => route.meta.moduleTitle || '模块 C')
+
 const pageTitle = computed(() => {
   if (isInstructor.value) {
     return instructorTab.value === 'template' ? '课程成绩预览与课程级结果' : '课程成绩录入'
@@ -67,6 +68,7 @@ const pageTitle = computed(() => {
   }
   return route.meta.title
 })
+
 const pageSummary = computed(() => {
   if (isInstructor.value) {
     return instructorTab.value === 'template'
@@ -75,7 +77,7 @@ const pageSummary = computed(() => {
   }
   if (isDirectorOrAcademic.value) {
     return directorTab.value === 'dashboard'
-      ? '按专业、年级、学期查看所有支撑课程的锁定状态，处理解锁申请，并在全部课程锁定后执行专业级全局达成度计算。'
+      ? '按专业、年级查看当前届学生涉及的全部支撑课程状态，处理解锁申请，并在全部课程锁定后执行专业级全局达成度计算。'
       : '查看已持久化的专业级毕业要求指标点达成度结果，作为后续报表与分析模块的统一输出口径。'
   }
   return route.meta.summary

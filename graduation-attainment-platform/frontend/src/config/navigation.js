@@ -241,10 +241,25 @@ export function getVisibleSections(roleCodes = []) {
     children:
       section.key === 'home'
         ? section.children
-        : section.children.filter((item) =>
-            item.roles.some((roleCode) => roleSet.has(roleCode)),
-          ),
+        : section.children
+            .filter((item) => item.roles.some((roleCode) => roleSet.has(roleCode)))
+            .map((item) => ({
+              ...item,
+              label: resolveVisibleLabel(item, roleSet),
+            })),
   })).filter((section) => section.children.length > 0)
+}
+
+function resolveVisibleLabel(item, roleSet) {
+  if (
+    item.key === 'assessment'
+    && roleSet.has('instructor')
+    && !roleSet.has('program_director')
+    && !roleSet.has('academic_affairs')
+  ) {
+    return '课程成绩与课程级计算'
+  }
+  return item.label
 }
 
 export function getProtectedRoutes() {

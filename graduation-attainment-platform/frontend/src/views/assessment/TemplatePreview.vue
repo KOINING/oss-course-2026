@@ -29,6 +29,14 @@
       <div class="context-actions">
         <el-button :disabled="!selectedClassId" @click="loadPreview">刷新</el-button>
         <el-button
+          type="primary"
+          :loading="savingInlineScores"
+          :disabled="!canSaveInlineScores"
+          @click="saveInlineScores"
+        >
+          保存成绩
+        </el-button>
+        <el-button
           v-if="scoreContext?.calcStatus === 'locked'"
           :disabled="objectiveDashboard?.unlockRequested"
           @click="requestUnlock"
@@ -71,14 +79,6 @@
         </template>
       </el-alert>
 
-      <el-alert type="info" :closable="false" show-icon>
-        <template #title>
-          固定列：<strong>学号 / 姓名</strong>
-          ，动态列：<strong>{{ assessmentPoints.length }}</strong> 个考核点，
-          学生数：<strong>{{ students.length }}</strong>
-        </template>
-      </el-alert>
-
       <el-alert
         v-if="scoreContext?.calcStatus === 'locked'"
         type="success"
@@ -91,7 +91,14 @@
           <span v-if="objectiveDashboard?.unlockRequested">
             已提交解锁申请：{{ objectiveDashboard.unlockRequestReason || '等待专业负责人或教务管理员审批' }}
           </span>
-          <span v-else>如需更改成绩，请先提交解锁申请，由专业负责人或教务管理员审批后再重新导入成绩并计算。</span>
+          <span v-else>如需更改成绩，请先提交解锁申请，审批通过后可在线修改或重新导入成绩，并重新计算。</span>
+        </template>
+      </el-alert>
+
+      <el-alert type="info" :closable="false" show-icon>
+        <template #title>
+          固定列：<strong>学号 / 姓名</strong>，动态列：<strong>{{ assessmentPoints.length }}</strong> 个考核点，
+          学生数：<strong>{{ students.length }}</strong>
         </template>
       </el-alert>
 
@@ -99,26 +106,32 @@
 
       <EmptyState
         v-else-if="!previewLoading && !selectedClassId"
-        description="当前没有可用教学班"
+        description="当前没有可用教学班。"
       />
 
       <EmptyState
         v-else-if="!previewLoading && !scoreContext?.canGenerateTemplate"
-        description="当前教学班前置条件未满足，暂不能生成模板或预览成绩"
+        description="当前教学班前置条件未满足，暂不能生成模板或预览成绩。"
       />
 
       <EmptyState
         v-else-if="!previewLoading && assessmentPoints.length === 0"
-        description="当前课程下暂无考核点，请先完成考核点配置"
+        description="当前课程下暂无考核点，请先完成考核点配置。"
       />
 
       <EmptyState
         v-else-if="!previewLoading && students.length === 0"
-        description="当前教学班暂无学生名单"
+        description="当前教学班暂无学生名单。"
       />
 
       <div v-else class="template-table-wrapper" v-loading="previewLoading">
-        <ScoreSheetTable :rows="students" :headers="assessmentPoints" :max-height="620" />
+        <ScoreSheetTable
+          :rows="students"
+          :headers="assessmentPoints"
+          :max-height="620"
+          :editable="canEditScores"
+          @update-score="updateScoreCell"
+        />
       </div>
 
       <ObjectiveAchievementDashboard
@@ -144,6 +157,7 @@ import {
   getTemplatePreviewDataApi,
   listInstructorTeachingClassesApi,
   requestUnlockApi,
+  saveScoresApi,
 } from '@/api/assessment'
 
 const classLoading = ref(false)
@@ -155,6 +169,7 @@ const previewLoading = ref(false)
 const previewError = ref('')
 const downloading = ref(false)
 const calculating = ref(false)
+const savingInlineScores = ref(false)
 const students = ref([])
 const assessmentPoints = ref([])
 const contextInfo = ref(null)
@@ -174,6 +189,12 @@ const canCalculate = computed(() =>
   && expectedScoreCount.value > 0
   && filledScoreCount.value === expectedScoreCount.value,
 )
+const canEditScores = computed(() =>
+  !!selectedClassId.value
+  && scoreContext.value?.canGenerateTemplate
+  && scoreContext.value?.calcStatus !== 'locked',
+)
+const canSaveInlineScores = computed(() => canEditScores.value && collectScorePayload().length > 0)
 const calcStatusLabel = computed(() => {
   const map = {
     unsubmitted: '未提交',
@@ -243,6 +264,7 @@ async function loadPreview() {
     if (!scoreContext.value?.canGenerateTemplate) {
       students.value = []
       assessmentPoints.value = []
+      objectiveDashboard.value = null
       return
     }
 
@@ -311,13 +333,58 @@ async function downloadTemplate() {
   }
 }
 
+function updateScoreCell({ rowIndex, columnIndex, value }) {
+  if (!students.value[rowIndex]) return
+  const currentScores = Array.isArray(students.value[rowIndex].scores) ? [...students.value[rowIndex].scores] : []
+  currentScores[columnIndex] = value
+  students.value[rowIndex] = {
+    ...students.value[rowIndex],
+    scores: currentScores,
+  }
+}
+
+function collectScorePayload() {
+  const payload = []
+  students.value.forEach((row) => {
+    if (!row?.studentId) return
+    ;(row.scores || []).forEach((score, index) => {
+      const header = assessmentPoints.value[index]
+      if (!header?.apId || score === null || score === undefined || score === '') {
+        return
+      }
+      payload.push({
+        studentId: row.studentId,
+        apId: header.apId,
+        actualScore: Number(score),
+      })
+    })
+  })
+  return payload
+}
+
+async function saveInlineScores() {
+  if (!canSaveInlineScores.value) return
+  savingInlineScores.value = true
+  try {
+    await saveScoresApi({
+      classId: selectedClassId.value,
+      scores: collectScorePayload(),
+    })
+    await loadPreview()
+    ElMessage.success('成绩保存成功，可继续补录或执行课程级计算')
+  } catch (error) {
+    ElMessage.error(error.message || '成绩保存失败')
+  } finally {
+    savingInlineScores.value = false
+  }
+}
+
 async function calculateCourse() {
   if (!canCalculate.value) return
   calculating.value = true
   try {
     await calculateCourseLevelApi({ classId: selectedClassId.value })
     await loadPreview()
-    await loadObjectiveDashboard()
     ElMessage.success('课程级计算完成，当前教学班已锁定')
   } catch (error) {
     ElMessage.error(error.message || '课程级计算失败')
@@ -333,7 +400,7 @@ async function requestUnlock() {
       confirmButtonText: '提交申请',
       cancelButtonText: '取消',
       inputType: 'textarea',
-      inputPlaceholder: '例如：录入成绩后发现期中测试分值有误，需要更正',
+      inputPlaceholder: '例如：录入成绩后发现部分分值有误，需要更正后重新计算',
       inputValidator: (input) => (input?.trim() ? true : '请填写解锁原因'),
     })
     await requestUnlockApi({

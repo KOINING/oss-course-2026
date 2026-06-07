@@ -17,27 +17,7 @@
         :disabled="!filters.majorId"
         @change="handleGradeYearChange"
       >
-        <el-option
-          v-for="year in currentGradeYears"
-          :key="year"
-          :label="`${year}级`"
-          :value="year"
-        />
-      </el-select>
-
-      <el-select
-        v-model="filters.termId"
-        placeholder="选择学期"
-        style="width: 220px"
-        :disabled="!filters.majorId || !filters.gradeYear"
-        @change="loadDashboard"
-      >
-        <el-option
-          v-for="term in currentTerms"
-          :key="term.termId"
-          :label="term.termCode"
-          :value="term.termId"
-        />
+        <el-option v-for="year in currentGradeYears" :key="year" :label="`${year}级`" :value="year" />
       </el-select>
 
       <el-button :loading="loading" @click="loadDashboard">查询</el-button>
@@ -55,7 +35,7 @@
 
     <EmptyState
       v-else-if="!hasFilters"
-      description="请按专业、年级、学期三个维度筛选支撑课程状态后，再执行专业级全局达成度计算。"
+      description="请先按专业、年级查看当前届学生涉及的全部支撑课程状态，再执行专业级全局达成度计算。"
     />
 
     <template v-else>
@@ -63,7 +43,7 @@
         <div class="summary-cards">
           <div class="summary-card summary-card--total">
             <div class="summary-card__num">{{ courses.length }}</div>
-            <div class="summary-card__label">支撑课程总数</div>
+            <div class="summary-card__label">支撑教学班总数</div>
           </div>
           <div class="summary-card summary-card--locked">
             <div class="summary-card__num">{{ lockedCount }}</div>
@@ -93,7 +73,7 @@
       >
         <template #title>当前不能执行专业级计算</template>
         <template #default>
-          {{ dashboardData.blockReason || '仍有支撑课程未完成并锁定。' }}
+          {{ dashboardData.blockReason || '仍有支撑课程未完成计算并锁定。' }}
         </template>
       </el-alert>
 
@@ -104,7 +84,7 @@
         show-icon
         class="aggregation-warning"
       >
-        <template #title>当前筛选范围内全部支撑课程均已锁定，可以执行专业级全局达成度计算。</template>
+        <template #title>当前年级涉及的全部支撑课程均已锁定，可以执行专业级全局达成度计算。</template>
       </el-alert>
 
       <EmptyState
@@ -201,15 +181,8 @@ const aggregating = ref(false)
 const unlockingClassId = ref(null)
 const loadError = ref('')
 
-const filterOptions = reactive({
-  majors: [],
-})
-
-const filters = reactive({
-  majorId: null,
-  gradeYear: null,
-  termId: null,
-})
+const filterOptions = reactive({ majors: [] })
+const filters = reactive({ majorId: null, gradeYear: null })
 
 const dashboardData = reactive({
   courses: [],
@@ -217,6 +190,8 @@ const dashboardData = reactive({
   unlockedWarning: false,
   blockReason: '',
   majorResultExists: false,
+  termId: null,
+  termCode: '',
 })
 
 const majorResult = reactive({
@@ -224,13 +199,9 @@ const majorResult = reactive({
   indicatorAchievements: [],
 })
 
-const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear && filters.termId))
+const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear))
 const selectedMajor = computed(() => filterOptions.majors.find((item) => item.majorId === filters.majorId) || null)
-const selectedGradeScope = computed(() =>
-  selectedMajor.value?.gradeYearScopes?.find((item) => item.gradeYear === filters.gradeYear) || null,
-)
 const currentGradeYears = computed(() => (selectedMajor.value?.gradeYearScopes || []).map((item) => item.gradeYear))
-const currentTerms = computed(() => selectedGradeScope.value?.terms || [])
 const courses = computed(() => dashboardData.courses || [])
 const lockedCount = computed(() => courses.value.filter((c) => c.calcStatus === 'locked').length)
 const computedCount = computed(() => courses.value.filter((c) => c.calcStatus === 'calculating').length)
@@ -256,7 +227,7 @@ function buildPayload() {
   return {
     majorId: filters.majorId,
     gradeYear: filters.gradeYear,
-    termId: filters.termId,
+    termId: dashboardData.termId,
   }
 }
 
@@ -274,10 +245,6 @@ function hydrateDependentFilters() {
   if (!years.includes(filters.gradeYear)) {
     filters.gradeYear = years[0] || null
   }
-  const terms = currentTerms.value
-  if (!terms.some((item) => item.termId === filters.termId)) {
-    filters.termId = terms[0]?.termId || null
-  }
 }
 
 function clearResults() {
@@ -286,6 +253,8 @@ function clearResults() {
   dashboardData.unlockedWarning = false
   dashboardData.blockReason = ''
   dashboardData.majorResultExists = false
+  dashboardData.termId = null
+  dashboardData.termCode = ''
   majorResult.resultReady = false
   majorResult.indicatorAchievements = []
 }
@@ -297,7 +266,6 @@ function handleMajorChange() {
 }
 
 function handleGradeYearChange() {
-  hydrateDependentFilters()
   clearResults()
   loadDashboard()
 }
@@ -328,9 +296,11 @@ async function loadDashboard() {
     dashboardData.unlockedWarning = data?.unlockedWarning ?? false
     dashboardData.blockReason = data?.blockReason || ''
     dashboardData.majorResultExists = data?.majorResultExists ?? false
+    dashboardData.termId = data?.termId ?? null
+    dashboardData.termCode = data?.termCode || ''
     await loadMajorResult()
   } catch (error) {
-    loadError.value = error.message || '加载宏观看板失败'
+    loadError.value = error.message || '加载专业级计算看板失败'
     clearResults()
   } finally {
     loading.value = false
@@ -354,7 +324,7 @@ async function calculateMajor() {
 async function approveUnlock(row) {
   try {
     await ElMessageBox.confirm(
-      `将解锁教学班 ${row.classCode}，并清空该班已生成的课程级结果，后续需重新导入成绩并重新计算。是否继续？`,
+      `将解锁教学班 ${row.classCode}，并清空该班已生成的课程级结果，后续需修改成绩重新计算。是否继续？`,
       '执行解锁',
       {
         confirmButtonText: '确认解锁',

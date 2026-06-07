@@ -13,6 +13,7 @@ import com.oss.osscourse.entity.Course;
 import com.oss.osscourse.entity.CourseIndicatorAchievement;
 import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.CourseObjectiveAchievement;
+import com.oss.osscourse.entity.GraduationRequirement;
 import com.oss.osscourse.entity.IndicatorPoint;
 import com.oss.osscourse.entity.Major;
 import com.oss.osscourse.entity.MajorIndicatorAchievement;
@@ -27,14 +28,15 @@ import com.oss.osscourse.mapper.CourseIndicatorAchievementMapper;
 import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.CourseObjectiveAchievementMapper;
+import com.oss.osscourse.mapper.GraduationRequirementMapper;
 import com.oss.osscourse.mapper.IndicatorPointMapper;
 import com.oss.osscourse.mapper.MajorIndicatorAchievementMapper;
 import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.mapper.StudentAssessmentScoreMapper;
 import com.oss.osscourse.mapper.StudentClassMapper;
+import com.oss.osscourse.mapper.StudentObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.TeacherMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
-import com.oss.osscourse.mapper.StudentObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.UnlockAuditLogMapper;
 import com.oss.osscourse.service.AssessmentQueryService;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +65,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
     private final StudentClassMapper studentClassMapper;
     private final StudentAssessmentScoreMapper sasMapper;
     private final MajorIndicatorAchievementMapper miaMapper;
+    private final GraduationRequirementMapper graduationRequirementMapper;
     private final IndicatorPointMapper indicatorPointMapper;
     private final CourseObjectiveAchievementMapper coaMapper;
     private final CourseIndicatorAchievementMapper ciaMapper;
@@ -75,10 +78,6 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                 new LambdaQueryWrapper<Major>().eq(Major::getStatus, 1).orderByAsc(Major::getMajorName));
         List<CourseMajor> courseMajors = courseMajorMapper.selectList(
                 new LambdaQueryWrapper<CourseMajor>().orderByAsc(CourseMajor::getMajorId).orderByDesc(CourseMajor::getGradeYear));
-        List<AcademicTerm> allTerms = academicTermMapper.selectList(
-                new LambdaQueryWrapper<AcademicTerm>().orderByDesc(AcademicTerm::getTermCode));
-        Map<Long, AcademicTerm> termMap = allTerms.stream()
-                .collect(Collectors.toMap(AcademicTerm::getTermId, item -> item));
 
         List<Integer> globalGradeYears = courseMajors.stream()
                 .map(CourseMajor::getGradeYear)
@@ -87,54 +86,22 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                 .sorted(Comparator.reverseOrder())
                 .toList();
 
-        List<AssessmentFilterOptionsResponse.TermOption> globalTerms = allTerms.stream()
-                .map(term -> AssessmentFilterOptionsResponse.TermOption.builder()
-                        .termId(term.getTermId())
-                        .termCode(term.getTermCode())
-                        .build())
-                .toList();
-
         List<AssessmentFilterOptionsResponse.MajorOption> majors = activeMajors.stream()
                 .map(major -> {
-                    List<CourseMajor> majorCourseMajors = courseMajors.stream()
+                    List<Integer> gradeYears = courseMajors.stream()
                             .filter(item -> Objects.equals(item.getMajorId(), major.getMajorId()))
+                            .map(CourseMajor::getGradeYear)
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .sorted(Comparator.reverseOrder())
                             .toList();
-                    Map<Integer, List<Long>> gradeCourseMap = majorCourseMajors.stream()
-                            .filter(item -> item.getGradeYear() != null)
-                            .collect(Collectors.groupingBy(
-                                    CourseMajor::getGradeYear,
-                                    LinkedHashMap::new,
-                                    Collectors.mapping(CourseMajor::getCourseId, Collectors.toList())));
 
-                    List<AssessmentFilterOptionsResponse.GradeYearScope> gradeYearScopes = new ArrayList<>();
-                    for (Map.Entry<Integer, List<Long>> entry : gradeCourseMap.entrySet()) {
-                        List<Long> courseIds = entry.getValue().stream().filter(Objects::nonNull).distinct().toList();
-                        List<AssessmentFilterOptionsResponse.TermOption> terms = courseIds.isEmpty()
-                                ? List.of()
-                                : teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                                        .select(TeachingClass::getTermId)
-                                        .in(TeachingClass::getCourseId, courseIds)
-                                        .eq(TeachingClass::getGradeYear, entry.getKey())
-                                        .groupBy(TeachingClass::getTermId)
-                                        .orderByDesc(TeachingClass::getTermId))
-                                .stream()
-                                .map(TeachingClass::getTermId)
-                                .filter(Objects::nonNull)
-                                .distinct()
-                                .map(termMap::get)
-                                .filter(Objects::nonNull)
-                                .sorted(Comparator.comparing(AcademicTerm::getTermCode).reversed())
-                                .map(term -> AssessmentFilterOptionsResponse.TermOption.builder()
-                                        .termId(term.getTermId())
-                                        .termCode(term.getTermCode())
-                                        .build())
-                                .toList();
-                        gradeYearScopes.add(AssessmentFilterOptionsResponse.GradeYearScope.builder()
-                                .gradeYear(entry.getKey())
-                                .terms(terms)
-                                .build());
-                    }
-                    gradeYearScopes.sort(Comparator.comparing(AssessmentFilterOptionsResponse.GradeYearScope::getGradeYear).reversed());
+                    List<AssessmentFilterOptionsResponse.GradeYearScope> gradeYearScopes = gradeYears.stream()
+                            .map(year -> AssessmentFilterOptionsResponse.GradeYearScope.builder()
+                                    .gradeYear(year)
+                                    .terms(List.of())
+                                    .build())
+                            .toList();
 
                     return AssessmentFilterOptionsResponse.MajorOption.builder()
                             .majorId(major.getMajorId())
@@ -147,28 +114,22 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         return AssessmentFilterOptionsResponse.builder()
                 .majors(majors)
                 .gradeYears(globalGradeYears)
-                .terms(globalTerms)
+                .terms(List.of())
                 .build();
     }
 
     @Override
     public MacroDashboardResponse getMacroDashboard(MacroDashboardRequest request) {
         Major major = requireMajor(request.getMajorId());
-        AcademicTerm term = requireTerm(request.getTermId());
-
-        List<CourseMajor> courseMajors = courseMajorMapper.selectList(
-                new LambdaQueryWrapper<CourseMajor>()
-                        .eq(CourseMajor::getMajorId, request.getMajorId())
-                        .eq(CourseMajor::getGradeYear, request.getGradeYear()));
-        List<Long> courseIds = courseMajors.stream().map(CourseMajor::getCourseId).toList();
+        List<Long> courseIds = listSupportCourseIds(request.getMajorId(), request.getGradeYear());
 
         if (courseIds.isEmpty()) {
             return MacroDashboardResponse.builder()
                     .majorId(major.getMajorId())
                     .majorName(major.getMajorName())
                     .gradeYear(request.getGradeYear())
-                    .termId(term.getTermId())
-                    .termCode(term.getTermCode())
+                    .termId(null)
+                    .termCode(null)
                     .aggregationAllowed(false)
                     .unlockedWarning(true)
                     .blockReason("当前专业在该年级下没有配置支撑课程")
@@ -177,34 +138,27 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                     .build();
         }
 
-        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(
-                new LambdaQueryWrapper<TeachingClass>()
-                        .in(TeachingClass::getCourseId, courseIds)
-                        .eq(TeachingClass::getGradeYear, request.getGradeYear())
-                        .eq(TeachingClass::getTermId, request.getTermId())
-                        .orderByAsc(TeachingClass::getCourseId)
-                        .orderByAsc(TeachingClass::getClassCode));
-
+        List<TeachingClass> teachingClasses = listSupportTeachingClasses(courseIds, request.getGradeYear());
         if (teachingClasses.isEmpty()) {
             return MacroDashboardResponse.builder()
                     .majorId(major.getMajorId())
                     .majorName(major.getMajorName())
                     .gradeYear(request.getGradeYear())
-                    .termId(term.getTermId())
-                    .termCode(term.getTermCode())
+                    .termId(null)
+                    .termCode(null)
                     .aggregationAllowed(false)
                     .unlockedWarning(true)
-                    .blockReason("当前筛选条件下没有教学班数据")
+                    .blockReason("当前专业在该年级下没有教学班数据")
                     .majorResultExists(false)
                     .courses(List.of())
                     .build();
         }
 
         Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
-                .collect(Collectors.toMap(Course::getCourseId, course -> course));
+                .collect(Collectors.toMap(Course::getCourseId, item -> item, (left, right) -> left, HashMap::new));
         Map<Long, Teacher> teacherMap = loadTeacherMap(teachingClasses);
         Map<Long, UnlockAuditLog> pendingUnlockMap = loadPendingUnlockMap(teachingClasses);
-        Map<Long, Teacher> requestTeacherMap = loadRequestTeacherMap(pendingUnlockMap.values().stream().toList());
+        Map<Long, Teacher> requestTeacherMap = loadRequestTeacherMap(new ArrayList<>(pendingUnlockMap.values()));
 
         List<MacroDashboardResponse.CourseRow> courses = teachingClasses.stream()
                 .map(teachingClass -> {
@@ -236,18 +190,25 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                 })
                 .toList();
 
+        Long latestTermId = teachingClasses.stream()
+                .map(TeachingClass::getTermId)
+                .filter(Objects::nonNull)
+                .max(Long::compareTo)
+                .orElse(null);
+
         boolean aggregationAllowed = !courses.isEmpty()
-                && courses.stream().allMatch(course -> "locked".equals(course.getCalcStatus()));
+                && courses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
+
         return MacroDashboardResponse.builder()
                 .majorId(major.getMajorId())
                 .majorName(major.getMajorName())
                 .gradeYear(request.getGradeYear())
-                .termId(term.getTermId())
-                .termCode(term.getTermCode())
+                .termId(latestTermId)
+                .termCode(resolveTermCode(latestTermId))
                 .aggregationAllowed(aggregationAllowed)
                 .unlockedWarning(!aggregationAllowed)
                 .blockReason(aggregationAllowed ? null : "存在未完成计算或未锁定的教学班")
-                .majorResultExists(hasMajorResult(request.getMajorId(), request.getGradeYear(), request.getTermId()))
+                .majorResultExists(hasMajorResult(request.getMajorId(), request.getGradeYear()))
                 .courses(courses)
                 .build();
     }
@@ -255,35 +216,50 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
     @Override
     public MajorCalcResultResponse getMajorCalcResult(MacroDashboardRequest request) {
         Major major = requireMajor(request.getMajorId());
-        AcademicTerm term = requireTerm(request.getTermId());
+        List<Long> courseIds = listSupportCourseIds(request.getMajorId(), request.getGradeYear());
+        List<TeachingClass> teachingClasses = listSupportTeachingClasses(courseIds, request.getGradeYear());
+        boolean aggregationAllowed = !teachingClasses.isEmpty()
+                && teachingClasses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
 
-        List<MajorIndicatorAchievement> results = miaMapper.selectList(
-                new LambdaQueryWrapper<MajorIndicatorAchievement>()
-                        .eq(MajorIndicatorAchievement::getMajorId, request.getMajorId())
-                        .eq(MajorIndicatorAchievement::getGradeYear, request.getGradeYear())
-                        .eq(MajorIndicatorAchievement::getTermId, request.getTermId())
-                        .orderByAsc(MajorIndicatorAchievement::getIpId));
+        if (!aggregationAllowed) {
+            return MajorCalcResultResponse.builder()
+                    .majorId(major.getMajorId())
+                    .majorName(major.getMajorName())
+                    .gradeYear(request.getGradeYear())
+                    .resultReady(false)
+                    .message("当前仍有支撑课程未完成计算或未锁定，专业级结果暂不展示")
+                    .indicatorAchievements(List.of())
+                    .build();
+        }
 
-        List<MajorCalcResponse.IndicatorAchievement> indicatorAchievements = results.stream()
-                .map(item -> {
-                    IndicatorPoint indicatorPoint = indicatorPointMapper.selectById(item.getIpId());
+        List<IndicatorPoint> configuredIndicators = listConfiguredIndicators(request.getMajorId(), request.getGradeYear());
+        List<MajorIndicatorAchievement> snapshotResults = listLatestMajorResults(request.getMajorId(), request.getGradeYear());
+        Map<Long, MajorIndicatorAchievement> resultMap = snapshotResults.stream()
+                .collect(Collectors.toMap(MajorIndicatorAchievement::getIpId, item -> item, (left, right) -> right, LinkedHashMap::new));
+
+        List<MajorCalcResponse.IndicatorAchievement> indicatorAchievements = configuredIndicators.stream()
+                .map(indicatorPoint -> {
+                    MajorIndicatorAchievement result = resultMap.get(indicatorPoint.getIpId());
                     return MajorCalcResponse.IndicatorAchievement.builder()
-                            .ipId(item.getIpId())
-                            .ipCode(indicatorPoint == null ? "" : indicatorPoint.getIpCode())
-                            .ipDescription(indicatorPoint == null ? "" : indicatorPoint.getIpDescription())
-                            .finalAchievement(item.getFinalAchievement())
+                            .ipId(indicatorPoint.getIpId())
+                            .ipCode(indicatorPoint.getIpCode())
+                            .ipDescription(indicatorPoint.getIpDescription())
+                            .finalAchievement(result == null ? null : result.getFinalAchievement())
                             .build();
                 })
                 .toList();
 
+        Long snapshotTermId = snapshotResults.isEmpty() ? null : snapshotResults.get(0).getTermId();
         return MajorCalcResultResponse.builder()
                 .majorId(major.getMajorId())
                 .majorName(major.getMajorName())
                 .gradeYear(request.getGradeYear())
-                .termId(term.getTermId())
-                .termCode(term.getTermCode())
-                .resultReady(!indicatorAchievements.isEmpty())
-                .message(indicatorAchievements.isEmpty() ? "当前筛选条件下暂无专业级汇总结果" : "专业级汇总结果已生成")
+                .termId(snapshotTermId)
+                .termCode(resolveTermCode(snapshotTermId))
+                .resultReady(indicatorAchievements.stream().anyMatch(item -> item.getFinalAchievement() != null))
+                .message(indicatorAchievements.stream().anyMatch(item -> item.getFinalAchievement() != null)
+                        ? "专业级汇总结果已生成"
+                        : "当前年级尚未生成专业级汇总结果")
                 .indicatorAchievements(indicatorAchievements)
                 .build();
     }
@@ -332,8 +308,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         if (!affectedMajorIds.isEmpty()) {
             miaMapper.delete(new LambdaQueryWrapper<MajorIndicatorAchievement>()
                     .in(MajorIndicatorAchievement::getMajorId, affectedMajorIds)
-                    .eq(MajorIndicatorAchievement::getGradeYear, teachingClass.getGradeYear())
-                    .eq(MajorIndicatorAchievement::getTermId, teachingClass.getTermId()));
+                    .eq(MajorIndicatorAchievement::getGradeYear, teachingClass.getGradeYear()));
         }
     }
 
@@ -345,12 +320,12 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         return major;
     }
 
-    private AcademicTerm requireTerm(Long termId) {
-        AcademicTerm term = academicTermMapper.selectById(termId);
-        if (term == null) {
-            throw new BusinessException(404, "学期不存在");
+    private String resolveTermCode(Long termId) {
+        if (termId == null) {
+            return null;
         }
-        return term;
+        AcademicTerm term = academicTermMapper.selectById(termId);
+        return term == null ? null : term.getTermCode();
     }
 
     private Map<Long, Teacher> loadTeacherMap(List<TeachingClass> teachingClasses) {
@@ -363,11 +338,14 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
             return Map.of();
         }
         return teacherMapper.selectBatchIds(teacherIds).stream()
-                .collect(Collectors.toMap(Teacher::getId, teacher -> teacher, (left, right) -> left, HashMap::new));
+                .collect(Collectors.toMap(Teacher::getId, item -> item, (left, right) -> left, HashMap::new));
     }
 
     private Map<Long, UnlockAuditLog> loadPendingUnlockMap(List<TeachingClass> teachingClasses) {
-        List<Long> classIds = teachingClasses.stream().map(TeachingClass::getClassId).filter(Objects::nonNull).toList();
+        List<Long> classIds = teachingClasses.stream()
+                .map(TeachingClass::getClassId)
+                .filter(Objects::nonNull)
+                .toList();
         if (classIds.isEmpty()) {
             return Map.of();
         }
@@ -393,15 +371,73 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
             return Map.of();
         }
         return teacherMapper.selectBatchIds(teacherIds).stream()
-                .collect(Collectors.toMap(Teacher::getId, teacher -> teacher, (left, right) -> left, LinkedHashMap::new));
+                .collect(Collectors.toMap(Teacher::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
     }
 
-    private boolean hasMajorResult(Long majorId, Integer gradeYear, Long termId) {
+    private boolean hasMajorResult(Long majorId, Integer gradeYear) {
         Long count = miaMapper.selectCount(new LambdaQueryWrapper<MajorIndicatorAchievement>()
                 .eq(MajorIndicatorAchievement::getMajorId, majorId)
-                .eq(MajorIndicatorAchievement::getGradeYear, gradeYear)
-                .eq(MajorIndicatorAchievement::getTermId, termId));
+                .eq(MajorIndicatorAchievement::getGradeYear, gradeYear));
         return count != null && count > 0;
+    }
+
+    private List<Long> listSupportCourseIds(Long majorId, Integer gradeYear) {
+        return courseMajorMapper.selectList(new LambdaQueryWrapper<CourseMajor>()
+                        .eq(CourseMajor::getMajorId, majorId)
+                        .eq(CourseMajor::getGradeYear, gradeYear))
+                .stream()
+                .map(CourseMajor::getCourseId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<TeachingClass> listSupportTeachingClasses(List<Long> courseIds, Integer gradeYear) {
+        if (courseIds == null || courseIds.isEmpty()) {
+            return List.of();
+        }
+        return teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                .in(TeachingClass::getCourseId, courseIds)
+                .eq(TeachingClass::getGradeYear, gradeYear)
+                .orderByAsc(TeachingClass::getTermId)
+                .orderByAsc(TeachingClass::getCourseId)
+                .orderByAsc(TeachingClass::getClassCode));
+    }
+
+    private List<IndicatorPoint> listConfiguredIndicators(Long majorId, Integer gradeYear) {
+        List<Long> grIds = graduationRequirementMapper.selectList(new LambdaQueryWrapper<GraduationRequirement>()
+                        .eq(GraduationRequirement::getMajorId, majorId)
+                        .eq(GraduationRequirement::getGradeYear, gradeYear)
+                        .eq(GraduationRequirement::getStatus, 1)
+                        .orderByAsc(GraduationRequirement::getGrId))
+                .stream()
+                .map(GraduationRequirement::getGrId)
+                .toList();
+        if (grIds.isEmpty()) {
+            return List.of();
+        }
+        return indicatorPointMapper.selectList(new LambdaQueryWrapper<IndicatorPoint>()
+                .in(IndicatorPoint::getGrId, grIds)
+                .eq(IndicatorPoint::getStatus, 1)
+                .orderByAsc(IndicatorPoint::getGrId)
+                .orderByAsc(IndicatorPoint::getIpCode));
+    }
+
+    private List<MajorIndicatorAchievement> listLatestMajorResults(Long majorId, Integer gradeYear) {
+        List<MajorIndicatorAchievement> allResults = miaMapper.selectList(new LambdaQueryWrapper<MajorIndicatorAchievement>()
+                .eq(MajorIndicatorAchievement::getMajorId, majorId)
+                .eq(MajorIndicatorAchievement::getGradeYear, gradeYear)
+                .orderByDesc(MajorIndicatorAchievement::getUpdatedAt)
+                .orderByDesc(MajorIndicatorAchievement::getTermId)
+                .orderByAsc(MajorIndicatorAchievement::getIpId));
+        if (allResults.isEmpty()) {
+            return List.of();
+        }
+        Long snapshotTermId = allResults.get(0).getTermId();
+        return allResults.stream()
+                .filter(item -> Objects.equals(item.getTermId(), snapshotTermId))
+                .sorted(Comparator.comparing(MajorIndicatorAchievement::getIpId))
+                .toList();
     }
 
     private String resolveCourseBlockReason(String calcStatus) {
