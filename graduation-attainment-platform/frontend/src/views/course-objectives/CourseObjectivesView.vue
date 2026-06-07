@@ -105,6 +105,7 @@
                   <el-button link type="primary" @click="goToTab('assessment-points', row)">进入考核点配置</el-button>
                   <el-popconfirm
                     :title="buildDeleteTitle(row)"
+                    popper-class="objective-delete-popconfirm"
                     confirm-button-text="确认删除"
                     cancel-button-text="取消"
                     @confirm="deleteObjective(row)"
@@ -499,5 +500,16 @@ onMounted(async () => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
+}
+
+:deep(.objective-delete-popconfirm .el-popconfirm__action) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+:deep(.objective-delete-popconfirm .el-popconfirm__action .el-button + .el-button) {
+  margin-left: 8px;
 }
 </style>
