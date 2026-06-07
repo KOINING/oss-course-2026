@@ -11,11 +11,11 @@
         </div>
       </template>
 
-      <NoPermission v-if="!hasAnyAccess" required-role="课程主讲教师、专业负责人或教务管理人员" />
+      <NoPermission v-if="!hasAnyAccess" required-role="课程主讲教师、专业负责人或教务管理员" />
 
       <template v-else>
         <el-tabs v-if="isInstructor" v-model="instructorTab" class="assessment-tabs">
-          <el-tab-pane label="成绩模板预览" name="template" lazy>
+          <el-tab-pane label="成绩预览" name="template" lazy>
             <TemplatePreview />
           </el-tab-pane>
           <el-tab-pane label="成绩录入" name="import" lazy>

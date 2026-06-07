@@ -15,12 +15,38 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import CourseObjectivesView from './CourseObjectivesView.vue'
 import CourseWeightView from '@/views/requirements/CourseWeightView.vue'
 import AssessmentPointConfig from '@/views/assessment/AssessmentPointConfig.vue'
 
-const activeTab = ref('objectives')
+const route = useRoute()
+const router = useRouter()
+const validTabs = new Set(['objectives', 'weights', 'assessment-points'])
+
+const activeTab = ref(validTabs.has(route.query.tab) ? route.query.tab : 'objectives')
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (validTabs.has(tab) && tab !== activeTab.value) {
+      activeTab.value = tab
+    }
+  },
+)
+
+watch(activeTab, (tab) => {
+  if (route.query.tab === tab) {
+    return
+  }
+  router.replace({
+    query: {
+      ...route.query,
+      tab,
+    },
+  })
+})
 </script>
 
 <style scoped>

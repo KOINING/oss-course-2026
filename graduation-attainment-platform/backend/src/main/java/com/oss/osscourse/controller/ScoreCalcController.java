@@ -4,6 +4,7 @@ import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.achievement.CourseCalcRequest;
 import com.oss.osscourse.dto.achievement.CourseCalcResponse;
 import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
+import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
@@ -78,6 +79,13 @@ public class ScoreCalcController {
     @Operation(summary = "课程级达成度计算")
     public Result<CourseCalcResponse> calcCourseAchievement(@Valid @RequestBody CourseCalcRequest request) {
         return Result.ok(scoreCalcService.calcCourseAchievement(request));
+    }
+
+    @PostMapping("/getCourseObjectiveDashboard")
+    @Operation(summary = "查询课程目标达成看板")
+    public Result<CourseObjectiveDashboardResponse> getCourseObjectiveDashboard(
+            @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
+        return Result.ok(scoreCalcService.getCourseObjectiveDashboard(classId));
     }
 
     @PostMapping("/calcMajorAchievement")

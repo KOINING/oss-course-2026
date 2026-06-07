@@ -9,10 +9,10 @@
         @change="handleClassChange"
       >
         <el-option
-          v-for="c in classOptions"
-          :key="c.classId"
-          :label="`${c.classCode} - ${c.courseName || c.courseCode}`"
-          :value="c.classId"
+          v-for="item in classOptions"
+          :key="item.classId"
+          :label="`${item.classCode} - ${item.courseName || item.courseCode}`"
+          :value="item.classId"
         />
       </el-select>
 
@@ -28,11 +28,6 @@
 
     <ErrorState v-if="loadError" :message="loadError" @retry="loadClasses" />
 
-    <EmptyState
-      v-else-if="!selectedClassId"
-      description="请选择一个教学班以导入成绩"
-    />
-
     <template v-else>
       <el-alert
         v-if="scoreContext?.blockReasons?.length"
@@ -40,7 +35,7 @@
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班尚未满足导入前置条件</template>
+        <template #title>当前教学班尚未满足成绩录入前置条件</template>
         <template #default>
           <ul class="block-reason-list">
             <li v-for="reason in scoreContext.blockReasons" :key="reason">{{ reason }}</li>
@@ -48,7 +43,7 @@
         </template>
       </el-alert>
 
-      <div class="import-layout" v-if="!calcLocked">
+      <div class="import-layout">
         <div class="import-upload-area">
           <el-alert
             type="info"
@@ -57,7 +52,7 @@
             style="margin-bottom: 16px"
           >
             <template #title>
-              请使用系统模板录入成绩后上传。系统会先做预校验，再保存成绩，最后执行课程级计算并锁定。
+              请使用系统模板录入成绩后上传。系统先做预校验，再保存原始成绩；当全部学生的全部考核点成绩都已补齐后，教师再在右侧执行课程级计算并锁定。
             </template>
           </el-alert>
 
@@ -95,14 +90,6 @@
               保存成绩
             </el-button>
             <el-button
-              type="warning"
-              :loading="calculating"
-              :disabled="!canCalculate"
-              @click="calculateCourse"
-            >
-              计算并锁定
-            </el-button>
-            <el-button
               :disabled="!scoreFile && importResult.summary.totalCount === 0"
               @click="clearImportState"
             >
@@ -131,6 +118,33 @@
             :loading="previewing || saving"
             title="成绩导入预校验结果"
           />
+
+          <el-card shadow="never">
+            <template #header>
+              <div class="score-preview-header">
+                <div>
+                  <span>当前教学班成绩预览</span>
+                  <div class="score-preview-meta">
+                    <span>已录入 {{ filledScoreCount }}/{{ expectedScoreCount }} 个成绩单元格</span>
+                    <el-tag :type="scoreSheetComplete ? 'success' : 'warning'" effect="plain" size="small">
+                      {{ scoreSheetComplete ? '成绩已补齐' : '仍有缺失成绩' }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <EmptyState
+              v-if="!selectedClassId || !scoreRows.length || !assessmentPoints.length"
+              description="当前教学班暂无可展示的成绩数据"
+            />
+            <ScoreSheetTable
+              v-else
+              :rows="scoreRows"
+              :headers="assessmentPoints"
+              :max-height="420"
+            />
+          </el-card>
 
           <el-card
             v-if="courseCalcResult"
@@ -167,33 +181,6 @@
           </el-card>
         </div>
       </div>
-
-      <div v-else class="calc-locked-notice">
-        <el-result
-          icon="success"
-          title="当前教学班已锁定"
-          :sub-title="`当前教学班计算状态为「${calcStatusLabel}」，教师端不能继续修改成绩。`"
-        />
-        <el-card
-          v-if="courseCalcResult"
-          class="calc-result-card"
-          shadow="never"
-        >
-          <template #header>
-            <div class="calc-result-header">
-              <span>最近一次课程级计算结果</span>
-              <el-tag type="success" effect="light">已锁定</el-tag>
-            </div>
-          </template>
-          <el-table :data="courseCalcResult.objectiveAchievements || []" size="small" border>
-            <el-table-column prop="objectiveCode" label="课程目标" width="120" />
-            <el-table-column prop="description" label="目标描述" min-width="220" />
-            <el-table-column prop="averageAchievement" label="班级平均达成度" width="160">
-              <template #default="{ row }">{{ formatPercent(row.averageAchievement) }}</template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </div>
     </template>
   </div>
 </template>
@@ -205,12 +192,13 @@ import { UploadFilled } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ImportResultPreview from '@/components/import/ImportResultPreview.vue'
+import ScoreSheetTable from '@/components/assessment/ScoreSheetTable.vue'
 import {
-  listInstructorTeachingClassesApi,
-  importScorePreviewApi,
   getScoreImportContextApi,
+  getTemplatePreviewDataApi,
+  importScorePreviewApi,
+  listInstructorTeachingClassesApi,
   saveScoresApi,
-  calculateCourseLevelApi,
 } from '@/api/assessment'
 
 const classLoading = ref(false)
@@ -224,10 +212,10 @@ const uploadRef = ref(null)
 const scoreFile = ref(null)
 const previewing = ref(false)
 const saving = ref(false)
-const calculating = ref(false)
-
 const previewPayload = ref([])
 const courseCalcResult = ref(null)
+const scoreRows = ref([])
+const assessmentPoints = ref([])
 
 const importResult = reactive({
   summary: { totalCount: 0, successCount: 0, failureCount: 0 },
@@ -254,21 +242,36 @@ const calcStatusType = computed(() => {
   return map[scoreContext.value?.calcStatus] || 'info'
 })
 
-const calcLocked = computed(() => scoreContext.value?.calcStatus === 'locked')
 const canPreviewImport = computed(() => !!scoreFile.value && !!selectedClassId.value && !!scoreContext.value?.canImportScore)
-const canSaveScores = computed(() => previewPayload.value.length > 0 && importResult.summary.failureCount === 0 && !calcLocked.value)
-const canCalculate = computed(() =>
-  !!selectedClassId.value && !calcLocked.value && scoreContext.value?.calcStatus === 'score_imported',
+const canSaveScores = computed(() => previewPayload.value.length > 0 && importResult.summary.failureCount === 0)
+const expectedScoreCount = computed(() => scoreRows.value.length * assessmentPoints.value.length)
+const filledScoreCount = computed(() =>
+  scoreRows.value.reduce(
+    (total, row) => total + (row.scores || []).filter((item) => item !== null && item !== undefined && item !== '').length,
+    0,
+  ),
 )
-
+const scoreSheetComplete = computed(() => expectedScoreCount.value > 0 && filledScoreCount.value === expectedScoreCount.value)
 async function loadClasses() {
   classLoading.value = true
   loadError.value = ''
   try {
     classOptions.value = (await listInstructorTeachingClassesApi()) || []
+    if (!classOptions.value.length) {
+      selectedClassId.value = null
+      contextInfo.value = null
+      scoreRows.value = []
+      assessmentPoints.value = []
+      return
+    }
+    if (!selectedClassId.value || !classOptions.value.some((item) => item.classId === selectedClassId.value)) {
+      selectedClassId.value = classOptions.value[0].classId
+    }
+    await handleClassChange()
   } catch (error) {
     loadError.value = error.message || '加载教学班列表失败'
     classOptions.value = []
+    selectedClassId.value = null
   } finally {
     classLoading.value = false
   }
@@ -277,15 +280,38 @@ async function loadClasses() {
 async function loadContext() {
   if (!selectedClassId.value) return
   scoreContext.value = await getScoreImportContextApi({ classId: selectedClassId.value })
-  contextInfo.value = scoreContext.value?.teachingClass || classOptions.value.find((item) => item.classId === selectedClassId.value) || null
+  contextInfo.value = scoreContext.value?.teachingClass
+    || classOptions.value.find((item) => item.classId === selectedClassId.value)
+    || null
+}
+
+async function loadScoreSheet() {
+  if (!selectedClassId.value) {
+    scoreRows.value = []
+    assessmentPoints.value = []
+    return
+  }
+
+  try {
+    const data = await getTemplatePreviewDataApi({ classId: selectedClassId.value })
+    scoreRows.value = data.rows || []
+    assessmentPoints.value = data.dynamicHeaders || []
+  } catch (error) {
+    scoreRows.value = []
+    assessmentPoints.value = []
+    ElMessage.error(error.message || '加载成绩预览失败')
+  }
 }
 
 async function handleClassChange() {
-  clearFile()
-  resetResult()
-  previewPayload.value = []
-  courseCalcResult.value = null
+  clearImportState()
   await loadContext()
+  if (scoreContext.value?.canGenerateTemplate) {
+    await loadScoreSheet()
+  } else {
+    scoreRows.value = []
+    assessmentPoints.value = []
+  }
 }
 
 function beforeUpload(file) {
@@ -338,7 +364,6 @@ async function previewImport() {
   previewing.value = true
   resetResult()
   previewPayload.value = []
-  courseCalcResult.value = null
   try {
     const fileBase64 = await readFileAsBase64(scoreFile.value.raw)
     const result = await importScorePreviewApi({
@@ -377,26 +402,12 @@ async function saveImportedScores() {
       scores: previewPayload.value,
     })
     await loadContext()
-    ElMessage.success('成绩保存成功，可以继续执行课程级计算')
+    await loadScoreSheet()
+    ElMessage.success('成绩保存成功，请在右侧确认成绩后执行课程级计算')
   } catch (error) {
     ElMessage.error(error.message || '成绩保存失败')
   } finally {
     saving.value = false
-  }
-}
-
-async function calculateCourse() {
-  if (!canCalculate.value) return
-  calculating.value = true
-  try {
-    courseCalcResult.value = await calculateCourseLevelApi({ classId: selectedClassId.value })
-    await loadContext()
-    clearImportState()
-    ElMessage.success('课程级计算完成，当前教学班已锁定')
-  } catch (error) {
-    ElMessage.error(error.message || '课程级计算失败')
-  } finally {
-    calculating.value = false
   }
 }
 
@@ -493,17 +504,21 @@ loadClasses()
   border-radius: 8px;
 }
 
-.calc-result-header {
+.calc-result-header,
+.score-preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.calc-locked-notice {
+.score-preview-meta {
+  margin-top: 6px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 12px;
 }
 </style>

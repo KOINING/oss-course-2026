@@ -4,22 +4,38 @@
       <el-select
         v-model="selectedCourseId"
         placeholder="选择课程"
-        clearable
         style="width: 240px"
         @change="handleCourseChange"
       >
         <el-option
-          v-for="c in courseOptions"
-          :key="c.courseId"
-          :label="`${c.courseCode} - ${c.courseName}`"
-          :value="c.courseId"
+          v-for="course in courseOptions"
+          :key="course.courseId"
+          :label="`${course.courseCode} - ${course.courseName}`"
+          :value="course.courseId"
         />
       </el-select>
+
+      <el-select
+        v-model="selectedClassId"
+        placeholder="选择教学班"
+        style="width: 260px"
+        :disabled="!selectedCourseId"
+        @change="handleClassChange"
+      >
+        <el-option
+          v-for="item in currentClassOptions"
+          :key="item.classId"
+          :label="`${item.classCode} - ${item.className || item.courseName}`"
+          :value="item.classId"
+        />
+      </el-select>
+
       <el-select
         v-model="filters.coId"
         placeholder="按课程目标筛选"
         clearable
-        style="width: 240px"
+        style="width: 260px"
+        :disabled="!selectedCourseId"
         @change="loadAssessmentPoints"
       >
         <el-option
@@ -29,6 +45,13 @@
           :value="obj.coId"
         />
       </el-select>
+    </div>
+
+    <div v-if="contextInfo" class="context-info">
+      <el-tag type="info" effect="plain">{{ contextInfo.majorName || '-' }}</el-tag>
+      <el-tag type="info" effect="plain">{{ contextInfo.gradeYear ? `${contextInfo.gradeYear}级` : '-' }}</el-tag>
+      <el-tag type="info" effect="plain">{{ contextInfo.termCode || '-' }}</el-tag>
+      <el-tag type="success" effect="plain">{{ contextInfo.classCode || '-' }}</el-tag>
     </div>
 
     <div class="table-toolbar">
@@ -41,13 +64,13 @@
     <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
 
     <EmptyState
-      v-else-if="!loading && points.length === 0 && selectedCourseId"
-      description="暂无考核点数据，请先选择一个课程并新增考核点"
+      v-else-if="!loading && !selectedCourseId"
+      description="当前没有可用课程"
     />
 
     <EmptyState
-      v-else-if="!selectedCourseId"
-      description="请先选择一门课程以查看考核点"
+      v-else-if="!loading && points.length === 0"
+      description="暂无考核点数据，请先新增考核点"
     />
 
     <el-table
@@ -58,8 +81,8 @@
       stripe
     >
       <el-table-column prop="apId" label="ID" width="70" />
-      <el-table-column prop="apName" label="考核点名称" min-width="160" />
-      <el-table-column label="所属课程目标" min-width="220">
+      <el-table-column prop="apName" label="考核点名称" min-width="180" />
+      <el-table-column label="所属课程目标" min-width="240">
         <template #default="{ row }">
           <div class="objective-cell">
             <el-tag type="info" effect="plain" size="small">{{ row.objectiveCode }}</el-tag>
@@ -70,13 +93,6 @@
       <el-table-column label="满分" width="100" align="center">
         <template #default="{ row }">
           <span class="full-score">{{ row.fullScore }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="100" align="center">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'info' : 'success'" effect="plain" size="small">
-            {{ row.status === 0 ? '停用' : '启用' }}
-          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
@@ -139,7 +155,8 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -154,12 +171,17 @@ import {
   updateAssessmentPointApi,
 } from '@/api/assessment'
 
+const route = useRoute()
+const router = useRouter()
+
 const loading = ref(false)
 const loadError = ref('')
 const teachingClassOptions = ref([])
 const courseOptions = ref([])
 const objectiveOptions = ref([])
 const selectedCourseId = ref(null)
+const selectedClassId = ref(null)
+const contextInfo = ref(null)
 const points = ref([])
 
 const filters = reactive({ coId: null })
@@ -182,6 +204,10 @@ const formRules = {
   coId: [{ required: true, message: '请选择课程目标', trigger: 'change' }],
 }
 
+const currentClassOptions = computed(() =>
+  teachingClassOptions.value.filter((item) => item.courseId === selectedCourseId.value),
+)
+
 async function loadCourses() {
   try {
     teachingClassOptions.value = (await listInstructorTeachingClassesApi()) || []
@@ -193,6 +219,17 @@ async function loadCourses() {
       seen.add(row.courseId)
       return true
     })
+
+    if (!courseOptions.value.length) {
+      return
+    }
+
+    const preferredCourseId = Number(route.query.courseId) || courseOptions.value[0].courseId
+    selectedCourseId.value = courseOptions.value.some((item) => item.courseId === preferredCourseId)
+      ? preferredCourseId
+      : courseOptions.value[0].courseId
+
+    await handleCourseChange(selectedCourseId.value)
   } catch {
     teachingClassOptions.value = []
     courseOptions.value = []
@@ -222,18 +259,51 @@ async function loadAssessmentPoints() {
     const params = { courseId: selectedCourseId.value }
     if (filters.coId) params.coId = filters.coId
     points.value = (await listAssessmentPointsApi(params)) || []
-  } catch (e) {
-    loadError.value = e.message || '加载考核点失败'
+  } catch (error) {
+    loadError.value = error.message || '加载考核点失败'
     points.value = []
   } finally {
     loading.value = false
   }
 }
 
-function handleCourseChange(courseId) {
+async function handleCourseChange(courseId = selectedCourseId.value) {
+  selectedCourseId.value = courseId || null
   filters.coId = null
-  loadObjectives(courseId)
-  loadAssessmentPoints()
+  contextInfo.value = null
+  points.value = []
+  await loadObjectives(selectedCourseId.value)
+
+  const classes = currentClassOptions.value
+  if (!classes.length) {
+    selectedClassId.value = null
+    await loadAssessmentPoints()
+    return
+  }
+
+  const preferredClassId = Number(route.query.teachingClassId) || classes[0].classId
+  selectedClassId.value = classes.some((item) => item.classId === preferredClassId)
+    ? preferredClassId
+    : classes[0].classId
+  handleClassChange(selectedClassId.value)
+  await loadAssessmentPoints()
+}
+
+function handleClassChange(classId = selectedClassId.value) {
+  selectedClassId.value = classId || null
+  contextInfo.value = currentClassOptions.value.find((item) => item.classId === selectedClassId.value) || null
+  syncQuery()
+}
+
+function syncQuery() {
+  router.replace({
+    query: {
+      ...route.query,
+      tab: 'assessment-points',
+      courseId: selectedCourseId.value || undefined,
+      teachingClassId: selectedClassId.value || undefined,
+    },
+  })
 }
 
 function resetForm() {
@@ -286,7 +356,7 @@ async function handleDelete(apId) {
     ElMessage.success('考核点已删除')
     await loadAssessmentPoints()
   } catch {
-    // error handled by interceptor
+    // handled by interceptor
   }
 }
 
@@ -316,6 +386,12 @@ onMounted(() => {
   gap: 12px;
 }
 
+.context-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .table-toolbar {
   display: flex;
   align-items: center;
@@ -333,7 +409,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 220px;
 }
 
 .full-score {

@@ -5,6 +5,7 @@ import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.achievement.CourseCalcRequest;
 import com.oss.osscourse.dto.achievement.CourseCalcResponse;
 import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
+import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
@@ -133,6 +134,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
         Map<Long, CourseObjective> objectiveMap = objectives.stream()
                 .collect(Collectors.toMap(CourseObjective::getCoId, objective -> objective));
+        Map<Long, Map<Long, Float>> savedScoreMap = loadSavedScoreMap(classId);
 
         List<ScoreTemplatePreviewResponse.AssessmentPointHeader> dynamicHeaders = assessmentPoints.stream()
                 .map(assessmentPoint -> {
@@ -153,8 +155,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 continue;
             }
             List<Float> scores = new ArrayList<>();
-            for (int i = 0; i < assessmentPoints.size(); i++) {
-                scores.add(null);
+            Map<Long, Float> studentSavedScores = savedScoreMap.getOrDefault(studentId, Map.of());
+            for (AssessmentPoint assessmentPoint : assessmentPoints) {
+                scores.add(studentSavedScores.get(assessmentPoint.getApId()));
             }
             rows.add(ScoreTemplatePreviewResponse.StudentScoreRow.builder()
                     .studentId(studentId)
@@ -474,11 +477,14 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(400, "当前课程未配置内部权重 w，不能执行课程级计算");
         }
 
+        validateInternalWeightSums(internalWeights);
+
         List<StudentClass> studentClasses = listStudentsInClass(request.getClassId());
         List<Long> studentIds = studentClasses.stream().map(StudentClass::getStudentId).toList();
         List<StudentAssessmentScore> allScores = sasMapper.selectList(
                 new LambdaQueryWrapper<StudentAssessmentScore>()
                         .eq(StudentAssessmentScore::getClassId, request.getClassId()));
+        ensureAllScoresCompleted(studentIds, assessmentPoints, allScores);
 
         Map<Long, List<StudentAssessmentScore>> studentScoresMap = allScores.stream()
                 .collect(Collectors.groupingBy(StudentAssessmentScore::getStudentId));
@@ -624,6 +630,80 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .objectiveAchievements(objectiveAchievements)
                 .indicatorAchievements(indicatorAchievements)
                 .isLocked(true)
+                .build();
+    }
+
+    @Override
+    public CourseObjectiveDashboardResponse getCourseObjectiveDashboard(Long classId) {
+        TeachingClass teachingClass = requireTeachingClass(classId);
+        Course course = courseMapper.selectById(teachingClass.getCourseId());
+
+        List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
+        Map<Long, Float> averageMap = coaMapper.selectList(
+                        new LambdaQueryWrapper<CourseObjectiveAchievement>()
+                                .eq(CourseObjectiveAchievement::getClassId, classId))
+                .stream()
+                .collect(Collectors.toMap(
+                        CourseObjectiveAchievement::getCoId,
+                        CourseObjectiveAchievement::getAverageAchievement,
+                        (left, right) -> right,
+                        LinkedHashMap::new));
+
+        List<CourseObjectiveDashboardResponse.ObjectiveSummary> objectiveSummaries = objectives.stream()
+                .map(objective -> CourseObjectiveDashboardResponse.ObjectiveSummary.builder()
+                        .coId(objective.getCoId())
+                        .objectiveCode(objective.getObjectiveCode())
+                        .description(objective.getCoDescription())
+                        .averageAchievement(averageMap.get(objective.getCoId()))
+                        .build())
+                .toList();
+
+        List<StudentClass> studentClasses = listStudentsInClass(classId);
+        List<Long> studentIds = studentClasses.stream().map(StudentClass::getStudentId).toList();
+        Map<Long, Student> studentMap = studentIds.isEmpty()
+                ? Map.of()
+                : studentMapper.selectBatchIds(studentIds).stream()
+                .collect(Collectors.toMap(Student::getStudentId, student -> student));
+
+        Map<Long, Map<Long, Float>> studentAchievementMap = soaMapper.selectList(
+                        new LambdaQueryWrapper<StudentObjectiveAchievement>()
+                                .eq(StudentObjectiveAchievement::getClassId, classId))
+                .stream()
+                .collect(Collectors.groupingBy(
+                        StudentObjectiveAchievement::getStudentId,
+                        Collectors.toMap(
+                                StudentObjectiveAchievement::getCoId,
+                                StudentObjectiveAchievement::getAchievement,
+                                (left, right) -> right,
+                                LinkedHashMap::new)));
+
+        List<CourseObjectiveDashboardResponse.StudentObjectiveRow> studentRows = studentClasses.stream()
+                .map(studentClass -> {
+                    Student student = studentMap.get(studentClass.getStudentId());
+                    if (student == null) {
+                        return null;
+                    }
+                    Map<Long, Float> rowMap = studentAchievementMap.getOrDefault(student.getStudentId(), Map.of());
+                    List<Float> achievements = objectives.stream()
+                            .map(objective -> rowMap.get(objective.getCoId()))
+                            .toList();
+                    return CourseObjectiveDashboardResponse.StudentObjectiveRow.builder()
+                            .studentId(student.getStudentId())
+                            .studentNo(student.getStudentNo())
+                            .studentName(student.getStudentName())
+                            .achievements(achievements)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return CourseObjectiveDashboardResponse.builder()
+                .classId(classId)
+                .className(teachingClass.getClassName())
+                .courseName(course == null ? null : course.getCourseName())
+                .resultReady(!averageMap.isEmpty() || !studentAchievementMap.isEmpty())
+                .objectiveSummaries(objectiveSummaries)
+                .studentRows(studentRows)
                 .build();
     }
 
@@ -825,6 +905,64 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         }
         return oicMapper.selectList(new LambdaQueryWrapper<ObjectiveIndicatorContribution>()
                 .in(ObjectiveIndicatorContribution::getCoId, coIds));
+    }
+
+    private Map<Long, Map<Long, Float>> loadSavedScoreMap(Long classId) {
+        return sasMapper.selectList(
+                        new LambdaQueryWrapper<StudentAssessmentScore>()
+                                .eq(StudentAssessmentScore::getClassId, classId))
+                .stream()
+                .collect(Collectors.groupingBy(
+                        StudentAssessmentScore::getStudentId,
+                        Collectors.toMap(
+                                StudentAssessmentScore::getApId,
+                                StudentAssessmentScore::getActualScore,
+                                (left, right) -> right,
+                                LinkedHashMap::new)));
+    }
+
+    private void validateInternalWeightSums(List<ObjectiveIndicatorContribution> internalWeights) {
+        Map<Long, Float> weightSums = new LinkedHashMap<>();
+        for (ObjectiveIndicatorContribution contribution : internalWeights) {
+            weightSums.merge(contribution.getIpId(), contribution.getInternalWeight(), Float::sum);
+        }
+
+        List<Long> invalidIpIds = weightSums.entrySet().stream()
+                .filter(entry -> Math.abs(entry.getValue() - 1.0f) > 0.001f)
+                .map(Map.Entry::getKey)
+                .toList();
+        if (invalidIpIds.isEmpty()) {
+            return;
+        }
+
+        List<String> invalidCodes = indicatorPointMapper.selectBatchIds(invalidIpIds).stream()
+                .map(IndicatorPoint::getIpCode)
+                .filter(Objects::nonNull)
+                .toList();
+        throw new BusinessException(400,
+                "当前课程内部权重 w 未满足同一指标点列权重和为 1.00，异常指标点："
+                        + String.join("、", invalidCodes));
+    }
+
+    private void ensureAllScoresCompleted(List<Long> studentIds,
+                                          List<AssessmentPoint> assessmentPoints,
+                                          List<StudentAssessmentScore> allScores) {
+        if (studentIds.isEmpty() || assessmentPoints.isEmpty()) {
+            throw new BusinessException(400, "当前教学班缺少学生名单或考核点配置，不能执行课程级计算");
+        }
+
+        Set<String> savedKeys = allScores.stream()
+                .map(score -> score.getStudentId() + "_" + score.getApId())
+                .collect(Collectors.toSet());
+
+        for (Long studentId : studentIds) {
+            for (AssessmentPoint assessmentPoint : assessmentPoints) {
+                String key = studentId + "_" + assessmentPoint.getApId();
+                if (!savedKeys.contains(key)) {
+                    throw new BusinessException(400, "当前教学班仍有未录入的考核点成绩，必须补齐全部学生成绩后才能执行课程级计算");
+                }
+            }
+        }
     }
 
     private void ensureInternalWeightsConfigured(List<CourseObjective> objectives) {

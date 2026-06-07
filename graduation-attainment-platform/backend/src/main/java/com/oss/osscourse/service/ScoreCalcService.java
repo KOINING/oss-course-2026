@@ -3,6 +3,7 @@ package com.oss.osscourse.service;
 import com.oss.osscourse.dto.achievement.CourseCalcRequest;
 import com.oss.osscourse.dto.achievement.CourseCalcResponse;
 import com.oss.osscourse.dto.achievement.CourseCalcStatusResponse;
+import com.oss.osscourse.dto.achievement.CourseObjectiveDashboardResponse;
 import com.oss.osscourse.dto.achievement.MajorCalcRequest;
 import com.oss.osscourse.dto.achievement.MajorCalcResponse;
 import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
@@ -21,6 +22,8 @@ public interface ScoreCalcService {
     void saveScores(ScoreSaveRequest request);
 
     CourseCalcResponse calcCourseAchievement(CourseCalcRequest request);
+
+    CourseObjectiveDashboardResponse getCourseObjectiveDashboard(Long classId);
 
     MajorCalcResponse calcMajorAchievement(MajorCalcRequest request);
 

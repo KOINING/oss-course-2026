@@ -7,7 +7,8 @@
             <p class="page-section">模块 B：内部权重配置</p>
             <h1>课程目标对指标点的内部权重</h1>
             <p class="page-summary">
-              根据《软件需求规格说明书》B-2，教师端只展示当前课程在当前专业、年级版本下负责支撑的指标点，并配置课程目标对这些指标点的内部贡献权重。
+              根据《软件需求规格说明书》B-2，教师端只展示当前课程在当前专业、年级版本下负责支撑的指标点，
+              并配置课程目标对这些指标点的内部贡献权重。
             </p>
           </div>
         </div>
@@ -35,7 +36,7 @@
             <el-select
               v-model="filters.teachingClassId"
               placeholder="请选择教学班"
-              style="width: 240px"
+              style="width: 260px"
               :disabled="!filters.courseId"
               @change="handleTeachingClassChange"
             >
@@ -50,7 +51,7 @@
 
           <el-form-item>
             <el-button type="primary" :disabled="!canQuery" :loading="tableLoading" @click="loadMatrix">
-              查询
+              刷新
             </el-button>
             <el-button @click="resetAll">重置</el-button>
           </el-form-item>
@@ -75,7 +76,8 @@
 
       <el-alert type="info" :closable="false" show-icon class="notice-alert">
         <template #default>
-          页面仅展示当前课程负责支撑的指标点。每个指标点列下所有课程目标的权重和必须等于 1.00，未参与该指标点的课程目标保持 0 即可，保存时不会提交 0 值单元格。
+          页面只展示当前课程负责支撑的指标点。每个指标点列下所有课程目标的权重和必须等于 1.00；
+          未参与该指标点的课程目标保持 0 即可，保存时不会提交 0 值单元格。
         </template>
       </el-alert>
 
@@ -182,6 +184,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   getContextApi,
@@ -190,6 +193,9 @@ import {
   listTeachingClassesApi,
 } from '@/api/courseObjectives'
 import { getCourseWeightApi, saveCourseWeightApi } from '@/api/courseWeight'
+
+const route = useRoute()
+const router = useRouter()
 
 const filters = reactive({
   courseId: null,
@@ -241,9 +247,7 @@ function getColumnSum(ipId) {
 
 function isColumnValid(ipId) {
   const hasSupport = courseObjectives.value.some((objective) => isSupported(objective.coId, ipId))
-  if (!hasSupport) {
-    return true
-  }
+  if (!hasSupport) return true
   return Math.abs(getColumnSum(ipId) - 1) < 0.001
 }
 
@@ -267,25 +271,42 @@ const indicatorGroups = computed(() => {
 async function loadCourses() {
   try {
     courses.value = (await listCoursesForInstructorApi()) || []
+    if (!courses.value.length) {
+      return
+    }
+
+    const preferredCourseId = Number(route.query.courseId) || courses.value[0].courseId
+    filters.courseId = courses.value.some((item) => item.courseId === preferredCourseId)
+      ? preferredCourseId
+      : courses.value[0].courseId
+    await handleCourseChange(filters.courseId)
   } catch {
     courses.value = []
     ElMessage.error('加载课程列表失败')
   }
 }
 
-async function handleCourseChange() {
+async function handleCourseChange(courseId = filters.courseId) {
+  filters.courseId = courseId || null
   filters.teachingClassId = null
   teachingClasses.value = []
   context.value = null
   contextWarning.value = ''
   clearMatrix()
 
-  if (!filters.courseId) {
-    return
-  }
+  if (!filters.courseId) return
 
   try {
     teachingClasses.value = (await listTeachingClassesApi({ courseId: filters.courseId })) || []
+    if (!teachingClasses.value.length) {
+      return
+    }
+
+    const preferredClassId = Number(route.query.teachingClassId) || teachingClasses.value[0].classId
+    filters.teachingClassId = teachingClasses.value.some((item) => item.classId === preferredClassId)
+      ? preferredClassId
+      : teachingClasses.value[0].classId
+    await handleTeachingClassChange()
   } catch {
     ElMessage.error('加载教学班失败')
   }
@@ -306,6 +327,7 @@ async function handleTeachingClassChange() {
     })
     contextWarning.value = context.value?.blockReason || ''
     await loadMatrix()
+    syncQuery()
   } catch {
     ElMessage.error('加载教学班上下文失败')
   }
@@ -341,16 +363,12 @@ function buildMatrix(weightRows) {
 }
 
 async function loadMatrix() {
-  if (!canQuery.value) {
-    return
-  }
+  if (!canQuery.value) return
 
   tableLoading.value = true
   try {
     const [objectiveRows, weightRows] = await Promise.all([
-      listCourseObjectivesApi({
-        courseId: filters.courseId,
-      }),
+      listCourseObjectivesApi({ courseId: filters.courseId }),
       getCourseWeightApi({
         courseId: filters.courseId,
         gradeYear: Number(context.value.gradeYear),
@@ -358,7 +376,6 @@ async function loadMatrix() {
     ])
 
     courseObjectives.value = objectiveRows || []
-
     const { matrix, supported, indicatorList } = buildMatrix(weightRows || [])
     matrixData.value = matrix
     supportSet.value = supported
@@ -377,6 +394,17 @@ async function loadMatrix() {
   }
 }
 
+function syncQuery() {
+  router.replace({
+    query: {
+      ...route.query,
+      courseId: filters.courseId || undefined,
+      teachingClassId: filters.teachingClassId || undefined,
+      tab: 'weights',
+    },
+  })
+}
+
 async function handleSave() {
   const invalidColumns = indicators.value.filter((indicator) => !isColumnValid(indicator.ipId))
   if (invalidColumns.length) {
@@ -387,9 +415,7 @@ async function handleSave() {
   const contributions = []
   courseObjectives.value.forEach((objective) => {
     indicators.value.forEach((indicator) => {
-      if (!isSupported(objective.coId, indicator.ipId)) {
-        return
-      }
+      if (!isSupported(objective.coId, indicator.ipId)) return
       const internalWeight = Number(matrixData.value[cellKey(objective.coId, indicator.ipId)] ?? 0)
       if (internalWeight > 0) {
         contributions.push({
@@ -476,7 +502,6 @@ onMounted(async () => {
   margin: 0;
   color: #64748b;
   line-height: 1.7;
-  max-width: 760px;
 }
 
 .context-section {

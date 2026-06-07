@@ -9,10 +9,10 @@
         @change="handleClassChange"
       >
         <el-option
-          v-for="c in classOptions"
-          :key="c.classId"
-          :label="`${c.classCode} - ${c.courseName || c.courseCode}`"
-          :value="c.classId"
+          v-for="item in classOptions"
+          :key="item.classId"
+          :label="`${item.classCode} - ${item.courseName || item.courseCode}`"
+          :value="item.classId"
         />
       </el-select>
 
@@ -23,7 +23,15 @@
       </div>
 
       <div class="context-actions">
-        <el-button :disabled="!selectedClassId" @click="loadPreview">刷新预览</el-button>
+        <el-button :disabled="!selectedClassId" @click="loadPreview">刷新</el-button>
+        <el-button
+          type="warning"
+          :loading="calculating"
+          :disabled="!canCalculate"
+          @click="calculateCourse"
+        >
+          计算并锁定
+        </el-button>
         <el-button
           type="primary"
           :loading="downloading"
@@ -37,19 +45,14 @@
 
     <ErrorState v-if="loadError" :message="loadError" @retry="loadClasses" />
 
-    <EmptyState
-      v-else-if="!selectedClassId"
-      description="请先选择一个教学班以预览成绩模板"
-    />
-
     <template v-else>
       <el-alert
-        v-if="scoreContext && scoreContext.blockReasons?.length"
+        v-if="scoreContext?.blockReasons?.length"
         type="warning"
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班尚未满足模板生成前置条件</template>
+        <template #title>当前教学班尚未满足模板与成绩预览前置条件</template>
         <template #default>
           <ul class="block-reason-list">
             <li v-for="reason in scoreContext.blockReasons" :key="reason">{{ reason }}</li>
@@ -57,71 +60,44 @@
         </template>
       </el-alert>
 
-      <div class="template-info">
-        <el-alert type="info" :closable="false" show-icon>
-          <template #title>
-            <span>
-              固定列：<strong>学号 | 姓名</strong>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              动态列：<strong>{{ assessmentPoints.length }} 个考核点</strong>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              学生数：<strong>{{ students.length }}</strong>
-            </span>
-          </template>
-        </el-alert>
-      </div>
+      <el-alert type="info" :closable="false" show-icon>
+        <template #title>
+          固定列：<strong>学号 / 姓名</strong>
+          ，动态列：<strong>{{ assessmentPoints.length }}</strong> 个考核点，
+          学生数：<strong>{{ students.length }}</strong>
+        </template>
+      </el-alert>
 
       <ErrorState v-if="previewError" :message="previewError" @retry="loadPreview" />
 
       <EmptyState
+        v-else-if="!previewLoading && !selectedClassId"
+        description="当前没有可用教学班"
+      />
+
+      <EmptyState
         v-else-if="!previewLoading && !scoreContext?.canGenerateTemplate"
-        description="当前教学班前置条件未满足，暂不能生成成绩模板"
+        description="当前教学班前置条件未满足，暂不能生成模板或预览成绩"
       />
 
       <EmptyState
         v-else-if="!previewLoading && assessmentPoints.length === 0"
-        description="当前教学班对应课程下暂无考核点，请先配置考核点"
+        description="当前课程下暂无考核点，请先完成考核点配置"
       />
 
       <EmptyState
         v-else-if="!previewLoading && students.length === 0"
-        description="当前教学班暂无学生，请先导入学生名单"
+        description="当前教学班暂无学生名单"
       />
 
-      <div v-else class="template-table-wrapper">
-        <el-table
-          v-loading="previewLoading"
-          :data="tableData"
-          border
-          stripe
-          :max-height="480"
-          show-summary
-          :summary-method="getSummary"
-        >
-          <el-table-column prop="studentNo" label="学号" width="140" fixed="left" />
-          <el-table-column prop="studentName" label="姓名" width="120" fixed="left" />
-
-          <el-table-column
-            v-for="ap in assessmentPoints"
-            :key="ap.apId"
-            :min-width="140"
-            align="center"
-          >
-            <template #header>
-              <div class="dynamic-header">
-                <div class="dynamic-header__name">{{ ap.apName }}</div>
-                <div class="dynamic-header__meta">
-                  <span>满分: {{ ap.fullScore }}</span>
-                  <el-tag size="small" type="primary" effect="plain">{{ ap.objectiveCode }}</el-tag>
-                </div>
-              </div>
-            </template>
-            <template #default>
-              <span class="score-placeholder">-</span>
-            </template>
-          </el-table-column>
-        </el-table>
+      <div v-else class="template-table-wrapper" v-loading="previewLoading">
+        <ScoreSheetTable :rows="students" :headers="assessmentPoints" :max-height="620" />
       </div>
+
+      <ObjectiveAchievementDashboard
+        v-if="objectiveDashboard"
+        :dashboard="objectiveDashboard"
+      />
     </template>
   </div>
 </template>
@@ -129,13 +105,17 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import ObjectiveAchievementDashboard from '@/components/assessment/ObjectiveAchievementDashboard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import ScoreSheetTable from '@/components/assessment/ScoreSheetTable.vue'
 import {
-  listInstructorTeachingClassesApi,
-  getTemplatePreviewDataApi,
-  getScoreImportContextApi,
+  calculateCourseLevelApi,
   downloadTemplateApi,
+  getCourseObjectiveDashboardApi,
+  getScoreImportContextApi,
+  getTemplatePreviewDataApi,
+  listInstructorTeachingClassesApi,
 } from '@/api/assessment'
 
 const classLoading = ref(false)
@@ -146,17 +126,26 @@ const loadError = ref('')
 const previewLoading = ref(false)
 const previewError = ref('')
 const downloading = ref(false)
+const calculating = ref(false)
 const students = ref([])
 const assessmentPoints = ref([])
 const contextInfo = ref(null)
 const scoreContext = ref(null)
+const courseCalcResult = ref(null)
+const objectiveDashboard = ref(null)
 
-const tableData = computed(() =>
-  students.value.map((student) => ({
-    studentNo: student.studentNo,
-    studentName: student.studentName,
-    studentId: student.studentId,
-  })),
+const expectedScoreCount = computed(() => students.value.length * assessmentPoints.value.length)
+const filledScoreCount = computed(() =>
+  students.value.reduce(
+    (total, row) => total + (row.scores || []).filter((item) => item !== null && item !== undefined && item !== '').length,
+    0,
+  ),
+)
+const canCalculate = computed(() =>
+  !!selectedClassId.value
+  && scoreContext.value?.calcStatus === 'score_imported'
+  && expectedScoreCount.value > 0
+  && filledScoreCount.value === expectedScoreCount.value,
 )
 
 async function loadClasses() {
@@ -164,22 +153,44 @@ async function loadClasses() {
   loadError.value = ''
   try {
     classOptions.value = (await listInstructorTeachingClassesApi()) || []
+    if (!classOptions.value.length) {
+      selectedClassId.value = null
+      contextInfo.value = null
+      students.value = []
+      assessmentPoints.value = []
+      return
+    }
+
+    if (!selectedClassId.value || !classOptions.value.some((item) => item.classId === selectedClassId.value)) {
+      selectedClassId.value = classOptions.value[0].classId
+    }
+    await loadPreview()
   } catch (error) {
     loadError.value = error.message || '加载教学班列表失败'
     classOptions.value = []
+    selectedClassId.value = null
   } finally {
     classLoading.value = false
   }
 }
 
 async function loadContext() {
-  if (!selectedClassId.value) return
+  if (!selectedClassId.value) {
+    scoreContext.value = null
+    contextInfo.value = null
+    return
+  }
   scoreContext.value = await getScoreImportContextApi({ classId: selectedClassId.value })
-  contextInfo.value = scoreContext.value?.teachingClass || classOptions.value.find((c) => c.classId === selectedClassId.value) || null
+  contextInfo.value = scoreContext.value?.teachingClass
+    || classOptions.value.find((item) => item.classId === selectedClassId.value)
+    || null
 }
 
 async function loadPreview() {
-  if (!selectedClassId.value) return
+  if (!selectedClassId.value) {
+    return
+  }
+
   previewLoading.value = true
   previewError.value = ''
   try {
@@ -189,13 +200,16 @@ async function loadPreview() {
       assessmentPoints.value = []
       return
     }
+
     const data = await getTemplatePreviewDataApi({ classId: selectedClassId.value })
     students.value = data.rows || []
     assessmentPoints.value = data.dynamicHeaders || []
+    await loadObjectiveDashboard()
   } catch (error) {
-    previewError.value = error.message || '加载模板预览失败'
+    previewError.value = error.message || '加载成绩预览失败'
     students.value = []
     assessmentPoints.value = []
+    objectiveDashboard.value = null
   } finally {
     previewLoading.value = false
   }
@@ -204,9 +218,22 @@ async function loadPreview() {
 async function handleClassChange() {
   students.value = []
   assessmentPoints.value = []
-  scoreContext.value = null
   previewError.value = ''
+  courseCalcResult.value = null
+  objectiveDashboard.value = null
   await loadPreview()
+}
+
+async function loadObjectiveDashboard() {
+  if (!selectedClassId.value) {
+    objectiveDashboard.value = null
+    return
+  }
+  try {
+    objectiveDashboard.value = await getCourseObjectiveDashboardApi({ classId: selectedClassId.value })
+  } catch {
+    objectiveDashboard.value = null
+  }
 }
 
 function getFileNameFromDisposition(disposition) {
@@ -240,10 +267,19 @@ async function downloadTemplate() {
   }
 }
 
-function getSummary() {
-  const sums = [`共 ${students.value.length} 名学生`, '']
-  assessmentPoints.value.forEach(() => sums.push(''))
-  return sums
+async function calculateCourse() {
+  if (!canCalculate.value) return
+  calculating.value = true
+  try {
+    courseCalcResult.value = await calculateCourseLevelApi({ classId: selectedClassId.value })
+    await loadPreview()
+    await loadObjectiveDashboard()
+    ElMessage.success('课程级计算完成，当前教学班已锁定')
+  } catch (error) {
+    ElMessage.error(error.message || '课程级计算失败')
+  } finally {
+    calculating.value = false
+  }
 }
 
 loadClasses()
@@ -275,10 +311,6 @@ loadClasses()
   margin-left: auto;
 }
 
-.template-info {
-  margin-bottom: 4px;
-}
-
 .block-reason-list {
   margin: 6px 0 0 18px;
   padding: 0;
@@ -287,30 +319,5 @@ loadClasses()
 .template-table-wrapper {
   border-radius: 8px;
   overflow: hidden;
-}
-
-.dynamic-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-}
-
-.dynamic-header__name {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.dynamic-header__meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.score-placeholder {
-  color: #c0c4cc;
 }
 </style>

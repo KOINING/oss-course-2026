@@ -73,6 +73,12 @@ export function calculateCourseLevelApi(data) {
   return request.post('/teacher/calcCourseAchievement', data)
 }
 
+export function getCourseObjectiveDashboardApi(data) {
+  return request.post('/teacher/getCourseObjectiveDashboard', null, {
+    params: { classId: data.classId },
+  })
+}
+
 export function getCourseCalcResultApi(data) {
   return request.post('/assessment/getCourseCalcResult', data)
 }
