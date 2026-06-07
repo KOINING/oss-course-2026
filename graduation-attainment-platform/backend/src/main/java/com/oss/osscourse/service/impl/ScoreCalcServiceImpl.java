@@ -1,4 +1,4 @@
-﻿package com.oss.osscourse.service.impl;
+package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
@@ -123,7 +123,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         TeachingClass teachingClass = requireTeachingClass(classId);
         List<StudentClass> studentClasses = listStudentsInClass(classId);
         if (studentClasses.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝病鏈夊鐢熷悕鍗曪紝璇峰厛瀵煎叆瀛︾敓");
+            throw new BusinessException(400, "当前教学班没有学生名单，请先导入学生");
         }
 
         List<Long> studentIds = studentClasses.stream().map(StudentClass::getStudentId).toList();
@@ -132,12 +132,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
         List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
         if (objectives.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃绋嬬洰鏍囷紝璇峰厛閰嶇疆璇剧▼鐩爣");
+            throw new BusinessException(400, "当前课程未配置课程目标，请先配置课程目标");
         }
 
         List<AssessmentPoint> assessmentPoints = listAssessmentPointsByObjectives(objectives);
         if (assessmentPoints.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃€冩牳鐐癸紝璇峰厛閰嶇疆鑰冩牳鐐?);
+            throw new BusinessException(400, "当前课程未配置考核点，请先配置考核点");
         }
 
         ensureInternalWeightsConfigured(objectives);
@@ -184,7 +184,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .courseName(course == null ? null : course.getCourseName())
                 .studentCount(rows.size())
                 .assessmentPointCount(assessmentPoints.size())
-                .fixedHeaders(List.of("瀛﹀彿", "濮撳悕"))
+                .fixedHeaders(List.of("学号", "姓名"))
                 .dynamicHeaders(dynamicHeaders)
                 .rows(rows)
                 .build();
@@ -195,7 +195,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         ScoreTemplatePreviewResponse preview = previewTemplate(classId);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet sheet = workbook.createSheet("鎴愮哗妯℃澘");
+            XSSFSheet sheet = workbook.createSheet("成绩模板");
 
             XSSFCellStyle headerStyle = workbook.createCellStyle();
             headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
@@ -226,7 +226,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             XSSFRow fullScoreRow = sheet.createRow(FULL_SCORE_ROW_INDEX);
             cellIndex = 0;
             XSSFCell labelCell = fullScoreRow.createCell(cellIndex++);
-            labelCell.setCellValue("婊″垎");
+            labelCell.setCellValue("满分");
             labelCell.setCellStyle(headerStyle);
             XSSFCell emptyCell = fullScoreRow.createCell(cellIndex++);
             emptyCell.setCellValue("");
@@ -240,7 +240,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             XSSFRow objectiveRow = sheet.createRow(OBJECTIVE_ROW_INDEX);
             cellIndex = 0;
             XSSFCell objectiveLabelCell = objectiveRow.createCell(cellIndex++);
-            objectiveLabelCell.setCellValue("璇剧▼鐩爣");
+            objectiveLabelCell.setCellValue("课程目标");
             objectiveLabelCell.setCellStyle(headerStyle);
             XSSFCell objectiveEmptyCell = objectiveRow.createCell(cellIndex++);
             objectiveEmptyCell.setCellValue("");
@@ -273,7 +273,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             workbook.write(outputStream);
             return outputStream.toByteArray();
         } catch (IOException e) {
-            throw new BusinessException(500, "鐢熸垚 Excel 妯℃澘澶辫触: " + e.getMessage());
+            throw new BusinessException(500, "生成 Excel 模板失败: " + e.getMessage());
         }
     }
 
@@ -281,12 +281,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     public ScoreImportPreviewResponse importScorePreview(ScoreImportRequest request) {
         TeachingClass teachingClass = requireTeachingClass(request.getClassId());
         if ("locked".equals(teachingClass.getCalcStatus())) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝凡閿佸畾锛屾棤娉曞鍏ユ垚缁?);
+            throw new BusinessException(400, "当前教学班已锁定，无法导入成绩");
         }
 
         List<StudentClass> studentClasses = listStudentsInClass(request.getClassId());
         if (studentClasses.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝病鏈夊鐢熷悕鍗曪紝鏃犳硶瀵煎叆鎴愮哗");
+            throw new BusinessException(400, "当前教学班没有学生名单，无法导入成绩");
         }
 
         List<Long> studentIds = studentClasses.stream().map(StudentClass::getStudentId).toList();
@@ -295,12 +295,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
         List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
         if (objectives.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃绋嬬洰鏍囷紝鏃犳硶瀵煎叆鎴愮哗");
+            throw new BusinessException(400, "当前课程未配置课程目标，无法导入成绩");
         }
 
         List<AssessmentPoint> assessmentPoints = listAssessmentPointsByObjectives(objectives);
         if (assessmentPoints.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃€冩牳鐐癸紝鏃犳硶瀵煎叆鎴愮哗");
+            throw new BusinessException(400, "当前课程未配置考核点，无法导入成绩");
         }
 
         ensureInternalWeightsConfigured(objectives);
@@ -332,22 +332,22 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             List<String> errors = new ArrayList<>();
 
             if (isBlank(studentNo)) {
-                errors.add("瀛﹀彿涓虹┖");
+                errors.add("学号为空");
             }
             if (isBlank(studentName)) {
-                errors.add("濮撳悕涓虹┖");
+                errors.add("姓名为空");
             }
             if (!isBlank(studentNo) && !seenStudentNos.add(studentNo)) {
-                errors.add("鏂囦欢鍐呭瓨鍦ㄩ噸澶嶅鍙?);
+                errors.add("文件内存在重复学号");
             }
 
             Student student = null;
             if (!isBlank(studentNo)) {
                 student = studentNoMap.get(studentNo);
                 if (student == null) {
-                    errors.add("瀛﹀彿涓嶅睘浜庡綋鍓嶆暀瀛︾彮");
+                    errors.add("学号不属于当前教学班");
                 } else if (!isBlank(studentName) && !Objects.equals(normalize(student.getStudentName()), normalize(studentName))) {
-                    errors.add("濮撳悕涓庢暀瀛︾彮瀛︾敓鍚嶅崟涓嶄竴鑷?);
+                    errors.add("姓名与教学班学生名单不一致");
                 }
             }
 
@@ -357,18 +357,18 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 AssessmentPoint assessmentPoint = entry.getValue();
                 String rawScore = valueAt(row, columnIndex);
                 if (isBlank(rawScore)) {
-                    errors.add("鑰冩牳鐐广€? + assessmentPoint.getApName() + "銆嶆垚缁╀负绌?);
+                    errors.add("考核点“" + assessmentPoint.getApName() + "”成绩为空");
                     continue;
                 }
                 Float actualScore;
                 try {
                     actualScore = Float.parseFloat(rawScore);
                 } catch (NumberFormatException ex) {
-                    errors.add("鑰冩牳鐐广€? + assessmentPoint.getApName() + "銆嶆垚缁╀笉鏄悎娉曟暟瀛?);
+                    errors.add("考核点“" + assessmentPoint.getApName() + "”成绩不是合法数字");
                     continue;
                 }
                 if (actualScore < 0 || actualScore > assessmentPoint.getFullScore()) {
-                    errors.add("鑰冩牳鐐广€? + assessmentPoint.getApName() + "銆嶆垚缁╄秴鍑烘弧鍒嗚寖鍥?);
+                    errors.add("考核点“" + assessmentPoint.getApName() + "”成绩超出满分范围");
                     continue;
                 }
                 if (student != null) {
@@ -394,7 +394,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         .rowIndex(rowIndex + 1)
                         .studentNo(studentNo)
                         .studentName(studentName)
-                        .errorMessage(String.join("锛?, errors))
+                        .errorMessage(String.join("；", errors))
                         .build());
             }
         }
@@ -415,10 +415,10 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     public void saveScores(ScoreSaveRequest request) {
         TeachingClass teachingClass = requireTeachingClass(request.getClassId());
         if ("locked".equals(teachingClass.getCalcStatus())) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝凡閿佸畾锛屾棤娉曚繚瀛樻垚缁?);
+            throw new BusinessException(400, "当前教学班已锁定，无法保存成绩");
         }
         if (request.getScores() == null || request.getScores().isEmpty()) {
-            throw new BusinessException(400, "娌℃湁鍙繚瀛樼殑鎴愮哗鏁版嵁");
+            throw new BusinessException(400, "没有可保存的成绩数据");
         }
 
         for (ScoreSaveRequest.ScoreItem item : request.getScores()) {
@@ -427,18 +427,18 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                             .eq(StudentClass::getClassId, request.getClassId())
                             .eq(StudentClass::getStudentId, item.getStudentId()));
             if (scCount == null || scCount == 0) {
-                throw new BusinessException(400, "瀛︾敓涓嶅睘浜庡綋鍓嶆暀瀛︾彮");
+                throw new BusinessException(400, "学生不属于当前教学班");
             }
 
             AssessmentPoint assessmentPoint = assessmentPointMapper.selectById(item.getApId());
             if (assessmentPoint == null) {
-                throw new BusinessException(400, "鑰冩牳鐐逛笉瀛樺湪");
+                throw new BusinessException(400, "考核点不存在");
             }
 
             if (item.getActualScore() == null
                     || item.getActualScore() < 0
                     || item.getActualScore() > assessmentPoint.getFullScore()) {
-                throw new BusinessException(400, "鎴愮哗瓒呭嚭婊″垎鑼冨洿");
+                throw new BusinessException(400, "成绩超出满分范围");
             }
 
             StudentAssessmentScore existing = sasMapper.selectOne(
@@ -469,14 +469,14 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     public CourseCalcResponse calcCourseAchievement(CourseCalcRequest request) {
         TeachingClass teachingClass = requireTeachingClass(request.getClassId());
         if ("locked".equals(teachingClass.getCalcStatus())) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝凡閿佸畾锛屼笉鑳介噸澶嶈绠?);
+            throw new BusinessException(400, "当前教学班已锁定，不能重复计算");
         }
 
         Long scoreCount = sasMapper.selectCount(
                 new LambdaQueryWrapper<StudentAssessmentScore>()
                         .eq(StudentAssessmentScore::getClassId, request.getClassId()));
         if (scoreCount == null || scoreCount == 0) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝病鏈夋垚缁╂暟鎹紝璇峰厛瀵煎叆鎴愮哗");
+            throw new BusinessException(400, "当前教学班没有成绩数据，请先导入成绩");
         }
 
         List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
@@ -484,7 +484,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<AssessmentPoint> assessmentPoints = listAssessmentPointsByObjectives(objectives);
         List<ObjectiveIndicatorContribution> internalWeights = listInternalWeights(coIds);
         if (internalWeights.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃唴閮ㄦ潈閲?w锛屼笉鑳芥墽琛岃绋嬬骇璁＄畻");
+            throw new BusinessException(400, "当前课程未配置内部权重 w，不能执行课程级计算");
         }
 
         validateInternalWeightSums(internalWeights);
@@ -757,13 +757,13 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         Teacher teacher = resolveCurrentTeacher(userId, roles);
         TeachingClass teachingClass = requireTeachingClass(request.getClassId());
         if (!teacher.getId().equals(teachingClass.getTeacherId())) {
-            throw new BusinessException(403, "鍙兘瀵瑰綋鍓嶆暀甯堣礋璐ｇ殑鏁欏鐝彁浜よВ閿佺敵璇?);
+            throw new BusinessException(403, "只能对当前教师负责的教学班提交解锁申请");
         }
         if (!"locked".equals(teachingClass.getCalcStatus())) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝皻鏈攣瀹氾紝鏃犻渶鐢宠瑙ｉ攣");
+            throw new BusinessException(400, "当前教学班尚未锁定，无需申请解锁");
         }
         if (findPendingUnlockRequest(request.getClassId()) != null) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝凡瀛樺湪寰呭鐞嗙殑瑙ｉ攣鐢宠");
+            throw new BusinessException(400, "当前教学班已存在待处理的解锁申请");
         }
 
         UnlockAuditLog entity = new UnlockAuditLog();
@@ -779,12 +779,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     public MajorCalcResponse calcMajorAchievement(MajorCalcRequest request) {
         Major major = majorMapper.selectById(request.getMajorId());
         if (major == null) {
-            throw new BusinessException(404, "涓撲笟涓嶅瓨鍦?);
+            throw new BusinessException(404, "专业不存在");
         }
 
         AcademicTerm term = academicTermMapper.selectById(request.getTermId());
         if (term == null) {
-            throw new BusinessException(404, "瀛︽湡涓嶅瓨鍦?);
+            throw new BusinessException(404, "学期不存在");
         }
 
         List<CourseMajor> courseMajors = courseMajorMapper.selectList(
@@ -793,7 +793,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         .eq(CourseMajor::getGradeYear, request.getGradeYear()));
         List<Long> courseIds = courseMajors.stream().map(CourseMajor::getCourseId).toList();
         if (courseIds.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠涓撲笟鍦ㄨ骞寸骇涓嬫病鏈夐厤缃敮鎾戣绋?);
+            throw new BusinessException(400, "当前专业在该年级下没有配置支撑课程");
         }
 
         List<TeachingClass> teachingClasses = teachingClassMapper.selectList(
@@ -802,12 +802,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         .eq(TeachingClass::getGradeYear, request.getGradeYear())
                         .eq(TeachingClass::getTermId, request.getTermId()));
         if (teachingClasses.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠涓撲笟鍦ㄨ骞寸骇鍜屽鏈熶笅娌℃湁鏁欏鐝暟鎹?);
+            throw new BusinessException(400, "当前专业在该年级和学期下没有教学班数据");
         }
 
         for (TeachingClass teachingClass : teachingClasses) {
             if (!"locked".equals(teachingClass.getCalcStatus())) {
-                throw new BusinessException(400, "瀛樺湪鏈畬鎴愯绠楃殑鏁欏鐝細" + teachingClass.getClassName());
+                throw new BusinessException(400, "存在未完成计算的教学班：" + teachingClass.getClassName());
             }
         }
 
@@ -890,12 +890,12 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     public CourseCalcStatusResponse getCourseCalcStatus(Long majorId, Long termId) {
         Major major = majorMapper.selectById(majorId);
         if (major == null) {
-            throw new BusinessException(404, "涓撲笟涓嶅瓨鍦?);
+            throw new BusinessException(404, "专业不存在");
         }
 
         AcademicTerm term = academicTermMapper.selectById(termId);
         if (term == null) {
-            throw new BusinessException(404, "瀛︽湡涓嶅瓨鍦?);
+            throw new BusinessException(404, "学期不存在");
         }
 
         List<CourseMajor> courseMajors = courseMajorMapper.selectList(
@@ -932,7 +932,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .termId(termId)
                 .termCode(term.getTermCode())
                 .canCalcMajor(allLocked)
-                .blockReason(allLocked ? null : "瀛樺湪鏈畬鎴愯绠楃殑鏁欏鐝?)
+                .blockReason(allLocked ? null : "存在未完成计算的教学班")
                 .courseStatuses(courseStatuses)
                 .build();
     }
@@ -940,23 +940,23 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     private TeachingClass requireTeachingClass(Long classId) {
         TeachingClass teachingClass = teachingClassMapper.selectById(classId);
         if (teachingClass == null) {
-            throw new BusinessException(404, "鏁欏鐝笉瀛樺湪");
+            throw new BusinessException(404, "教学班不存在");
         }
         return teachingClass;
     }
 
     private Teacher resolveCurrentTeacher(Long userId, List<String> roles) {
         if (userId == null) {
-            throw new BusinessException(401, "褰撳墠鐧诲綍淇℃伅缂哄皯鐢ㄦ埛ID");
+            throw new BusinessException(401, "当前登录信息缺少用户ID");
         }
         if (roles == null || roles.stream().noneMatch("instructor"::equals)) {
-            throw new BusinessException(403, "褰撳墠璐﹀彿涓嶆槸璇剧▼涓昏鏁欏笀");
+            throw new BusinessException(403, "当前账号不是课程主讲教师");
         }
         Teacher teacher = teacherMapper.selectOne(new LambdaQueryWrapper<Teacher>()
                 .eq(Teacher::getUserId, userId)
                 .eq(Teacher::getStatus, 1));
         if (teacher == null) {
-            throw new BusinessException(403, "褰撳墠鐧诲綍鐢ㄦ埛鏈粦瀹氬惎鐢ㄧ姸鎬佺殑鏁欏笀韬唤");
+            throw new BusinessException(403, "当前登录用户未绑定启用状态的教师身份");
         }
         return teacher;
     }
@@ -1095,15 +1095,15 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .filter(Objects::nonNull)
                 .toList();
         throw new BusinessException(400,
-                "褰撳墠璇剧▼鍐呴儴鏉冮噸 w 鏈弧瓒冲悓涓€鎸囨爣鐐瑰垪鏉冮噸鍜屼负 1.00锛屽紓甯告寚鏍囩偣锛?
-                        + String.join("銆?, invalidCodes));
+                "当前课程内部权重 w 未满足同一指标点列权重和为 1.00，异常指标点："
+                        + String.join("、", invalidCodes));
     }
 
     private void ensureAllScoresCompleted(List<Long> studentIds,
                                           List<AssessmentPoint> assessmentPoints,
                                           List<StudentAssessmentScore> allScores) {
         if (studentIds.isEmpty() || assessmentPoints.isEmpty()) {
-            throw new BusinessException(400, "褰撳墠鏁欏鐝己灏戝鐢熷悕鍗曟垨鑰冩牳鐐归厤缃紝涓嶈兘鎵ц璇剧▼绾ц绠?);
+            throw new BusinessException(400, "当前教学班缺少学生名单或考核点配置，不能执行课程级计算");
         }
 
         Set<String> savedKeys = allScores.stream()
@@ -1114,7 +1114,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             for (AssessmentPoint assessmentPoint : assessmentPoints) {
                 String key = studentId + "_" + assessmentPoint.getApId();
                 if (!savedKeys.contains(key)) {
-                    throw new BusinessException(400, "褰撳墠鏁欏鐝粛鏈夋湭褰曞叆鐨勮€冩牳鐐规垚缁╋紝蹇呴』琛ラ綈鍏ㄩ儴瀛︾敓鎴愮哗鍚庢墠鑳芥墽琛岃绋嬬骇璁＄畻");
+                    throw new BusinessException(400, "当前教学班仍有未录入的考核点成绩，必须补齐全部学生成绩后才能执行课程级计算");
                 }
             }
         }
@@ -1123,7 +1123,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     private void ensureInternalWeightsConfigured(List<CourseObjective> objectives) {
         List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
         if (listInternalWeights(coIds).isEmpty()) {
-            throw new BusinessException(400, "褰撳墠璇剧▼鏈厤缃唴閮ㄦ潈閲?w锛岃鍏堝畬鎴愬唴閮ㄦ潈閲嶉厤缃?);
+            throw new BusinessException(400, "当前课程未配置内部权重 w，请先完成内部权重配置");
         }
     }
 
@@ -1137,9 +1137,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             Sheet sheet = workbook.getSheetAt(0);
             return parseSheetRows(sheet);
         } catch (IOException e) {
-            throw new BusinessException(400, "璇诲彇鎴愮哗鏂囦欢澶辫触: " + e.getMessage());
+            throw new BusinessException(400, "读取成绩文件失败: " + e.getMessage());
         } catch (Exception e) {
-            throw new BusinessException(400, "鎴愮哗鏂囦欢鏍煎紡涓嶆纭紝璇蜂娇鐢ㄧ郴缁熸ā鏉块噸鏂板鍏?);
+            throw new BusinessException(400, "成绩文件格式不正确，请使用系统模板重新导入");
         }
     }
 
@@ -1152,7 +1152,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         try {
             return Base64.getDecoder().decode(encoded);
         } catch (IllegalArgumentException e) {
-            throw new BusinessException(400, "鎴愮哗鏂囦欢鍐呭涓嶆槸鍚堟硶鐨?Base64 鏁版嵁");
+            throw new BusinessException(400, "成绩文件内容不是合法的 Base64 数据");
         }
     }
 
@@ -1213,41 +1213,41 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                                           Map<String, AssessmentPoint> apNameMap,
                                           Map<Long, CourseObjective> objectiveMap) {
         if (table.size() <= OBJECTIVE_ROW_INDEX) {
-            throw new BusinessException(400, "鎴愮哗鏂囦欢缂哄皯妯℃澘澶撮儴锛岃浣跨敤绯荤粺妯℃澘閲嶆柊瀵煎叆");
+            throw new BusinessException(400, "成绩文件缺少模板头部，请使用系统模板重新导入");
         }
         List<String> headerRow = table.get(HEADER_ROW_INDEX);
-        if (!Objects.equals(valueAt(headerRow, 0), "瀛﹀彿") || !Objects.equals(valueAt(headerRow, 1), "濮撳悕")) {
-            throw new BusinessException(400, "妯℃澘鍥哄畾鍒楀繀椤讳负鈥滃鍙枫€佸鍚嶁€?);
+        if (!Objects.equals(valueAt(headerRow, 0), "学号") || !Objects.equals(valueAt(headerRow, 1), "姓名")) {
+            throw new BusinessException(400, "模板固定列必须为“学号、姓名”");
         }
 
         Map<Integer, AssessmentPoint> columnMapping = mapAssessmentPointColumns(headerRow, apNameMap);
         if (columnMapping.size() != apNameMap.size()) {
-            throw new BusinessException(400, "妯℃澘涓殑鑰冩牳鐐瑰垪涓庡綋鍓嶈绋嬮厤缃笉涓€鑷达紝璇烽噸鏂颁笅杞芥ā鏉?);
+            throw new BusinessException(400, "模板中的考核点列与当前课程配置不一致，请重新下载模板");
         }
 
         List<String> fullScoreRow = table.get(FULL_SCORE_ROW_INDEX);
-        if (!Objects.equals(valueAt(fullScoreRow, 0), "婊″垎")) {
-            throw new BusinessException(400, "妯℃澘绗簩琛屽繀椤讳负婊″垎琛?);
+        if (!Objects.equals(valueAt(fullScoreRow, 0), "满分")) {
+            throw new BusinessException(400, "模板第二行必须为满分行");
         }
         for (Map.Entry<Integer, AssessmentPoint> entry : columnMapping.entrySet()) {
             String rawFullScore = valueAt(fullScoreRow, entry.getKey());
             if (isBlank(rawFullScore)) {
-                throw new BusinessException(400, "妯℃澘婊″垎琛岀己灏戣€冩牳鐐光€? + entry.getValue().getApName() + "鈥濈殑婊″垎閰嶇疆");
+                throw new BusinessException(400, "模板满分行缺少考核点“" + entry.getValue().getApName() + "”的满分配置");
             }
             float actualFullScore;
             try {
                 actualFullScore = Float.parseFloat(rawFullScore);
             } catch (NumberFormatException e) {
-                throw new BusinessException(400, "妯℃澘婊″垎琛屽瓨鍦ㄩ潪娉曞垎鍊硷紝璇烽噸鏂颁笅杞芥ā鏉?);
+                throw new BusinessException(400, "模板满分行存在非法分值，请重新下载模板");
             }
             if (Math.abs(actualFullScore - entry.getValue().getFullScore()) > 0.001f) {
-                throw new BusinessException(400, "鑰冩牳鐐光€? + entry.getValue().getApName() + "鈥濈殑婊″垎涓庡綋鍓嶉厤缃笉涓€鑷?);
+                throw new BusinessException(400, "考核点“" + entry.getValue().getApName() + "”的满分与当前配置不一致");
             }
         }
 
         List<String> objectiveRow = table.get(OBJECTIVE_ROW_INDEX);
-        if (!Objects.equals(valueAt(objectiveRow, 0), "璇剧▼鐩爣")) {
-            throw new BusinessException(400, "妯℃澘绗笁琛屽繀椤讳负璇剧▼鐩爣琛?);
+        if (!Objects.equals(valueAt(objectiveRow, 0), "课程目标")) {
+            throw new BusinessException(400, "模板第三行必须为课程目标行");
         }
         for (Map.Entry<Integer, AssessmentPoint> entry : columnMapping.entrySet()) {
             AssessmentPoint assessmentPoint = entry.getValue();
@@ -1255,7 +1255,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             String expectedCode = objective == null ? "" : safeString(objective.getObjectiveCode());
             String actualCode = valueAt(objectiveRow, entry.getKey());
             if (!Objects.equals(normalize(expectedCode), normalize(actualCode))) {
-                throw new BusinessException(400, "鑰冩牳鐐光€? + assessmentPoint.getApName() + "鈥濇墍灞炶绋嬬洰鏍囦笌褰撳墠閰嶇疆涓嶄竴鑷?);
+                throw new BusinessException(400, "考核点“" + assessmentPoint.getApName() + "”所属课程目标与当前配置不一致");
             }
         }
     }
@@ -1271,10 +1271,10 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             }
             AssessmentPoint assessmentPoint = apNameMap.get(normalize(headerName));
             if (assessmentPoint == null) {
-                throw new BusinessException(400, "妯℃澘涓瓨鍦ㄦ湭閰嶇疆鐨勮€冩牳鐐瑰垪锛? + headerName);
+                throw new BusinessException(400, "模板中存在未配置的考核点列：" + headerName);
             }
             if (!mappedApIds.add(assessmentPoint.getApId())) {
-                throw new BusinessException(400, "妯℃澘涓瓨鍦ㄩ噸澶嶇殑鑰冩牳鐐瑰垪锛? + headerName);
+                throw new BusinessException(400, "模板中存在重复的考核点列：" + headerName);
             }
             columnMapping.put(columnIndex, assessmentPoint);
         }
