@@ -1,25 +1,23 @@
--- ================================================================
+﻿-- ================================================================
 -- upgrade_week4_e2e_test_data.sql
--- 用途：第四周模块 C 全链路测试数据基线
--- 数据库：GraduationDB
+-- 鐢ㄩ€旓細绗洓鍛ㄦā鍧?C 鍏ㄩ摼璺祴璇曟暟鎹熀绾?-- 鏁版嵁搴擄細GraduationDB
 --
--- 说明：
--- 1. 本脚本不修改账号、角色、权限体系：
+-- 璇存槑锛?-- 1. 鏈剼鏈笉淇敼璐﹀彿銆佽鑹层€佹潈闄愪綋绯伙細
 --    sys_user / sys_role / sys_permission / sys_role_permission / sys_user_role
--- 2. 本脚本会清空除账号体系外的业务数据，并重建第四周模块 C 所需 E2E 数据
--- 3. 本脚本依赖已有教师账号映射，默认复用：
---    T2024001 / T2024002 / T2024003
--- 4. 本脚本执行前需确保已执行：
+-- 2. 鏈剼鏈細娓呯┖闄よ处鍙蜂綋绯诲鐨勪笟鍔℃暟鎹紝骞堕噸寤虹鍥涘懆妯″潡 C 鎵€闇€ E2E 鏁版嵁
+-- 3. 鏈剼鏈緷璧栧凡鏈夋暀甯堣处鍙锋槧灏勶紝榛樿澶嶇敤锛?--    T2024001 / T2024002 / T2024003
+-- 4. 鏈剼鏈墽琛屽墠闇€纭繚宸叉墽琛岋細
 --    upgrade_grade_year_20260603.sql
 --    upgrade_week4_score_calc.sql
 -- ================================================================
 
 USE GraduationDB;
 
-SET NAMES utf8mb4;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET collation_connection = 'utf8mb4_unicode_ci';
 
 -- ================================================================
--- 0. E2E 模板数据
+-- 0. E2E 妯℃澘鏁版嵁
 -- ================================================================
 DROP TEMPORARY TABLE IF EXISTS tmp_e2e_context;
 CREATE TEMPORARY TABLE tmp_e2e_context (
@@ -27,7 +25,7 @@ CREATE TEMPORARY TABLE tmp_e2e_context (
     major_code VARCHAR(20) NOT NULL,
     grade_year INT NOT NULL,
     scenario_code VARCHAR(32) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_context (context_code, major_code, grade_year, scenario_code) VALUES
 ('CS2022_MAIN',   '080901', 2022, 'blocked_unsubmitted'),
@@ -39,7 +37,7 @@ DROP TEMPORARY TABLE IF EXISTS tmp_e2e_gr_template;
 CREATE TEMPORARY TABLE tmp_e2e_gr_template (
     gr_code VARCHAR(10) PRIMARY KEY,
     gr_description VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_gr_template (gr_code, gr_description) VALUES
 ('EGR01', 'E2E_GR_01_EngineeringKnowledge'),
@@ -57,7 +55,7 @@ CREATE TEMPORARY TABLE tmp_e2e_ip_template (
     ip_code VARCHAR(10) NOT NULL,
     ip_description VARCHAR(255) NOT NULL,
     PRIMARY KEY (gr_code, ip_code)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_ip_template (gr_code, ip_code, ip_description) VALUES
 ('EGR01', 'E1-1', 'E2E_IP_E1_1_KnowledgeModeling'),
@@ -83,7 +81,7 @@ CREATE TEMPORARY TABLE tmp_e2e_course_def (
     course_name VARCHAR(100) NOT NULL,
     credit FLOAT NOT NULL,
     major_code VARCHAR(20) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_course_def (course_code, course_name, credit, major_code) VALUES
 ('E2E-CS-DS',   'E2E-Data-Structure',         3.0, '080901'),
@@ -101,7 +99,7 @@ DROP TEMPORARY TABLE IF EXISTS tmp_e2e_objective_template;
 CREATE TEMPORARY TABLE tmp_e2e_objective_template (
     objective_code VARCHAR(16) PRIMARY KEY,
     co_description VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_objective_template (objective_code, co_description) VALUES
 ('CO1', 'E2E-UnderstandCoreConcepts'),
@@ -113,13 +111,12 @@ CREATE TEMPORARY TABLE tmp_e2e_ap_template (
     ap_name VARCHAR(50) PRIMARY KEY,
     full_score FLOAT NOT NULL,
     objective_code VARCHAR(16) NOT NULL
-);
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT INTO tmp_e2e_ap_template (ap_name, full_score, objective_code) VALUES
-('平时作业', 20, 'CO1'),
-('阶段测验', 20, 'CO1'),
-('实验报告', 30, 'CO2'),
-('期末考核', 30, 'CO3');
+('E2E-Homework', 20, 'CO1'),
+('E2E-Phase-Quiz', 20, 'CO1'),
+('E2E-Lab-Report', 30, 'CO2'),
+('E2E-Final-Assessment', 30, 'CO3');
 
 DROP TEMPORARY TABLE IF EXISTS tmp_e2e_support_template;
 CREATE TEMPORARY TABLE tmp_e2e_support_template (
@@ -132,7 +129,7 @@ CREATE TEMPORARY TABLE tmp_e2e_support_template (
     co_code_b VARCHAR(16) NOT NULL,
     weight_b FLOAT NOT NULL,
     PRIMARY KEY (major_code, course_code, gr_code, ip_code)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_support_template (major_code, course_code, gr_code, ip_code, co_code_a, weight_a, co_code_b, weight_b) VALUES
 ('080901', 'E2E-CS-DS',  'EGR01', 'E1-1', 'CO1', 0.6, 'CO2', 0.4),
@@ -178,7 +175,7 @@ CREATE TEMPORARY TABLE tmp_e2e_class_plan (
     teacher_no VARCHAR(32) NOT NULL,
     calc_status VARCHAR(20) NOT NULL,
     class_name VARCHAR(100) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_class_plan (class_code, context_code, major_code, grade_year, course_code, teacher_no, calc_status, class_name) VALUES
 ('E2E-CS22-01', 'CS2022_MAIN',  '080901', 2022, 'E2E-CS-DS',   'T2024001', 'locked',         'E2E-CS2022-DataStructure'),
@@ -206,7 +203,7 @@ DROP TEMPORARY TABLE IF EXISTS tmp_e2e_num10;
 CREATE TEMPORARY TABLE tmp_e2e_num10 (
     seq INT PRIMARY KEY,
     score_factor FLOAT NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO tmp_e2e_num10 (seq, score_factor) VALUES
 (1, 0.60),
@@ -239,6 +236,8 @@ SELECT
     n.score_factor
 FROM tmp_e2e_context ctx
 JOIN tmp_e2e_num10 n ON 1 = 1;
+ALTER TABLE tmp_e2e_student_plan
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_e2e_support_plan;
 CREATE TEMPORARY TABLE tmp_e2e_support_plan AS
@@ -256,11 +255,11 @@ SELECT
 FROM tmp_e2e_context ctx
 JOIN tmp_e2e_support_template tpl
   ON tpl.major_code = ctx.major_code;
+ALTER TABLE tmp_e2e_support_plan
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ================================================================
--- 1. 清洗旧业务数据
--- 清洗策略：保留账号体系与 teacher 表，清空其余业务数据后重建
--- ================================================================
+-- 1. 娓呮礂鏃т笟鍔℃暟鎹?-- 娓呮礂绛栫暐锛氫繚鐣欒处鍙蜂綋绯讳笌 teacher 琛紝娓呯┖鍏朵綑涓氬姟鏁版嵁鍚庨噸寤?-- ================================================================
 DELETE FROM temp_import_staging;
 DELETE FROM calc_audit_log;
 DELETE FROM unlock_audit_log;
@@ -288,8 +287,7 @@ SET major_id = NULL;
 DELETE FROM major;
 
 -- ================================================================
--- 2. 基础主数据重建
--- ================================================================
+-- 2. 鍩虹涓绘暟鎹噸寤?-- ================================================================
 INSERT INTO college (college_code, college_name, status)
 SELECT 'CS', 'School-of-Computer-Science-and-Technology', 1
 FROM dual
@@ -348,8 +346,7 @@ SET @term_main := (
 );
 
 -- ================================================================
--- 3. 模块 A 数据重建：课程、毕业要求、指标点、宏观支撑矩阵
--- ================================================================
+-- 3. 妯″潡 A 鏁版嵁閲嶅缓锛氳绋嬨€佹瘯涓氳姹傘€佹寚鏍囩偣銆佸畯瑙傛敮鎾戠煩闃?-- ================================================================
 INSERT INTO course (course_code, course_name, credit, status)
 SELECT course_code, course_name, credit, 1
 FROM tmp_e2e_course_def;
@@ -373,7 +370,7 @@ JOIN (
 INSERT INTO graduation_requirement (gr_code, gr_description, major_id, grade_year, status)
 SELECT
     grt.gr_code,
-    CONCAT(grt.gr_description, '(', m.major_name, '-', ctx.grade_year, '级)'),
+    CONCAT(grt.gr_description, '(', m.major_name, '-', ctx.grade_year, '绾?'),
     m.major_id,
     ctx.grade_year,
     1
@@ -386,7 +383,7 @@ JOIN tmp_e2e_gr_template grt
 INSERT INTO indicator_point (ip_code, ip_description, gr_id, status)
 SELECT
     ipt.ip_code,
-    CONCAT(ipt.ip_description, '(', m.major_name, '-', ctx.grade_year, '级)'),
+    CONCAT(ipt.ip_description, '(', m.major_name, '-', ctx.grade_year, '绾?'),
     gr.gr_id,
     1
 FROM tmp_e2e_context ctx
@@ -417,7 +414,7 @@ JOIN indicator_point ip
  AND ip.ip_code = sp.ip_code;
 
 -- ================================================================
--- 4. 模块 B 数据重建：课程目标、考核点、内部权重 w
+-- 4. 妯″潡 B 鏁版嵁閲嶅缓锛氳绋嬬洰鏍囥€佽€冩牳鐐广€佸唴閮ㄦ潈閲?w
 -- ================================================================
 INSERT INTO course_objective (objective_code, co_description, course_id)
 SELECT
@@ -471,8 +468,7 @@ JOIN course_objective co
  AND co.objective_code = CASE WHEN seq_map.seq_no = 1 THEN sp.co_code_a ELSE sp.co_code_b END;
 
 -- ================================================================
--- 5. 模块 C 数据重建：学生、教学班、原始成绩
--- ================================================================
+-- 5. 妯″潡 C 鏁版嵁閲嶅缓锛氬鐢熴€佹暀瀛︾彮銆佸師濮嬫垚缁?-- ================================================================
 INSERT INTO student (student_no, student_name, major_id, enrollment_year, status)
 SELECT
     sp.student_no,
@@ -535,10 +531,8 @@ JOIN assessment_point ap
   ON ap.co_id = co.co_id;
 
 -- ================================================================
--- 6. 课程级结果与专业级结果重建
--- 仅为 locked 教学班生成课程级结果
--- 仅为 SE2022_MAIN 生成专业级结果
--- ================================================================
+-- 6. 璇剧▼绾х粨鏋滀笌涓撲笟绾х粨鏋滈噸寤?-- 浠呬负 locked 鏁欏鐝敓鎴愯绋嬬骇缁撴灉
+-- 浠呬负 SE2022_MAIN 鐢熸垚涓撲笟绾х粨鏋?-- ================================================================
 INSERT INTO student_objective_achievement (student_id, class_id, co_id, achievement)
 SELECT
     sas.student_id,
@@ -611,24 +605,22 @@ SELECT
     tc.class_id,
     t.id,
     1,
-    'E2E-预置解锁申请-验证审批解锁后修改成绩并重新计算'
+    'E2E-Preloaded-Unlock-Request-Modify-Scores-And-Recalculate'
 FROM teaching_class tc
 JOIN teacher t
   ON t.teacher_no = 'T2024002'
 WHERE tc.class_code = 'E2E-SE22-01';
 
 -- ================================================================
--- 7. 执行后自检 SQL（按需手动执行）
--- ================================================================
+-- 7. 鎵ц鍚庤嚜妫€ SQL锛堟寜闇€鎵嬪姩鎵ц锛?-- ================================================================
 
--- 7.1 账号体系未改动
--- SELECT COUNT(*) AS user_count FROM sys_user;
+-- 7.1 璐﹀彿浣撶郴鏈敼鍔?-- SELECT COUNT(*) AS user_count FROM sys_user;
 -- SELECT COUNT(*) AS role_count FROM sys_role;
 -- SELECT COUNT(*) AS permission_count FROM sys_permission;
 -- SELECT COUNT(*) AS role_permission_count FROM sys_role_permission;
 -- SELECT COUNT(*) AS user_role_count FROM sys_user_role;
 
--- 7.2 非 E2E 旧业务数据已清理
+-- 7.2 闈?E2E 鏃т笟鍔℃暟鎹凡娓呯悊
 -- SELECT COUNT(*) AS non_e2e_course_count
 -- FROM course
 -- WHERE course_code NOT LIKE 'E2E-%';
@@ -645,8 +637,7 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- FROM graduation_requirement
 -- WHERE gr_code NOT LIKE 'EGR%';
 
--- 7.3 专业与年级完整性
--- SELECT m.major_code, m.major_name, gr.grade_year,
+-- 7.3 涓撲笟涓庡勾绾у畬鏁存€?-- SELECT m.major_code, m.major_name, gr.grade_year,
 --        COUNT(DISTINCT gr.gr_id) AS gr_count,
 --        COUNT(DISTINCT ip.ip_id) AS ip_count
 -- FROM graduation_requirement gr
@@ -655,7 +646,7 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- GROUP BY m.major_code, m.major_name, gr.grade_year
 -- ORDER BY m.major_code, gr.grade_year;
 
--- 7.4 宏观支撑矩阵 W 求和校验
+-- 7.4 瀹忚鏀拺鐭╅樀 W 姹傚拰鏍￠獙
 -- SELECT m.major_code, gr.grade_year, gr.gr_code, ip.ip_code,
 --        COUNT(*) AS support_course_count,
 --        ROUND(SUM(cis.total_weight), 4) AS weight_sum
@@ -666,7 +657,7 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- GROUP BY m.major_code, gr.grade_year, gr.gr_code, ip.ip_code
 -- ORDER BY m.major_code, gr.grade_year, gr.gr_code, ip.ip_code;
 
--- 7.5 内部权重 w 求和校验
+-- 7.5 鍐呴儴鏉冮噸 w 姹傚拰鏍￠獙
 -- SELECT c.course_code, gr.grade_year, ip.ip_code,
 --        ROUND(SUM(oic.internal_weight), 4) AS weight_sum
 -- FROM objective_indicator_contribution oic
@@ -677,13 +668,11 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- GROUP BY c.course_code, gr.grade_year, ip.ip_code
 -- ORDER BY c.course_code, gr.grade_year, ip.ip_code;
 
--- 7.6 教学班状态分布
--- SELECT class_code, class_name, grade_year, calc_status
+-- 7.6 鏁欏鐝姸鎬佸垎甯?-- SELECT class_code, class_name, grade_year, calc_status
 -- FROM teaching_class
 -- ORDER BY class_code;
 
--- 7.7 成绩完整性
--- SELECT tc.class_code, tc.calc_status,
+-- 7.7 鎴愮哗瀹屾暣鎬?-- SELECT tc.class_code, tc.calc_status,
 --        COUNT(DISTINCT sc.student_id) AS student_count,
 --        COUNT(DISTINCT ap.ap_id) AS assessment_count,
 --        COUNT(sas.sas_id) AS score_count
@@ -698,8 +687,7 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- GROUP BY tc.class_code, tc.calc_status
 -- ORDER BY tc.class_code;
 
--- 7.8 课程级结果完整性
--- SELECT tc.class_code,
+-- 7.8 璇剧▼绾х粨鏋滃畬鏁存€?-- SELECT tc.class_code,
 --        COUNT(DISTINCT soa.soa_id) AS soa_count,
 --        COUNT(DISTINCT coa.coa_id) AS coa_count,
 --        COUNT(DISTINCT cia.cia_id) AS cia_count
@@ -710,8 +698,7 @@ WHERE tc.class_code = 'E2E-SE22-01';
 -- GROUP BY tc.class_code
 -- ORDER BY tc.class_code;
 
--- 7.9 专业级结果与阻断态校验
--- SELECT m.major_code, mia.grade_year, at.term_code, COUNT(*) AS mia_count
+-- 7.9 涓撲笟绾х粨鏋滀笌闃绘柇鎬佹牎楠?-- SELECT m.major_code, mia.grade_year, at.term_code, COUNT(*) AS mia_count
 -- FROM major_indicator_achievement mia
 -- JOIN major m ON m.major_id = mia.major_id
 -- JOIN academic_term at ON at.term_id = mia.term_id
