@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -44,20 +45,21 @@ public class ScoreCalcController {
     @PostMapping("/previewTemplate")
     @Operation(summary = "预览成绩模板")
     public Result<ScoreTemplatePreviewResponse> previewTemplate(
-            @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
+            @Parameter(description = "教学班 ID", required = true) @RequestParam Long classId) {
         return Result.ok(scoreCalcService.previewTemplate(classId));
     }
 
     @GetMapping("/downloadTemplate")
     @Operation(summary = "下载成绩模板")
     public ResponseEntity<byte[]> downloadTemplate(
-            @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
+            @Parameter(description = "教学班 ID", required = true) @RequestParam Long classId) {
         byte[] excelBytes = scoreCalcService.downloadTemplate(classId);
-        String fileName = "成绩模板_" + classId + ".xlsx";
+        String fileName = "成绩模板.xlsx";
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         headers.setContentDisposition(org.springframework.http.ContentDisposition.builder("attachment")
-                .filename(fileName, java.nio.charset.StandardCharsets.UTF_8)
+                .filename(fileName, StandardCharsets.UTF_8)
                 .build());
         headers.setContentLength(excelBytes.length);
         return ResponseEntity.ok().headers(headers).body(excelBytes);
@@ -85,7 +87,7 @@ public class ScoreCalcController {
     @PostMapping("/getCourseObjectiveDashboard")
     @Operation(summary = "查询课程目标达成看板")
     public Result<CourseObjectiveDashboardResponse> getCourseObjectiveDashboard(
-            @Parameter(description = "教学班ID", required = true) @RequestParam Long classId) {
+            @Parameter(description = "教学班 ID", required = true) @RequestParam Long classId) {
         return Result.ok(scoreCalcService.getCourseObjectiveDashboard(classId));
     }
 
