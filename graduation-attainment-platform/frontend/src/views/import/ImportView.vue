@@ -314,7 +314,7 @@ function goToStudentList() {
                   type="primary"
                   plain
                   :icon="Download"
-                  @click="downloadTemplate('/templates/students.xlsx', 'students-template.xlsx')"
+                  @click="downloadTemplate('/templates/student-import-template.xlsx', 'students-template.xlsx')"
                 >
                   下载模板
                 </el-button>
@@ -368,7 +368,7 @@ function goToStudentList() {
                   type="primary"
                   plain
                   :icon="Download"
-                  @click="downloadTemplate('/templates/student-classes.xlsx', 'student-class-template.xlsx')"
+                  @click="downloadTemplate('/templates/student-class-import-template.xlsx', 'student-class-template.xlsx')"
                 >
                   下载模板
                 </el-button>
