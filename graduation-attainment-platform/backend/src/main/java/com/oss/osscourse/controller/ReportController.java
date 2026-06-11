@@ -1,6 +1,7 @@
 package com.oss.osscourse.controller;
 
 import com.oss.osscourse.common.Result;
+import com.oss.osscourse.dto.report.MajorRadarResponse;
 import com.oss.osscourse.dto.report.MajorReportRequest;
 import com.oss.osscourse.dto.report.MajorReportResponse;
 import com.oss.osscourse.service.MajorReportService;
@@ -66,6 +67,21 @@ public class ReportController {
                 .build());
         headers.setContentLength(excelBytes.length);
         return ResponseEntity.ok().headers(headers).body(excelBytes);
+    }
+
+    @PostMapping("/majorRadar")
+    @Operation(
+            summary = "专业级雷达图数据",
+            description = "复用专业级评价报告统一结果源（major_indicator_achievement），"
+                    + "将指标点达成度转换为雷达图可直接消费的轴标签与数值格式，"
+                    + "含合格线（0.7）、良好线（0.8）参考线。"
+                    + "角色：专业负责人、教务管理员。"
+    )
+    public Result<MajorRadarResponse> getMajorRadar(
+            @Valid @RequestBody MajorReportRequest request,
+            @RequestAttribute("roles") List<String> roles) {
+        ensureMajorReportAccess(roles);
+        return Result.ok(majorReportService.getMajorRadar(request));
     }
 
     private void ensureMajorReportAccess(List<String> roles) {

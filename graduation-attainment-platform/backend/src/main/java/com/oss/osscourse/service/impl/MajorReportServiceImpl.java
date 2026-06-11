@@ -2,6 +2,7 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.dto.report.MajorRadarResponse;
 import com.oss.osscourse.dto.report.MajorReportRequest;
 import com.oss.osscourse.dto.report.MajorReportResponse;
 import com.oss.osscourse.dto.report.MajorReportResponse.ContributingCourse;
@@ -427,6 +428,62 @@ public class MajorReportServiceImpl implements MajorReportService {
         } catch (IOException e) {
             throw new BusinessException(500, "生成专业级评价报告 Excel 失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public MajorRadarResponse getMajorRadar(MajorReportRequest request) {
+        // 与 assembleMajorReport 共用同一结果源
+        MajorReportResponse report = assembleMajorReport(request);
+
+        // 提取指标点达成度列表
+        List<IndicatorReportRow> rows = report.getIndicatorAchievements() != null
+                ? report.getIndicatorAchievements()
+                : List.of();
+
+        // 构建轴标签和值
+        List<MajorRadarResponse.AxisIndicator> axisIndicators = new ArrayList<>();
+        List<Float> seriesData = new ArrayList<>();
+
+        for (IndicatorReportRow row : rows) {
+            axisIndicators.add(MajorRadarResponse.AxisIndicator.builder()
+                    .ipId(row.getIpId())
+                    .ipCode(row.getIpCode())
+                    .ipDescription(row.getIpDescription())
+                    .grCode(row.getGrCode())
+                    .build());
+            seriesData.add(row.getFinalAchievement());
+        }
+
+        MajorRadarResponse.RadarData radarData = MajorRadarResponse.RadarData.builder()
+                .indicators(axisIndicators)
+                .series(List.of(MajorRadarResponse.SeriesItem.builder()
+                        .name("专业级达成度")
+                        .data(seriesData)
+                        .build()))
+                .maxValue(1.0f)
+                .referenceLines(List.of(
+                        MajorRadarResponse.ReferenceLine.builder()
+                                .value(0.7f)
+                                .name("合格线")
+                                .build(),
+                        MajorRadarResponse.ReferenceLine.builder()
+                                .value(0.8f)
+                                .name("良好线")
+                                .build()))
+                .build();
+
+        return MajorRadarResponse.builder()
+                .majorId(report.getMajorId())
+                .majorName(report.getMajorName())
+                .gradeYear(report.getGradeYear())
+                .termId(report.getTermId())
+                .termCode(report.getTermCode())
+                .reportGeneratedAt(LocalDateTime.now())
+                .resultReady(report.getResultReady())
+                .message(report.getMessage())
+                .radar(radarData)
+                .dataSource("major_indicator_achievement（专业+" + report.getGradeYear() + " 级）")
+                .build();
     }
 
     // ==================== Excel 样式工厂 ====================

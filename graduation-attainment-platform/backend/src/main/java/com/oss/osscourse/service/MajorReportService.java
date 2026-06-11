@@ -1,5 +1,6 @@
 package com.oss.osscourse.service;
 
+import com.oss.osscourse.dto.report.MajorRadarResponse;
 import com.oss.osscourse.dto.report.MajorReportRequest;
 import com.oss.osscourse.dto.report.MajorReportResponse;
 
@@ -24,4 +25,14 @@ public interface MajorReportService {
      * @return Excel 文件字节数组
      */
     byte[] exportMajorReport(MajorReportRequest request);
+
+    /**
+     * 获取专业级雷达图数据。
+     * 与 assembleMajorReport 共用一个结果源，从统一报告数据中
+     * 提取指标点达成度，转换为雷达图可直接渲染的轴标签与数值格式。
+     *
+     * @param request 查询请求（majorId + gradeYear，可选 termId）
+     * @return 雷达图数据
+     */
+    MajorRadarResponse getMajorRadar(MajorReportRequest request);
 }
