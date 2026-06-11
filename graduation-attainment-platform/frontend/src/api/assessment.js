@@ -106,3 +106,9 @@ export function getMajorCalcResultApi(data) {
 export function approveUnlockApi(data) {
   return request.post('/assessment/approveUnlock', data)
 }
+
+export function exportMajorReportApi(data) {
+  return authorizedAxios().post('/assessment/exportMajorReport', data, {
+    responseType: 'blob',
+  })
+}
