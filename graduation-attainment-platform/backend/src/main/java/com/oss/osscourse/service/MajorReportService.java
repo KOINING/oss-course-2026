@@ -14,4 +14,14 @@ public interface MajorReportService {
      * @return 专业级报告完整数据
      */
     MajorReportResponse assembleMajorReport(MajorReportRequest request);
+
+    /**
+     * 导出专业级评价报告 Excel。
+     * 与 assembleMajorReport 共用一个结果源，将装配后的报告数据
+     * 写入结构化 Excel 文件并返回字节数组。
+     *
+     * @param request 查询请求（majorId + gradeYear，可选 termId）
+     * @return Excel 文件字节数组
+     */
+    byte[] exportMajorReport(MajorReportRequest request);
 }

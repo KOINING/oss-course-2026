@@ -8,12 +8,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -38,6 +43,29 @@ public class ReportController {
             @RequestAttribute("roles") List<String> roles) {
         ensureMajorReportAccess(roles);
         return Result.ok(majorReportService.assembleMajorReport(request));
+    }
+
+    @PostMapping("/majorReport/export")
+    @Operation(
+            summary = "导出专业级评价报告 Excel",
+            description = "复用专业级评价报告统一结果源（major_indicator_achievement），"
+                    + "生成结构化 Excel 文件供下载。报告包含：指标点达成度汇总 + 各指标点支撑课程贡献明细 + 数据源说明。"
+                    + "角色：专业负责人、教务管理员。"
+    )
+    public ResponseEntity<byte[]> exportMajorReport(
+            @Valid @RequestBody MajorReportRequest request,
+            @RequestAttribute("roles") List<String> roles) {
+        ensureMajorReportAccess(roles);
+        byte[] excelBytes = majorReportService.exportMajorReport(request);
+        String fileName = "专业级达成度评价报告_" + request.getGradeYear() + ".xlsx";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDisposition(ContentDisposition.builder("attachment")
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build());
+        headers.setContentLength(excelBytes.length);
+        return ResponseEntity.ok().headers(headers).body(excelBytes);
     }
 
     private void ensureMajorReportAccess(List<String> roles) {
