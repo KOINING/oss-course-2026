@@ -2,6 +2,10 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+const LOCAL_API_TARGET = 'http://localhost:8080'
+// 远端联调备用地址，当前默认开发代理不使用它。
+const REMOTE_API_TARGET = 'http://39.104.52.187'
+
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -13,11 +17,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_DEV_API_TARGET || 'http://39.104.52.187',
+        target: LOCAL_API_TARGET,
         changeOrigin: true,
       },
       '/health': {
-        target: process.env.VITE_DEV_API_TARGET || 'http://39.104.52.187',
+        target: LOCAL_API_TARGET,
+
         changeOrigin: true,
       },
     },

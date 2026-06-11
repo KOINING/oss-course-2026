@@ -262,3 +262,11 @@ export function getProtectedRoutes() {
     })),
   )
 }
+
+export function getResolvedRouteTitle(routeName, roleCodes = []) {
+  const routeItem = getProtectedRoutes().find((item) => item.routeName === routeName)
+  if (!routeItem) {
+    return ''
+  }
+  return resolveVisibleLabel(routeItem, new Set(roleCodes))
+}

@@ -146,6 +146,20 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <div v-if="!loading && selectedCourseId" class="score-summary" :class="scoreSummary.stateClass">
+            <div class="score-summary__inline">
+              <span class="score-summary__title">考核点总满分</span>
+              <div class="score-summary__main">
+                <span class="score-summary__value">{{ formatScore(scoreSummary.total) }}</span>
+                <span class="score-summary__divider">/</span>
+                <span class="score-summary__target">100</span>
+              </div>
+              <el-tag :type="scoreSummary.tagType" effect="light" round>
+                {{ scoreSummary.tagLabel }}
+              </el-tag>
+            </div>
+          </div>
         </section>
       </div>
     </el-card>
@@ -245,6 +259,36 @@ const formRules = {
 const currentClassOptions = computed(() =>
   teachingClassOptions.value.filter((item) => item.courseId === selectedCourseId.value),
 )
+
+const totalFullScore = computed(() =>
+  points.value.reduce((sum, item) => sum + Number(item?.fullScore || 0), 0),
+)
+
+const scoreSummary = computed(() => {
+  const total = totalFullScore.value
+  if (total < 100) {
+    return {
+      total,
+      stateClass: 'is-warning',
+      tagType: 'warning',
+      tagLabel: '未配满',
+    }
+  }
+  if (total > 100) {
+    return {
+      total,
+      stateClass: 'is-danger',
+      tagType: 'danger',
+      tagLabel: '超限',
+    }
+  }
+  return {
+    total,
+    stateClass: 'is-success',
+    tagType: 'success',
+    tagLabel: '已配平',
+  }
+})
 
 async function loadCourses() {
   try {
@@ -351,6 +395,24 @@ function resetForm() {
   form.coId = null
 }
 
+function formatScore(value) {
+  const numeric = Number(value || 0)
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1)
+}
+
+function validateTotalFullScoreBeforeSubmit() {
+  const currentTotal = points.value.reduce((sum, item) => {
+    if (dialogMode.value === 'edit' && item.apId === form.apId) {
+      return sum
+    }
+    return sum + Number(item?.fullScore || 0)
+  }, 0)
+  const nextTotal = currentTotal + Number(form.fullScore || 0)
+  if (nextTotal > 100) {
+    throw new Error(`当前课程下考核点总满分不能超过 100，现有总满分为 ${formatScore(currentTotal)}，本次提交后将达到 ${formatScore(nextTotal)}`)
+  }
+}
+
 function openDialog(mode, row = null) {
   dialogMode.value = mode
   resetForm()
@@ -365,9 +427,10 @@ function openDialog(mode, row = null) {
 }
 
 async function handleSubmit() {
-  await formRef.value?.validate()
-  submitLoading.value = true
   try {
+    await formRef.value?.validate()
+    validateTotalFullScoreBeforeSubmit()
+    submitLoading.value = true
     const payload = {
       apName: form.apName,
       fullScore: form.fullScore,
@@ -383,6 +446,10 @@ async function handleSubmit() {
     }
     dialogVisible.value = false
     await loadAssessmentPoints()
+  } catch (error) {
+    if (error?.message) {
+      ElMessage.error(error.message)
+    }
   } finally {
     submitLoading.value = false
   }
@@ -503,5 +570,58 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.score-summary {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.score-summary__inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-summary__title {
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.score-summary__main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.score-summary__value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.score-summary__divider,
+.score-summary__target {
+  font-size: 18px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.score-summary.is-warning .score-summary__value {
+  color: #d97706;
+}
+
+.score-summary.is-success .score-summary__value {
+  color: #16a34a;
+}
+
+.score-summary.is-danger .score-summary__value {
+  color: #dc2626;
 }
 </style>

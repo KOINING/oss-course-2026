@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AdminUserManagementServiceImpl implements AdminUserManagementService {
+    private static final String DEFAULT_RESET_PASSWORD = "123456";
 
     private static final Set<String> ASSIGNABLE_ROLE_CODES = Set.of(
             "academic_affairs",
@@ -153,6 +154,21 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
 
         SysUser user = requireManagedUser(request.getId());
         user.setStatus(request.getStatus());
+        sysUserMapper.updateById(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetUserPassword(AdminResetUserPasswordRequest request,
+                                  List<String> currentRoles,
+                                  List<String> currentPermissions) {
+        assertManagePermission(currentRoles, currentPermissions);
+
+        requireManagedUser(request.getId());
+
+        SysUser user = new SysUser();
+        user.setId(request.getId());
+        user.setPassword(passwordEncoder.encode(DEFAULT_RESET_PASSWORD));
         sysUserMapper.updateById(user);
     }
 
