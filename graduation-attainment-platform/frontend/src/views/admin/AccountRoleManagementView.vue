@@ -70,12 +70,22 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button link type="primary" @click="openEditDialog(row)">
                 编辑
               </el-button>
+              <el-popconfirm
+                title="确认将该账号密码重置为 123456 吗？"
+                @confirm="handleResetPassword(row)"
+              >
+                <template #reference>
+                  <el-button link type="warning">
+                    重置密码
+                  </el-button>
+                </template>
+              </el-popconfirm>
               <el-popconfirm
                 :title="row.status === 1 ? '确认禁用该账号吗？' : '确认启用该账号吗？'"
                 @confirm="handleToggleStatus(row)"
@@ -170,6 +180,7 @@ import {
   addUserApi,
   listAssignableRolesApi,
   listUsersApi,
+  resetUserPasswordApi,
   updateUserApi,
   updateUserStatusApi,
 } from '@/api/admin'
@@ -333,6 +344,11 @@ async function handleToggleStatus(row) {
   })
   ElMessage.success(nextStatus === 1 ? '账号已启用' : '账号已禁用')
   await loadUsers()
+}
+
+async function handleResetPassword(row) {
+  await resetUserPasswordApi({ id: row.id })
+  ElMessage.success(`账号“${row.username}”密码已重置为 123456`)
 }
 
 onMounted(async () => {

@@ -14,14 +14,14 @@ public interface CourseObjectiveMapper extends BaseMapper<CourseObjective> {
 
     /**
      * 查询课程目标列表（JOIN course 表获取课程编码和名称）。
-     * 列表查询不返回 co_description（原始DB值），由 Service 层组装纯文本 description。
+     * 为兼容已部署环境中的旧表结构，列表查询只读取当前页面必需字段，
+     * 不强依赖 created_at / updated_at 这类非核心展示列。
      */
     @Select({
             "<script>",
             "SELECT co.co_id AS coId, co.objective_code AS objectiveCode,",
             "co.co_description AS description, co.course_id AS courseId,",
-            "c.course_code AS courseCode, c.course_name AS courseName,",
-            "co.created_at AS createdAt, co.updated_at AS updatedAt",
+            "c.course_code AS courseCode, c.course_name AS courseName",
             "FROM course_objective co",
             "LEFT JOIN course c ON co.course_id = c.course_id",
             "<where>",
@@ -40,12 +40,12 @@ public interface CourseObjectiveMapper extends BaseMapper<CourseObjective> {
 
     /**
      * 按ID查询单个课程目标详情（含原始 co_description 及课程信息）。
+     * 同样避免依赖旧环境中可能尚未补齐的时间列。
      */
     @Select({
             "SELECT co.co_id AS coId, co.objective_code AS objectiveCode,",
             "co.co_description AS description, co.course_id AS courseId,",
-            "c.course_code AS courseCode, c.course_name AS courseName,",
-            "co.created_at AS createdAt, co.updated_at AS updatedAt",
+            "c.course_code AS courseCode, c.course_name AS courseName",
             "FROM course_objective co",
             "LEFT JOIN course c ON co.course_id = c.course_id",
             "WHERE co.co_id = #{coId}"

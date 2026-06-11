@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "成绩导入预览响应")
+@Schema(description = "成绩导入预校验响应")
 public class ScoreImportPreviewResponse {
 
     @Schema(description = "总记录数", example = "30")
@@ -24,14 +24,17 @@ public class ScoreImportPreviewResponse {
     @Schema(description = "失败记录数", example = "2")
     private Integer failCount;
 
-    @Schema(description = "是否可以保存", example = "true")
+    @Schema(description = "是否允许保存", example = "true")
     private Boolean canSave;
 
-    @Schema(description = "成功记录")
+    @Schema(description = "校验通过的行")
     private List<SuccessRow> successRows;
 
-    @Schema(description = "失败记录")
+    @Schema(description = "校验失败的行")
     private List<FailRow> failRows;
+
+    @Schema(description = "通过校验后可直接保存的成绩明细")
+    private List<ScoreSaveRequest.ScoreItem> scoreItems;
 
     @Data
     @Builder
@@ -39,7 +42,7 @@ public class ScoreImportPreviewResponse {
     @AllArgsConstructor
     @Schema(description = "成功行")
     public static class SuccessRow {
-        @Schema(description = "行号", example = "2")
+        @Schema(description = "Excel 行号", example = "4")
         private Integer rowIndex;
 
         @Schema(description = "学号", example = "20220101001")
@@ -50,6 +53,9 @@ public class ScoreImportPreviewResponse {
 
         @Schema(description = "学生ID", example = "1")
         private Long studentId;
+
+        @Schema(description = "本行已识别成绩项数量", example = "8")
+        private Integer scoreCount;
     }
 
     @Data
@@ -58,7 +64,7 @@ public class ScoreImportPreviewResponse {
     @AllArgsConstructor
     @Schema(description = "失败行")
     public static class FailRow {
-        @Schema(description = "行号", example = "3")
+        @Schema(description = "Excel 行号", example = "5")
         private Integer rowIndex;
 
         @Schema(description = "学号", example = "20220101002")
@@ -67,7 +73,7 @@ public class ScoreImportPreviewResponse {
         @Schema(description = "学生姓名", example = "李四")
         private String studentName;
 
-        @Schema(description = "失败原因", example = "学号不存在")
+        @Schema(description = "失败原因", example = "学号不属于当前教学班")
         private String errorMessage;
     }
 }

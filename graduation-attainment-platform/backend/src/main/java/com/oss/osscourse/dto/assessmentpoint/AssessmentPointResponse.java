@@ -1,13 +1,17 @@
 package com.oss.osscourse.dto.assessmentpoint;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "考核点响应对象")
 public class AssessmentPointResponse {
     @Schema(description = "考核点ID", example = "1")

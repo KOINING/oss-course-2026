@@ -83,35 +83,13 @@ export const NAVIGATION_SECTIONS = [
       },
       {
         key: 'student-list',
-        label: '学生基础信息管理',
+        label: '学生名单管理',
         path: '/student-list',
         routeName: ROUTE_NAMES.STUDENT_LIST,
         roles: ['academic_affairs'],
         moduleTitle: '模块 A：基础与宏观数据管理',
         summary:
-          '维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态，不直接维护教学班学生关联。',
-        entities: ['Student'],
-      },
-      {
-        key: 'teaching-class',
-        label: '教学班管理',
-        path: '/teaching-class',
-        routeName: ROUTE_NAMES.TEACHING_CLASS,
-        roles: ['admin', 'academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
-        summary:
-          '管理课程的教学班信息，包括班级编号、授课教师、班级容量等。',
-        entities: ['TeachingClass'],
-      },
-      {
-        key: 'student-list',
-        label: '学生名单管理',
-        path: '/student-list',
-        routeName: ROUTE_NAMES.STUDENT_LIST,
-        roles: ['admin', 'academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
-        summary:
-          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等。',
+          '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等，并承接学生名单导入与核对。',
         entities: ['Student'],
       },
       {
@@ -184,16 +162,6 @@ export const NAVIGATION_SECTIONS = [
         entities: ['sys_user', 'sys_role', 'sys_user_role', 'sys_role_permission'],
         componentKey: 'account-role-management',
       },
-      {
-        key: 'component-demo',
-        label: '组件预览（开发）',
-        path: '/component-demo',
-        routeName: ROUTE_NAMES.COMPONENT_DEMO,
-        roles: ['admin'],
-        moduleTitle: '系统管理',
-        summary: '页面组件预览与调试页面，仅供开发期验证交互与样式。',
-        entities: [],
-      },
     ],
   },
   {
@@ -203,13 +171,13 @@ export const NAVIGATION_SECTIONS = [
     children: [
       {
         key: 'assessment',
-        label: '成绩录入与计算',
+        label: '达成度计算与看板',
         path: '/assessment',
         routeName: ROUTE_NAMES.ASSESSMENT,
         roles: ['academic_affairs', 'program_director', 'instructor'],
-        moduleTitle: '模块 C：成绩录入与直接评价',
+        moduleTitle: '模块 C：课程与专业达成度计算',
         summary:
-          '承接班级与学生数据、原始成绩导入、课程级计算和专业级汇总，是平台达成度分析的执行中心。',
+          '承接原始成绩导入、课程级达成度计算、专业级全局汇总与结果看板，是平台达成度分析的执行中心。',
         entities: [
           'TeachingClass',
           'Student',
@@ -263,10 +231,25 @@ export function getVisibleSections(roleCodes = []) {
     children:
       section.key === 'home'
         ? section.children
-        : section.children.filter((item) =>
-            item.roles.some((roleCode) => roleSet.has(roleCode)),
-          ),
+        : section.children
+            .filter((item) => item.roles.some((roleCode) => roleSet.has(roleCode)))
+            .map((item) => ({
+              ...item,
+              label: resolveVisibleLabel(item, roleSet),
+            })),
   })).filter((section) => section.children.length > 0)
+}
+
+function resolveVisibleLabel(item, roleSet) {
+  if (
+    item.key === 'assessment'
+    && roleSet.has('instructor')
+    && !roleSet.has('program_director')
+    && !roleSet.has('academic_affairs')
+  ) {
+    return '课程成绩与课程级计算'
+  }
+  return item.label
 }
 
 export function getProtectedRoutes() {
@@ -278,4 +261,12 @@ export function getProtectedRoutes() {
       icon: section.icon,
     })),
   )
+}
+
+export function getResolvedRouteTitle(routeName, roleCodes = []) {
+  const routeItem = getProtectedRoutes().find((item) => item.routeName === routeName)
+  if (!routeItem) {
+    return ''
+  }
+  return resolveVisibleLabel(routeItem, new Set(roleCodes))
 }

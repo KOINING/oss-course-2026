@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 @Builder
-@Schema(description = "教师端成绩录入上下文")
+@Schema(description = "教师端成绩导入上下文")
 public class ScoreImportContextResponse {
     @Schema(description = "当前教师权限判断结果")
     private PermissionResult permission;
@@ -24,6 +24,9 @@ public class ScoreImportContextResponse {
 
     @Schema(description = "当前考核点数量", example = "8")
     private Long assessmentPointCount;
+
+    @Schema(description = "当前内部权重配置数量", example = "8")
+    private Long internalWeightCount;
 
     @Schema(description = "当前课程级计算状态", example = "unsubmitted")
     private String calcStatus;

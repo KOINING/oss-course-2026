@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import pinia from '@/stores'
 import { useUserStore } from '@/stores/user'
-import { getProtectedRoutes } from '@/config/navigation'
+import { getProtectedRoutes, getResolvedRouteTitle } from '@/config/navigation'
 import { getToken } from '@/utils/auth'
 import { APP_TITLE, DEFAULT_HOME_PATH, ROUTE_NAMES } from '@/utils/constants'
 
@@ -15,6 +15,10 @@ function resolveProtectedComponent(item) {
 
   if (item.routeName === ROUTE_NAMES.SUPPORT_MATRIX) {
     return () => import('@/views/requirements/SupportMatrixView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.COURSE_OBJECTIVES) {
+    return () => import('@/views/course-objectives/CourseObjectivesModuleView.vue')
   }
 
   if (item.routeName === ROUTE_NAMES.BASIC_DATA) {
@@ -35,6 +39,10 @@ function resolveProtectedComponent(item) {
 
   if (item.routeName === ROUTE_NAMES.DATA_IMPORT) {
     return () => import('@/views/import/ImportView.vue')
+  }
+
+  if (item.routeName === ROUTE_NAMES.ASSESSMENT) {
+    return () => import('@/views/assessment/AssessmentView.vue')
   }
 
   if (item.routeName === ROUTE_NAMES.REPORTS) {
@@ -87,8 +95,6 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  document.title = to.meta.title ? `${to.meta.title} - ${APP_TITLE}` : APP_TITLE
-
   const isPublic = Boolean(to.meta.public)
   const hasToken = Boolean(getToken())
   const userStore = useUserStore(pinia)
@@ -118,6 +124,15 @@ router.beforeEach(async (to) => {
       return DEFAULT_HOME_PATH
     }
   }
+
+  if (!isPublic && to.name) {
+    const resolvedTitle = getResolvedRouteTitle(to.name, userStore.roleCodes)
+    if (resolvedTitle) {
+      to.meta.title = resolvedTitle
+    }
+  }
+
+  document.title = to.meta.title ? `${to.meta.title} - ${APP_TITLE}` : APP_TITLE
 
   return true
 })

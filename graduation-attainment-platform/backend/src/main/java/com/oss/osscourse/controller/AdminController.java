@@ -56,4 +56,12 @@ public class AdminController {
         adminUserManagementService.updateUserStatus(request, roles, permissions);
         return Result.ok("账号状态更新成功", null);
     }
+
+    @PostMapping("/resetUserPassword")
+    public Result<Void> resetUserPassword(@Valid @RequestBody AdminResetUserPasswordRequest request,
+                                          @RequestAttribute("roles") List<String> roles,
+                                          @RequestAttribute("permissions") List<String> permissions) {
+        adminUserManagementService.resetUserPassword(request, roles, permissions);
+        return Result.ok("密码已重置为 123456", null);
+    }
 }

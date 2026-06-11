@@ -12,7 +12,10 @@ public class MajorCalcRequest {
     @Schema(description = "专业ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long majorId;
 
-    @NotNull(message = "学期ID不能为空")
-    @Schema(description = "学期ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "年级不能为空")
+    @Schema(description = "年级", example = "2022", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Integer gradeYear;
+
+    @Schema(description = "内部代表学期ID，仅供服务端兼容旧链路时使用", example = "1")
     private Long termId;
 }

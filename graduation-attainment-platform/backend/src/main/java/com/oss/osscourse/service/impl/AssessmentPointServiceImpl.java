@@ -23,6 +23,7 @@ public class AssessmentPointServiceImpl implements AssessmentPointService {
 
     private static final String MANAGE_ROLE = "instructor";
     private static final String MANAGE_PERMISSION = "point:write";
+    private static final float MAX_TOTAL_FULL_SCORE = 100.0f;
 
     private final AssessmentPointMapper apMapper;
     private final CourseObjectiveMapper courseObjectiveMapper;
@@ -90,6 +91,8 @@ public class AssessmentPointServiceImpl implements AssessmentPointService {
             throw new BusinessException(400, "课程(ID=" + courseId + ") 下已存在名称为「" + apName + "」的考核点，请使用不同的名称");
         }
 
+        validateCourseTotalFullScore(courseId, fullScore, null);
+
         AssessmentPoint entity = new AssessmentPoint();
         entity.setApName(apName);
         entity.setFullScore(fullScore);
@@ -141,6 +144,8 @@ public class AssessmentPointServiceImpl implements AssessmentPointService {
         if (nameCount > 0) {
             throw new BusinessException(400, "课程(ID=" + courseId + ") 下已存在名称为「" + apName + "」的考核点，请使用不同的名称");
         }
+
+        validateCourseTotalFullScore(courseId, fullScore, apId);
 
         entity.setApName(apName);
         entity.setFullScore(fullScore);
@@ -201,5 +206,17 @@ public class AssessmentPointServiceImpl implements AssessmentPointService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void validateCourseTotalFullScore(Long courseId, Float currentFullScore, Long excludeApId) {
+        Float existingTotal = apMapper.sumFullScoreByCourse(courseId, excludeApId);
+        float safeExistingTotal = existingTotal == null ? 0.0f : existingTotal;
+        float nextTotal = safeExistingTotal + currentFullScore;
+        if (nextTotal > MAX_TOTAL_FULL_SCORE) {
+            throw new BusinessException(
+                    400,
+                    "当前课程下考核点总满分不能超过 100，现有总满分为 " + safeExistingTotal + "，本次提交后将达到 " + nextTotal
+            );
+        }
     }
 }
