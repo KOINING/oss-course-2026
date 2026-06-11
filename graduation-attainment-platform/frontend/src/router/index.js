@@ -37,6 +37,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/import/ImportView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.REPORTS) {
+    return () => import('@/views/reports/CourseReportView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')
