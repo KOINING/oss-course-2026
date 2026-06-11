@@ -23,4 +23,8 @@ public interface AdminUserManagementService {
     void updateUserStatus(AdminUpdateUserStatusRequest request,
                           List<String> currentRoles,
                           List<String> currentPermissions);
+
+    void resetUserPassword(AdminResetUserPasswordRequest request,
+                           List<String> currentRoles,
+                           List<String> currentPermissions);
 }

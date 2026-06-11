@@ -19,3 +19,7 @@ export function updateUserApi(data) {
 export function updateUserStatusApi(data) {
   return request.post('/admin/updateUserStatus', data)
 }
+
+export function resetUserPasswordApi(data) {
+  return request.post('/admin/resetUserPassword', data)
+}

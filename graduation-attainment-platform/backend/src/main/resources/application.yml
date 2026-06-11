@@ -5,10 +5,10 @@ spring:
   application:
     name: oss-course
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/graduationdb?useSSL=false&serverTimezone=UTC&characterEncoding=utf8}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3308/GraduationDB?useSSL=false&serverTimezone=UTC&characterEncoding=utf8}
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
   sql:
     init:
       mode: never
@@ -39,5 +39,5 @@ mybatis-plus:
     cache-enabled: false
 
 jwt:
-  secret: local-dev-secret-key-abcdefghijklmnopqrstuvwxyz-123456
+  secret: ${JWT_SECRET:local-dev-secret-key-abcdefghijklmnopqrstuvwxyz-123456} 
   expiration: ${JWT_EXPIRATION:86400000}

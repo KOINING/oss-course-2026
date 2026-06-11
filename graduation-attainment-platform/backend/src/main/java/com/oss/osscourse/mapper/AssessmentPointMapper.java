@@ -78,6 +78,23 @@ public interface AssessmentPointMapper extends BaseMapper<AssessmentPoint> {
                             @Param("excludeApId") Long excludeApId);
 
     /**
+     * 汇总同一课程下所有考核点满分，用于总分上限校验。
+     */
+    @Select({
+            "<script>",
+            "SELECT COALESCE(SUM(ap.full_score), 0)",
+            "FROM assessment_point ap",
+            "JOIN course_objective co ON ap.co_id = co.co_id",
+            "WHERE co.course_id = #{courseId}",
+            "<if test='excludeApId != null'>",
+            "AND ap.ap_id != #{excludeApId}",
+            "</if>",
+            "</script>"
+    })
+    Float sumFullScoreByCourse(@Param("courseId") Long courseId,
+                               @Param("excludeApId") Long excludeApId);
+
+    /**
      * 统计被学生成绩引用的数量（删除前置校验）。
      */
     @Select("SELECT COUNT(1) FROM student_assessment_score WHERE ap_id = #{apId}")
