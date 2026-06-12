@@ -1,0 +1,202 @@
+package com.oss.osscourse.dto.report;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "课程级评价报表响应")
+public class CourseReportResponse {
+
+    @Schema(description = "课程ID", example = "1")
+    private Long courseId;
+
+    @Schema(description = "课程编码", example = "CS201")
+    private String courseCode;
+
+    @Schema(description = "课程名称", example = "数据结构")
+    private String courseName;
+
+    @Schema(description = "年级", example = "2022")
+    private Integer gradeYear;
+
+    @Schema(description = "学分", example = "3.0")
+    private Float credit;
+
+    @Schema(description = "教学班列表")
+    private List<TeachingClassReport> teachingClasses;
+
+    @Schema(description = "课程目标达成度汇总")
+    private List<ObjectiveAchievementSummary> objectiveAchievements;
+
+    @Schema(description = "课程级指标点达成度汇总")
+    private List<IndicatorAchievementSummary> indicatorAchievements;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "教学班报表")
+    public static class TeachingClassReport {
+
+        @Schema(description = "教学班ID", example = "1")
+        private Long classId;
+
+        @Schema(description = "教学班编号", example = "TC2024CS01")
+        private String classCode;
+
+        @Schema(description = "教学班名称", example = "数据结构2024-2025-1班")
+        private String className;
+
+        @Schema(description = "学期编码", example = "2024-2025-1")
+        private String termCode;
+
+        @Schema(description = "学生人数", example = "30")
+        private Integer studentCount;
+
+        @Schema(description = "计算状态", example = "locked")
+        private String calcStatus;
+
+        @Schema(description = "各考核点平均分")
+        private List<AssessmentPointAverage> assessmentPointAverages;
+
+        @Schema(description = "课程目标达成度明细")
+        private List<ObjectiveAchievementDetail> objectiveAchievementDetails;
+
+        @Schema(description = "课程级指标点达成度")
+        private List<IndicatorAchievementDetail> indicatorAchievementDetails;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "考核点平均分")
+    public static class AssessmentPointAverage {
+
+        @Schema(description = "考核点ID", example = "1")
+        private Long apId;
+
+        @Schema(description = "考核点名称", example = "期末卷-链表操作题")
+        private String apName;
+
+        @Schema(description = "满分", example = "20.0")
+        private Float fullScore;
+
+        @Schema(description = "平均分", example = "15.5")
+        private Float averageScore;
+
+        @Schema(description = "得分率", example = "0.775")
+        private Float scoreRate;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "课程目标达成度明细")
+    public static class ObjectiveAchievementDetail {
+
+        @Schema(description = "课程目标ID", example = "1")
+        private Long coId;
+
+        @Schema(description = "课程目标编码", example = "CO1")
+        private String objectiveCode;
+
+        @Schema(description = "课程目标描述", example = "能够运用数据结构知识解决实际问题")
+        private String description;
+
+        @Schema(description = "班级平均达成度", example = "0.75")
+        private Float averageAchievement;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "课程级指标点达成度明细")
+    public static class IndicatorAchievementDetail {
+
+        @Schema(description = "指标点ID", example = "1")
+        private Long ipId;
+
+        @Schema(description = "指标点编码", example = "1.1")
+        private String ipCode;
+
+        @Schema(description = "指标点描述", example = "能够运用数学、自然科学和工程科学的基本原理")
+        private String ipDescription;
+
+        @Schema(description = "课程级指标点达成度", example = "0.72")
+        private Float achievement;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "课程目标达成度汇总")
+    public static class ObjectiveAchievementSummary {
+
+        @Schema(description = "课程目标ID", example = "1")
+        private Long coId;
+
+        @Schema(description = "课程目标编码", example = "CO1")
+        private String objectiveCode;
+
+        @Schema(description = "课程目标描述", example = "能够运用数据结构知识解决实际问题")
+        private String description;
+
+        @Schema(description = "各教学班达成度")
+        private List<ClassAchievement> classAchievements;
+
+        @Schema(description = "平均达成度", example = "0.73")
+        private Float averageAchievement;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "课程级指标点达成度汇总")
+    public static class IndicatorAchievementSummary {
+
+        @Schema(description = "指标点ID", example = "1")
+        private Long ipId;
+
+        @Schema(description = "指标点编码", example = "1.1")
+        private String ipCode;
+
+        @Schema(description = "指标点描述", example = "能够运用数学、自然科学和工程科学的基本原理")
+        private String ipDescription;
+
+        @Schema(description = "各教学班达成度")
+        private List<ClassAchievement> classAchievements;
+
+        @Schema(description = "平均达成度", example = "0.70")
+        private Float averageAchievement;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "教学班达成度")
+    public static class ClassAchievement {
+
+        @Schema(description = "教学班ID", example = "1")
+        private Long classId;
+
+        @Schema(description = "教学班名称", example = "数据结构2024-2025-1班")
+        private String className;
+
+        @Schema(description = "达成度值", example = "0.75")
+        private Float achievement;
+    }
+}

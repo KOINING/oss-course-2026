@@ -67,6 +67,13 @@
             <version>5.4.0</version>
         </dependency>
 
+        <!-- Apache PDFBox for PDF export -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
