@@ -324,38 +324,18 @@ public class CourseReportServiceImpl implements CourseReportService {
         CourseReportResponse report = getCourseReport(request);
 
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
-            // 加载中文字体（从资源目录加载）
-            java.io.InputStream fontStream = getClass().getClassLoader().getResourceAsStream("fonts/STHeiti.ttc");
+            // 加载中文字体（使用TTF格式的Noto Sans SC字体）
+            java.io.InputStream fontStream = getClass().getClassLoader().getResourceAsStream("fonts/NotoSansSC-Regular.ttf");
             if (fontStream == null) {
-                // 备用方案：使用系统字体
-                java.io.File fontFile = new java.io.File("/System/Library/Fonts/STHeiti Medium.ttc");
-                if (!fontFile.exists()) {
-                    fontFile = new java.io.File("/System/Library/Fonts/Supplemental/Songti.ttc");
-                }
-                if (!fontFile.exists()) {
-                    throw new BusinessException(500, "未找到中文字体文件");
-                }
-                fontStream = new java.io.FileInputStream(fontFile);
+                throw new BusinessException(500, "未找到中文字体文件");
             }
 
-            org.apache.pdfbox.pdmodel.font.PDFont font;
-            org.apache.pdfbox.pdmodel.font.PDFont boldFont;
-
-            // 使用PDType0Font.load加载字体
-            font = org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, fontStream, false);
+            // 使用PDType0Font.load加载TTF字体
+            org.apache.pdfbox.pdmodel.font.PDFont font = org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, fontStream, false);
             fontStream.close();
 
-            // 重新打开流加载粗体
-            fontStream = getClass().getClassLoader().getResourceAsStream("fonts/STHeiti.ttc");
-            if (fontStream == null) {
-                java.io.File fontFile = new java.io.File("/System/Library/Fonts/STHeiti Medium.ttc");
-                if (!fontFile.exists()) {
-                    fontFile = new java.io.File("/System/Library/Fonts/Supplemental/Songti.ttc");
-                }
-                fontStream = new java.io.FileInputStream(fontFile);
-            }
-            boldFont = org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, fontStream, true);
-            fontStream.close();
+            // 粗体使用同一字体（Noto Sans SC是可变字体，这里简化处理）
+            org.apache.pdfbox.pdmodel.font.PDFont boldFont = font;
 
             // 创建第一页
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(
