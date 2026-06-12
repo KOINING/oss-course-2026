@@ -99,11 +99,11 @@ curl -X POST http://localhost:8080/api/teacher/report/data \
 ### 3. 导出课程级评价报表 Excel
 
 ```bash
-curl -X POST http://localhost:8080/api/teacher/report/export/excel \
+curl -X POST http://39.104.52.187/api/teacher/report/export/excel \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhY2FkZW1pY193dSIsInVzZXJJZCI6NiwicmVhbE5hbWUiOiLlkLTogIHluIgiLCJyb2xlcyI6WyJhY2FkZW1pY19hZmZhaXJzIl0sInBlcm1pc3Npb25zIjpbImNvdXJzZTppbXBvcnQiLCJjbGFzczppbXBvcnQiLCJyZXBvcnQ6ZXhwb3J0Il0sImlhdCI6MTc4MTIyMzI4NSwiZXhwIjoxNzgxMzA5Njg1fQ.qQGhO4c22L-wkh_QjYctjkrzWLMZc0j-JnsVJRKNQsBAIB2rQqedESzCACcq_0ME" \
   -d '{
-    "courseId": 1,
+    "courseId": 62,
     "gradeYear": 2022
   }' \
   -o "课程级评价报表.xlsx"
@@ -116,11 +116,11 @@ curl -X POST http://localhost:8080/api/teacher/report/export/excel \
 ### 4. 导出课程级评价报表 PDF
 
 ```bash
-curl -X POST http://localhost:8080/api/teacher/report/export/pdf \
+curl -X POST http://39.104.52.187/api/teacher/report/export/pdf \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhY2FkZW1pY193dSIsInVzZXJJZCI6NiwicmVhbE5hbWUiOiLlkLTogIHluIgiLCJyb2xlcyI6WyJhY2FkZW1pY19hZmZhaXJzIl0sInBlcm1pc3Npb25zIjpbImNvdXJzZTppbXBvcnQiLCJjbGFzczppbXBvcnQiLCJyZXBvcnQ6ZXhwb3J0Il0sImlhdCI6MTc4MTIyMzI4NSwiZXhwIjoxNzgxMzA5Njg1fQ.qQGhO4c22L-wkh_QjYctjkrzWLMZc0j-JnsVJRKNQsBAIB2rQqedESzCACcq_0ME" \
   -d '{
-    "courseId": 1,
+    "courseId": 62,
     "gradeYear": 2022
   }' \
   -o "课程级评价报表.pdf"
