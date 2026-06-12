@@ -5,7 +5,7 @@ import request from './request'
  * @param {Object} params - { courseId, gradeYear }
  */
 export function getCourseReportApi(params) {
-  return request.post('/teacher/getCourseReport', params)
+  return request.post('/teacher/report/data', params)
 }
 
 /**
@@ -14,7 +14,7 @@ export function getCourseReportApi(params) {
  * @returns {Promise<Blob>}
  */
 export function exportCourseReportExcelApi(params) {
-  return request.post('/teacher/exportCourseReportExcel', params, {
+  return request.post('/teacher/report/export/excel', params, {
     responseType: 'blob',
   })
 }
@@ -25,7 +25,7 @@ export function exportCourseReportExcelApi(params) {
  * @returns {Promise<Blob>}
  */
 export function exportCourseReportPdfApi(params) {
-  return request.post('/teacher/exportCourseReportPdf', params, {
+  return request.post('/teacher/report/export/pdf', params, {
     responseType: 'blob',
   })
 }

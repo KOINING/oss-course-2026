@@ -49,6 +49,10 @@ function resolveProtectedComponent(item) {
     return () => import('@/views/reports/CourseReportView.vue')
   }
 
+  if (item.routeName === ROUTE_NAMES.DRILL_DOWN_LEDGER) {
+    return () => import('@/views/reports/DrillDownLedgerView.vue')
+  }
+
   return item.routeName === ROUTE_NAMES.HOME
     ? () => import('@/views/home/HomeView.vue')
     : () => import('@/views/system/ModulePlaceholderView.vue')
