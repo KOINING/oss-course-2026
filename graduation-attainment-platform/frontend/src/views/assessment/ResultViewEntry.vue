@@ -89,19 +89,43 @@
 
       <el-card class="entry-info-card">
         <template #header>
-          <span class="info-card-title">专业级指标点结果</span>
+          <div class="info-card-header-row">
+            <span class="info-card-title">专业级指标点结果</span>
+            <el-button
+              v-if="majorResult.resultReady"
+              type="primary"
+              :icon="Download"
+              @click="exportReport"
+            >
+              导出专业级报告
+            </el-button>
+          </div>
         </template>
         <EmptyState
           v-if="!majorResult.resultReady"
           :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果。'"
         />
-        <el-table v-else :data="majorResult.indicatorAchievements || []" border size="small">
-          <el-table-column prop="ipCode" label="指标点" width="120" />
-          <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
-          <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="180">
-            <template #default="{ row }">{{ formatDecimal(row.finalAchievement) }}</template>
-          </el-table-column>
-        </el-table>
+        <template v-else>
+          <div v-if="majorResult.termCode" class="term-info">
+            统计学期：{{ majorResult.termCode }}
+          </div>
+          <el-table :data="majorResult.indicatorAchievements || []" border size="small">
+            <el-table-column prop="ipCode" label="指标点" width="120" />
+            <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
+            <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="180">
+              <template #default="{ row }">{{ formatDecimal(row.finalAchievement) }}</template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </el-card>
+
+      <el-card v-if="majorResult.resultReady" class="entry-info-card">
+        <template #header>
+          <span class="info-card-title">毕业要求指标点达成度雷达图</span>
+        </template>
+        <ProfessionalRadarChart
+          :indicator-achievements="majorResult.indicatorAchievements"
+        />
       </el-card>
     </template>
   </div>
@@ -109,10 +133,13 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { DataAnalysis, TrendCharts } from '@element-plus/icons-vue'
+import { DataAnalysis, Download, TrendCharts } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import ProfessionalRadarChart from './ProfessionalRadarChart.vue'
 import {
+  exportMajorReportApi,
   getMacroDashboardDataApi,
   getMajorCalcResultApi,
   listMajorGradeYearTermsApi,
@@ -133,6 +160,7 @@ const majorResult = reactive({
   resultReady: false,
   message: '',
   indicatorAchievements: [],
+  termCode: '',
 })
 
 const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear))
@@ -184,6 +212,7 @@ function clearResults() {
   majorResult.resultReady = false
   majorResult.message = ''
   majorResult.indicatorAchievements = []
+  majorResult.termCode = ''
 }
 
 function handleMajorChange() {
@@ -215,11 +244,42 @@ async function loadResults() {
     majorResult.resultReady = majorData?.resultReady ?? false
     majorResult.message = majorData?.message || ''
     majorResult.indicatorAchievements = majorData?.indicatorAchievements || []
+    majorResult.termCode = majorData?.termCode || ''
   } catch (error) {
     loadError.value = error.message || '加载专业级结果失败'
     clearResults()
   } finally {
     loading.value = false
+  }
+}
+
+async function exportReport() {
+  try {
+    const response = await exportMajorReportApi(buildPayload())
+    const blob = response.data
+    const isExcel = blob.type.includes('spreadsheet') || blob.type.includes('excel') || blob.type.includes('ms-excel')
+    if (!isExcel) {
+      const text = await blob.text()
+      let msg = '导出失败，服务器未返回有效文件'
+      try {
+        const err = JSON.parse(text)
+        msg = err.message || msg
+      } catch {}
+      ElMessage.error(msg)
+      return
+    }
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const majorName = selectedMajor.value?.majorName || '专业'
+    link.download = `${majorName}${filters.gradeYear}级专业级评价报告.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('报告导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '报告导出失败')
   }
 }
 
@@ -290,8 +350,20 @@ onMounted(() => {
   border-radius: 14px;
 }
 
+.info-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .info-card-title {
   font-weight: 600;
   color: #1f2937;
+}
+
+.term-info {
+  padding: 8px 0 16px;
+  font-size: 13px;
+  color: #64748b;
 }
 </style>
