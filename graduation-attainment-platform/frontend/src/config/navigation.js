@@ -210,6 +210,22 @@ export const NAVIGATION_SECTIONS = [
           'MajorIndicatorAchievement',
         ],
       },
+      {
+        key: 'drill-down-ledger',
+        label: '穿透式台账',
+        path: '/drill-down-ledger',
+        routeName: ROUTE_NAMES.DRILL_DOWN_LEDGER,
+        roles: ['academic_affairs', 'program_director'],
+        moduleTitle: '模块 D：报表生成与底稿导出',
+        summary:
+          '从专业级毕业要求指标点逐层下钻至原始成绩的穿透式台账，支持 Excel 导出。覆盖专业级指标点、课程级指标点、课程目标、考核点和原始成绩五个层级。',
+        entities: [
+          'MajorIndicatorAchievement',
+          'CourseIndicatorAchievement',
+          'CourseObjectiveAchievement',
+          'StudentAssessmentScore',
+        ],
+      },
     ],
   },
 ]

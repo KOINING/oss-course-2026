@@ -14,6 +14,7 @@ export const ROUTE_NAMES = {
   COURSE_OBJECTIVES: 'CourseObjectives',
   ASSESSMENT: 'Assessment',
   REPORTS: 'Reports',
+  DRILL_DOWN_LEDGER: 'DrillDownLedger',
   NOT_FOUND: 'NotFound',
   COMPONENT_DEMO: 'ComponentDemo',
 }
