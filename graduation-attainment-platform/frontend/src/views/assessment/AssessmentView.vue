@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ pageSection }}</p>
             <h1>{{ pageTitle }}</h1>
             <p class="page-summary">{{ pageSummary }}</p>
           </div>
@@ -57,7 +56,6 @@ const isDirectorOrAcademic = computed(() =>
   userStore.roleCodes.some((role) => ['program_director', 'academic_affairs'].includes(role)),
 )
 const hasAnyAccess = computed(() => isInstructor.value || isDirectorOrAcademic.value)
-const pageSection = computed(() => route.meta.moduleTitle || '模块 C')
 
 const pageTitle = computed(() => {
   if (isInstructor.value) {

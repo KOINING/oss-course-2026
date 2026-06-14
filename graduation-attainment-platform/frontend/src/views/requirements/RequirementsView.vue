@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   addGraduationRequirementApi,
@@ -16,6 +17,7 @@ import {
 
 const grLoading = ref(false)
 const ipLoading = ref(false)
+const route = useRoute()
 
 const grs = ref([])
 const ips = ref([])
@@ -365,7 +367,6 @@ onMounted(async () => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A</p>
             <h1>毕业要求与指标点</h1>
             <p class="page-summary">按专业和年级维护毕业要求及指标点版本。</p>
           </div>
@@ -575,6 +576,12 @@ onMounted(async () => {
 <style scoped>
 .requirements-page {
   padding: 16px;
+}
+
+.page-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .page-header h1 {

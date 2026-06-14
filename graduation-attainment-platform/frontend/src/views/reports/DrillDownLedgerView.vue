@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 D：报表生成与底稿导出</p>
             <h1>穿透式台账下钻查询</h1>
             <p class="page-summary">
               从专业级毕业要求指标点逐层下钻至课程级指标点、课程目标、考核点，最终追溯到原始成绩，支持穿透式 Excel 台账导出。
@@ -369,7 +368,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Back, CircleCheck, CircleClose, Download, Loading } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -382,6 +381,7 @@ import {
 } from '@/api/achievementTrace'
 import { getMajorReportApi, triggerDownload as triggerLedgerDownload } from '@/api/report'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 

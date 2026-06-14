@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 D：报表生成与底稿导出</p>
             <h1>课程级评价报表</h1>
             <p class="page-summary">输出《课程目标达成情况评价表》，覆盖该课程该年级下全部相关教学班，供课程目标与指标点达成情况说明使用。</p>
           </div>

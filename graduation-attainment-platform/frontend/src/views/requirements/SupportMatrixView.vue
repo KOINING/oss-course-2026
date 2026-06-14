@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import {
@@ -17,6 +18,7 @@ const filters = reactive({
   gradeYear: null,
   courseId: null,
 })
+const route = useRoute()
 
 const majorOptions = ref([])
 const gradeYearOptions = ref([])
@@ -295,7 +297,6 @@ onBeforeUnmount(() => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A</p>
             <h1>支撑矩阵配置</h1>
             <p class="page-summary">
               按专业和年级配置课程对指标点的支撑关系，列权重校验始终基于当前版本下的全部课程。
@@ -431,6 +432,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .support-matrix-page {
   padding: 16px;
+}
+
+.page-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .page-header h1 {

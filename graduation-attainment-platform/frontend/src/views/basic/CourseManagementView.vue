@@ -222,7 +222,6 @@ onMounted(async () => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ route.meta.moduleTitle || '模块 A' }}</p>
             <h1>{{ route.meta.title || '课程管理' }}</h1>
             <p class="page-summary">
               {{ route.meta.summary || '维护课程基础信息及其在不同专业、不同年级培养方案中的适用关系。' }}
@@ -386,6 +385,12 @@ onMounted(async () => {
 <style scoped>
 .course-management-page {
   padding: 16px;
+}
+
+.course-management-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .page-header h1 {

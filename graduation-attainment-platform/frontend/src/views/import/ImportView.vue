@@ -62,7 +62,6 @@ const headerMeta = computed(() => ({
   title: route.meta.title || '数据导入',
   summary:
     route.meta.summary || '支持课程清单、学生信息和教学班学生关系导入，并提供逐行校验结果。',
-  moduleTitle: route.meta.moduleTitle || '模块 A',
 }))
 
 watch(
@@ -248,7 +247,6 @@ function goToStudentList() {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ headerMeta.moduleTitle }}</p>
             <h1>{{ headerMeta.title }}</h1>
             <p class="page-summary">{{ headerMeta.summary }}</p>
           </div>
@@ -443,6 +441,12 @@ function goToStudentList() {
 <style scoped>
 .import-page {
   padding: 16px;
+}
+
+.import-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .page-header h1 {

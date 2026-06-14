@@ -314,7 +314,6 @@ onMounted(async () => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ route.meta.moduleTitle }}</p>
             <h1>{{ route.meta.title }}</h1>
             <p class="page-summary">{{ route.meta.summary }}</p>
           </div>

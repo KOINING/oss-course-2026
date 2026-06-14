@@ -45,7 +45,7 @@ export const NAVIGATION_SECTIONS = [
   },
   {
     key: 'module-a',
-    label: '模块 A',
+    label: '基础数据',
     icon: 'Setting',
     children: [
       {
@@ -54,7 +54,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/basic-data',
         routeName: ROUTE_NAMES.BASIC_DATA,
         roles: ['admin', 'academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '基础数据',
         summary:
           '维护学年学期、学院、专业等基础主数据，为毕业要求配置和后续计算流程提供统一数据底座。',
         entities: ['College', 'Major', 'AcademicTerm'],
@@ -65,7 +65,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/course-management',
         routeName: ROUTE_NAMES.COURSE_MANAGEMENT,
         roles: ['academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '基础数据与导入',
         summary:
           '管理课程代码、课程名称、学分及课程与专业的关联关系，并承接课程清单导入业务。',
         entities: ['Course'],
@@ -76,7 +76,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/teaching-class',
         routeName: ROUTE_NAMES.TEACHING_CLASS,
         roles: ['academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '基础数据与导入',
         summary:
           '管理课程对应的教学班信息，并承接教学班学生关联查看、移除与批量导入。',
         entities: ['TeachingClass', 'StudentClass'],
@@ -87,7 +87,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/student-list',
         routeName: ROUTE_NAMES.STUDENT_LIST,
         roles: ['academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '基础数据与导入',
         summary:
           '管理教学班中的学生信息，包括学号、姓名、专业、入学年份等，并承接学生名单导入与核对。',
         entities: ['Student'],
@@ -98,7 +98,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/requirements',
         routeName: ROUTE_NAMES.REQUIREMENTS,
         roles: ['program_director'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '专业体系配置',
         summary:
           '维护毕业要求主体及二级指标点，形成专业认证的目标体系，作为课程支撑矩阵配置的依据。',
         entities: ['GraduationRequirement', 'IndicatorPoint'],
@@ -109,7 +109,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/data-import',
         routeName: ROUTE_NAMES.DATA_IMPORT,
         roles: ['academic_affairs'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '基础数据与导入',
         summary:
           '通过 Excel 模板批量导入课程清单、学生基础信息和教学班学生关联，支持逐行校验、错误定位与结果预览。',
         entities: ['Course', 'Student', 'StudentClass'],
@@ -120,7 +120,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/support-matrix',
         routeName: ROUTE_NAMES.SUPPORT_MATRIX,
         roles: ['program_director'],
-        moduleTitle: '模块 A：基础与宏观数据管理',
+        moduleTitle: '专业体系配置',
         summary:
           '配置课程与指标点之间的宏观支撑关系及总支撑权重，保证专业级达成度汇总链路完整可追踪。',
         entities: ['CourseIndicatorSupport', 'Course', 'IndicatorPoint'],
@@ -129,7 +129,7 @@ export const NAVIGATION_SECTIONS = [
   },
   {
     key: 'module-b',
-    label: '模块 B',
+    label: '课程体系配置',
     icon: 'Reading',
     children: [
       {
@@ -138,7 +138,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/course-objectives',
         routeName: ROUTE_NAMES.COURSE_OBJECTIVES,
         roles: ['instructor'],
-        moduleTitle: '模块 B：课程大纲与微观映射管理',
+        moduleTitle: '课程体系配置',
         summary:
           '维护课程目标、课程目标对指标点的内部贡献权重，以及与考核点之间的映射关系。',
         entities: ['CourseObjective', 'ObjectiveIndicatorContribution', 'AssessmentPoint'],
@@ -166,7 +166,7 @@ export const NAVIGATION_SECTIONS = [
   },
   {
     key: 'module-c',
-    label: '模块 C',
+    label: '达成度分析',
     icon: 'DataAnalysis',
     children: [
       {
@@ -175,7 +175,7 @@ export const NAVIGATION_SECTIONS = [
         path: '/assessment',
         routeName: ROUTE_NAMES.ASSESSMENT,
         roles: ['academic_affairs', 'program_director', 'instructor'],
-        moduleTitle: '模块 C：课程与专业达成度计算',
+        moduleTitle: '达成度分析',
         summary:
           '承接原始成绩导入、课程级达成度计算、专业级全局汇总与结果看板，是平台达成度分析的执行中心。',
         entities: [
@@ -188,11 +188,27 @@ export const NAVIGATION_SECTIONS = [
           'MajorIndicatorAchievement',
         ],
       },
+      {
+        key: 'drill-down-ledger',
+        label: '专业级报告与台账',
+        path: '/drill-down-ledger',
+        routeName: ROUTE_NAMES.DRILL_DOWN_LEDGER,
+        roles: ['academic_affairs', 'program_director'],
+        moduleTitle: '专业级报告与台账',
+        summary:
+          '围绕专业级报告、雷达图和穿透式台账开展查看与导出，支持从专业级指标点逐层下钻到课程、课程目标、考核点和原始成绩。',
+        entities: [
+          'MajorIndicatorAchievement',
+          'CourseIndicatorAchievement',
+          'CourseObjectiveAchievement',
+          'StudentAssessmentScore',
+        ],
+      },
     ],
   },
   {
     key: 'module-d',
-    label: '模块 D',
+    label: '报表与归档',
     icon: 'Document',
     children: [
       {
@@ -201,29 +217,13 @@ export const NAVIGATION_SECTIONS = [
         path: '/reports',
         routeName: ROUTE_NAMES.REPORTS,
         roles: ['instructor'],
-        moduleTitle: '模块 D：报表生成与底稿导出',
+        moduleTitle: '报表与归档',
         summary:
           '聚合课程级计算结果，生成课程级评价报表，用于教师查看、归档和导出课程目标与指标点达成情况。',
         entities: [
           'CourseObjectiveAchievement',
           'CourseIndicatorAchievement',
           'MajorIndicatorAchievement',
-        ],
-      },
-      {
-        key: 'drill-down-ledger',
-        label: '专业级报告与台账',
-        path: '/drill-down-ledger',
-        routeName: ROUTE_NAMES.DRILL_DOWN_LEDGER,
-        roles: ['academic_affairs', 'program_director'],
-        moduleTitle: '模块 D：报表生成与底稿导出',
-        summary:
-          '围绕专业级报告、雷达图和穿透式台账开展查看与导出，支持从专业级指标点逐层下钻到课程、课程目标、考核点和原始成绩。',
-        entities: [
-          'MajorIndicatorAchievement',
-          'CourseIndicatorAchievement',
-          'CourseObjectiveAchievement',
-          'StudentAssessmentScore',
         ],
       },
     ],
@@ -244,6 +244,7 @@ export function getVisibleSections(roleCodes = []) {
 
   return NAVIGATION_SECTIONS.map((section) => ({
     ...section,
+    label: resolveSectionLabel(section, roleSet),
     children:
       section.key === 'home'
         ? section.children
@@ -258,9 +259,11 @@ export function getVisibleSections(roleCodes = []) {
 
 function isVisibleForRoleSet(item, roleSet) {
   if (item.key === 'reports') {
-    return roleSet.has('instructor')
+    return (
+      roleSet.has('instructor')
       && !roleSet.has('program_director')
       && !roleSet.has('academic_affairs')
+    )
   }
   return item.roles.some((roleCode) => roleSet.has(roleCode))
 }
@@ -275,6 +278,24 @@ function resolveVisibleLabel(item, roleSet) {
     return '课程成绩与课程级计算'
   }
   return item.label
+}
+
+function resolveSectionLabel(section, roleSet) {
+  if (section.key === 'module-a') {
+    if (roleSet.has('academic_affairs')) {
+      return '基础数据与导入'
+    }
+    if (roleSet.has('program_director')) {
+      return '专业体系配置'
+    }
+    return '基础数据'
+  }
+
+  if (section.key === 'module-c') {
+    return '达成度分析'
+  }
+
+  return section.label
 }
 
 export function getProtectedRoutes() {
