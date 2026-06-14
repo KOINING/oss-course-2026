@@ -34,12 +34,28 @@
                 />
               </el-select>
             </el-form-item>
+            <el-form-item label="专业">
+              <el-select
+                v-model="filters.majorId"
+                placeholder="请选择专业"
+                style="width: 220px"
+                :disabled="!filters.courseId"
+                @change="onMajorChange"
+              >
+                <el-option
+                  v-for="major in majors"
+                  :key="major.majorId"
+                  :label="major.majorName"
+                  :value="major.majorId"
+                />
+              </el-select>
+            </el-form-item>
             <el-form-item label="年级">
               <el-select
                 v-model="filters.gradeYear"
                 placeholder="请选择年级"
                 style="width: 160px"
-                :disabled="!filters.courseId"
+                :disabled="!filters.courseId || !filters.majorId"
                 @change="onGradeYearChange"
               >
                 <el-option
@@ -181,7 +197,7 @@
 
         <el-empty
           v-else-if="!loading"
-          description="请先选择课程和年级，再查询课程级评价报表"
+          description="请先选择课程、专业和年级，再查询课程级评价报表"
           :image-size="120"
         />
 
@@ -209,16 +225,17 @@ const userStore = useUserStore()
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))
 
-const filters = reactive({ courseId: null, gradeYear: null })
+const filters = reactive({ courseId: null, majorId: null, gradeYear: null })
 const teachingClassContexts = ref([])
 const courses = ref([])
+const majors = ref([])
 const gradeYears = ref([])
 const reportData = ref(null)
 const loading = ref(false)
 const exportingExcel = ref(false)
 const exportingPdf = ref(false)
 
-const canQuery = computed(() => filters.courseId && filters.gradeYear)
+const canQuery = computed(() => filters.courseId && filters.majorId && filters.gradeYear)
 
 async function loadCourses() {
   try {
@@ -236,13 +253,39 @@ async function loadCourses() {
 }
 
 function onCourseChange() {
+  filters.majorId = null
   filters.gradeYear = null
+  majors.value = []
   gradeYears.value = []
   reportData.value = null
   if (!filters.courseId) return
   const matched = teachingClassContexts.value.filter((c) => c.courseId === filters.courseId)
+  const seen = new Set()
+  majors.value = matched.filter((item) => {
+    const key = item.majorId ?? `name:${item.majorName || ''}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  if (majors.value.length === 1) {
+    filters.majorId = majors.value[0].majorId
+    onMajorChange()
+  }
+}
+
+function onMajorChange() {
+  filters.gradeYear = null
+  gradeYears.value = []
+  reportData.value = null
+  if (!filters.courseId || !filters.majorId) return
+  const matched = teachingClassContexts.value.filter(
+    (c) => c.courseId === filters.courseId && c.majorId === filters.majorId,
+  )
   const years = [...new Set(matched.map((c) => c.gradeYear).filter(Boolean))]
   gradeYears.value = years.sort((a, b) => b - a)
+  if (gradeYears.value.length === 1) {
+    filters.gradeYear = gradeYears.value[0]
+  }
 }
 
 function onGradeYearChange() {
@@ -256,6 +299,7 @@ async function loadReport() {
   try {
     const data = await getCourseReportApi({
       courseId: filters.courseId,
+      majorId: filters.majorId,
       gradeYear: filters.gradeYear,
     })
     reportData.value = normalizeCourseReport(data)
@@ -270,9 +314,12 @@ function selectInitialContext() {
   if (!teachingClassContexts.value.length) return false
 
   const routeCourseId = Number(route.query.courseId)
+  const routeMajorId = Number(route.query.majorId)
   const routeGradeYear = Number(route.query.gradeYear)
   const matchedByRoute = teachingClassContexts.value.find((item) =>
-    item.courseId === routeCourseId && item.gradeYear === routeGradeYear,
+    item.courseId === routeCourseId
+      && (!routeMajorId || item.majorId === routeMajorId)
+      && item.gradeYear === routeGradeYear,
   )
 
   const target = matchedByRoute || teachingClassContexts.value[0]
@@ -280,10 +327,19 @@ function selectInitialContext() {
 
   filters.courseId = target.courseId
   const matched = teachingClassContexts.value.filter((item) => item.courseId === target.courseId)
-  const years = [...new Set(matched.map((item) => item.gradeYear).filter(Boolean))]
+  const seen = new Set()
+  majors.value = matched.filter((item) => {
+    const key = item.majorId ?? `name:${item.majorName || ''}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  filters.majorId = target.majorId || majors.value[0]?.majorId || null
+  const yearMatched = matched.filter((item) => item.majorId === filters.majorId)
+  const years = [...new Set(yearMatched.map((item) => item.gradeYear).filter(Boolean))]
   gradeYears.value = years.sort((a, b) => b - a)
   filters.gradeYear = target.gradeYear || gradeYears.value[0] || null
-  return Boolean(filters.courseId && filters.gradeYear)
+  return Boolean(filters.courseId && filters.majorId && filters.gradeYear)
 }
 
 function normalizeCourseReport(data) {
@@ -377,6 +433,7 @@ async function exportExcel() {
   try {
     const blob = await exportCourseReportExcelApi({
       courseId: filters.courseId,
+      majorId: filters.majorId,
       gradeYear: filters.gradeYear,
     })
     triggerDownload(blob, `课程评价报表_${reportData.value?.courseName}_${filters.gradeYear}级.xlsx`)
@@ -393,6 +450,7 @@ async function exportPdf() {
   try {
     const blob = await exportCourseReportPdfApi({
       courseId: filters.courseId,
+      majorId: filters.majorId,
       gradeYear: filters.gradeYear,
     })
     triggerDownload(blob, `课程评价报表_${reportData.value?.courseName}_${filters.gradeYear}级.pdf`)
@@ -455,7 +513,7 @@ onMounted(async () => {
   margin: 0;
   color: #64748b;
   line-height: 1.75;
-  max-width: 640px;
+  max-width: none;
 }
 
 .page-content {
@@ -489,6 +547,15 @@ onMounted(async () => {
   font-size: 13px;
   color: #1e40af;
   line-height: 1.6;
+}
+
+.context-section > h2,
+.context-section > .context-note {
+  display: none;
+}
+
+.context-section {
+  padding-top: 16px;
 }
 
 .filter-form {

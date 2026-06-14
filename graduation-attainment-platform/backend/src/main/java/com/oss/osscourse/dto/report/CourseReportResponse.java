@@ -28,11 +28,17 @@ public class CourseReportResponse {
     @Schema(description = "年级", example = "2022")
     private Integer gradeYear;
 
+    @Schema(description = "专业ID", example = "1")
+    private Long majorId;
+
     @Schema(description = "学分", example = "3.0")
     private Float credit;
 
     @Schema(description = "专业名称", example = "计算机科学与技术")
     private String majorName;
+
+    @Schema(description = "授课教师", example = "张三")
+    private String teacherName;
 
     @Schema(description = "涉及教学班数量", example = "2")
     private Integer classCount;

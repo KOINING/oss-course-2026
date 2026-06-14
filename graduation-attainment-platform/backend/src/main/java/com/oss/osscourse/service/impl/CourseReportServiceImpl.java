@@ -5,6 +5,8 @@ import com.oss.osscourse.common.BusinessException;
 import com.oss.osscourse.dto.report.CourseReportRequest;
 import com.oss.osscourse.dto.report.CourseReportResponse;
 import com.oss.osscourse.dto.report.CourseReportResponse.*;
+import com.oss.osscourse.dto.supportmatrix.CourseIndicatorSupportResponse;
+import com.oss.osscourse.dto.teachercontext.TeacherClassStudentResponse;
 import com.oss.osscourse.entity.*;
 import com.oss.osscourse.mapper.*;
 import com.oss.osscourse.service.CourseReportService;
@@ -33,7 +35,13 @@ public class CourseReportServiceImpl implements CourseReportService {
     private final StudentAssessmentScoreMapper sasMapper;
     private final StudentClassMapper studentClassMapper;
     private final ObjectiveIndicatorContributionMapper oicMapper;
+    private final CourseMajorMapper courseMajorMapper;
+    private final MajorMapper majorMapper;
+    private final GraduationRequirementMapper graduationRequirementMapper;
+    private final CourseIndicatorSupportMapper courseIndicatorSupportMapper;
+    private final TeacherMapper teacherMapper;
 
+/*
     @Override
     public CourseReportResponse getCourseReport(CourseReportRequest request) {
         // 1. 验证课程存在
@@ -43,13 +51,24 @@ public class CourseReportServiceImpl implements CourseReportService {
         }
 
         // 2. 查询该课程在该年级下的所有教学班
+        Long majorId = resolveReportMajorId(request.getCourseId(), request.getGradeYear(), request.getMajorId());
+        Major major = majorId == null ? null : majorMapper.selectById(majorId);
+        List<IndicatorPoint> scopedIndicators = listScopedIndicators(request.getCourseId(), majorId, request.getGradeYear());
+        Set<Long> scopedIndicatorIds = scopedIndicators.stream()
+                .map(IndicatorPoint::getIpId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, IndicatorPoint> indicatorPointMap = scopedIndicators.stream()
+                .collect(Collectors.toMap(IndicatorPoint::getIpId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
         LambdaQueryWrapper<TeachingClass> tcWrapper = new LambdaQueryWrapper<>();
         tcWrapper.eq(TeachingClass::getCourseId, request.getCourseId())
                  .eq(TeachingClass::getGradeYear, request.getGradeYear());
         if (request.getTermId() != null) {
             tcWrapper.eq(TeachingClass::getTermId, request.getTermId());
         }
-        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper);
+        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper).stream()
+                .filter(item -> classMatchesProgram(item.getClassId(), majorId, request.getGradeYear()))
+                .collect(Collectors.toList());
 
         if (teachingClasses.isEmpty()) {
             throw new BusinessException(404, "该课程在该年级下没有教学班");
@@ -64,21 +83,30 @@ public class CourseReportServiceImpl implements CourseReportService {
         // 4. 获取考核点
         List<AssessmentPoint> assessmentPoints = assessmentPointMapper.selectList(
                 new LambdaQueryWrapper<AssessmentPoint>()
-                        .in(AssessmentPoint::getCoId, coIds));
+                        .in(!coIds.isEmpty(), AssessmentPoint::getCoId, coIds));
 
         // 5. 构建教学班报表
+        List<AssessmentPointHeader> assessmentPointHeaders = assessmentPoints.stream()
+                .map(ap -> AssessmentPointHeader.builder()
+                        .apId(ap.getApId())
+                        .apName(ap.getApName())
+                        .fullScore(ap.getFullScore())
+                        .build())
+                .collect(Collectors.toList());
         List<TeachingClassReport> classReports = new ArrayList<>();
-        Map<Long, List<ObjectiveAchievementDetail>> coAchievementMap = new HashMap<>();
-        Map<Long, List<IndicatorAchievementDetail>> ipAchievementMap = new HashMap<>();
+        List<ClassSummary> classSummaries = new ArrayList<>();
+        List<ClassScoreSummary> classScoreSummaries = new ArrayList<>();
+        Map<Long, List<ClassAchievement>> coAchievementMap = new LinkedHashMap<>();
+        Map<Long, List<ClassAchievement>> ipAchievementMap = new LinkedHashMap<>();
 
         for (TeachingClass tc : teachingClasses) {
             // 获取学生人数
-            Long studentCount = studentClassMapper.selectCount(
-                    new LambdaQueryWrapper<StudentClass>()
-                            .eq(StudentClass::getClassId, tc.getClassId()));
+            List<TeacherClassStudentResponse> students = studentClassMapper.selectStudentsByClassId(tc.getClassId());
+            int studentCount = students == null ? 0 : students.size();
 
             // 获取各考核点平均分
             List<AssessmentPointAverage> apAverages = new ArrayList<>();
+            Map<Long, Float> apAverageMap = new LinkedHashMap<>();
             for (AssessmentPoint ap : assessmentPoints) {
                 // 查询该考核点的所有成绩
                 List<StudentAssessmentScore> scores = sasMapper.selectList(
@@ -102,6 +130,7 @@ public class CourseReportServiceImpl implements CourseReportService {
                         .averageScore(averageScore)
                         .scoreRate(scoreRate)
                         .build());
+                apAverageMap.put(ap.getApId(), averageScore);
             }
 
             // 获取课程目标达成度明细
@@ -127,7 +156,11 @@ public class CourseReportServiceImpl implements CourseReportService {
 
                 // 收集用于汇总
                 coAchievementMap.computeIfAbsent(co.getCoId(), k -> new ArrayList<>())
-                        .add(detail);
+                        .add(ClassAchievement.builder()
+                                .classId(tc.getClassId())
+                                .className(tc.getClassName())
+                                .achievement(achievement)
+                                .build());
             }
 
             // 获取课程级指标点达成度
@@ -137,7 +170,15 @@ public class CourseReportServiceImpl implements CourseReportService {
                             .eq(CourseIndicatorAchievement::getClassId, tc.getClassId()));
 
             for (CourseIndicatorAchievement cia : ciaList) {
-                IndicatorPoint ip = indicatorPointMapper.selectById(cia.getIpId());
+                if (!scopedIndicatorIds.isEmpty() && !scopedIndicatorIds.contains(cia.getIpId())) {
+                    continue;
+                }
+                IndicatorPoint ip = indicatorPointMap.containsKey(cia.getIpId())
+                        ? indicatorPointMap.get(cia.getIpId())
+                        : indicatorPointMapper.selectById(cia.getIpId());
+                if (ip != null) {
+                    indicatorPointMap.putIfAbsent(ip.getIpId(), ip);
+                }
                 IndicatorAchievementDetail detail = IndicatorAchievementDetail.builder()
                         .ipId(cia.getIpId())
                         .ipCode(ip != null ? ip.getIpCode() : "")
@@ -148,7 +189,11 @@ public class CourseReportServiceImpl implements CourseReportService {
 
                 // 收集用于汇总
                 ipAchievementMap.computeIfAbsent(cia.getIpId(), k -> new ArrayList<>())
-                        .add(detail);
+                        .add(ClassAchievement.builder()
+                                .classId(tc.getClassId())
+                                .className(tc.getClassName())
+                                .achievement(cia.getAchievement())
+                                .build());
             }
 
             classReports.add(TeachingClassReport.builder()
@@ -156,25 +201,36 @@ public class CourseReportServiceImpl implements CourseReportService {
                     .classCode(tc.getClassCode())
                     .className(tc.getClassName())
                     .termCode("") // 需要查询学期表
-                    .studentCount(studentCount != null ? studentCount.intValue() : 0)
+                    .studentCount(studentCount)
                     .calcStatus(tc.getCalcStatus())
                     .assessmentPointAverages(apAverages)
                     .objectiveAchievementDetails(coDetails)
                     .indicatorAchievementDetails(ipDetails)
+                    .build());
+            classSummaries.add(ClassSummary.builder()
+                    .classId(tc.getClassId())
+                    .classCode(tc.getClassCode())
+                    .className(tc.getClassName())
+                    .termCode("")
+                    .studentCount(studentCount)
+                    .calcStatus(tc.getCalcStatus())
+                    .build());
+            classScoreSummaries.add(ClassScoreSummary.builder()
+                    .classId(tc.getClassId())
+                    .classCode(tc.getClassCode())
+                    .className(tc.getClassName())
+                    .termCode("")
+                    .studentCount(studentCount)
+                    .calcStatus(tc.getCalcStatus())
+                    .apAverages(apAverageMap)
                     .build());
         }
 
         // 6. 构建课程目标达成度汇总
         List<ObjectiveAchievementSummary> coSummaries = new ArrayList<>();
         for (CourseObjective co : objectives) {
-            List<ObjectiveAchievementDetail> details = coAchievementMap.getOrDefault(co.getCoId(), List.of());
-            List<ClassAchievement> classAchievements = details.stream()
-                    .map(d -> ClassAchievement.builder()
+            List<ClassAchievement> classAchievements = coAchievementMap.getOrDefault(co.getCoId(), List.of());
                             .classId(null) // 可以从上下文获取
-                            .className("")
-                            .achievement(d.getAverageAchievement())
-                            .build())
-                    .collect(Collectors.toList());
 
             float avgAchievement = details.isEmpty() ? 0 :
                     (float) details.stream().mapToDouble(ObjectiveAchievementDetail::getAverageAchievement).average().orElse(0);
@@ -197,7 +253,6 @@ public class CourseReportServiceImpl implements CourseReportService {
             IndicatorPoint ip = indicatorPointMapper.selectById(ipId);
             List<ClassAchievement> classAchievements = details.stream()
                     .map(d -> ClassAchievement.builder()
-                            .classId(null)
                             .className("")
                             .achievement(d.getAchievement())
                             .build())
@@ -227,7 +282,235 @@ public class CourseReportServiceImpl implements CourseReportService {
                 .build();
     }
 
-            @Override
+*/
+
+    @Override
+    public CourseReportResponse getCourseReport(CourseReportRequest request) {
+        Course course = courseMapper.selectById(request.getCourseId());
+        if (course == null) {
+            throw new BusinessException(404, "Course not found");
+        }
+
+        Long majorId = resolveReportMajorId(request.getCourseId(), request.getGradeYear(), request.getMajorId());
+        Major major = majorId == null ? null : majorMapper.selectById(majorId);
+        List<IndicatorPoint> scopedIndicators = listScopedIndicators(request.getCourseId(), majorId, request.getGradeYear());
+        Set<Long> scopedIndicatorIds = scopedIndicators.stream()
+                .map(IndicatorPoint::getIpId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, IndicatorPoint> indicatorPointMap = scopedIndicators.stream()
+                .collect(Collectors.toMap(IndicatorPoint::getIpId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        LambdaQueryWrapper<TeachingClass> tcWrapper = new LambdaQueryWrapper<>();
+        tcWrapper.eq(TeachingClass::getCourseId, request.getCourseId())
+                .eq(TeachingClass::getGradeYear, request.getGradeYear());
+        if (request.getTermId() != null) {
+            tcWrapper.eq(TeachingClass::getTermId, request.getTermId());
+        }
+        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper).stream()
+                .filter(item -> classMatchesProgram(item.getClassId(), majorId, request.getGradeYear()))
+                .collect(Collectors.toList());
+        if (teachingClasses.isEmpty()) {
+            throw new BusinessException(404, "No teaching class matches the selected course, major and grade");
+        }
+        String teacherName = teacherMapper.selectBatchIds(
+                        teachingClasses.stream()
+                                .map(TeachingClass::getTeacherId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .collect(Collectors.toList()))
+                .stream()
+                .map(Teacher::getTeacherName)
+                .filter(Objects::nonNull)
+                .filter(name -> !name.isBlank())
+                .distinct()
+                .collect(Collectors.joining("、"));
+
+        List<CourseObjective> objectives = courseObjectiveMapper.selectList(
+                new LambdaQueryWrapper<CourseObjective>()
+                        .eq(CourseObjective::getCourseId, request.getCourseId()));
+        List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).collect(Collectors.toList());
+        List<AssessmentPoint> assessmentPoints = assessmentPointMapper.selectList(
+                new LambdaQueryWrapper<AssessmentPoint>()
+                        .in(!coIds.isEmpty(), AssessmentPoint::getCoId, coIds));
+        List<AssessmentPointHeader> assessmentPointHeaders = assessmentPoints.stream()
+                .map(ap -> AssessmentPointHeader.builder()
+                        .apId(ap.getApId())
+                        .apName(ap.getApName())
+                        .fullScore(ap.getFullScore())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<TeachingClassReport> classReports = new ArrayList<>();
+        List<ClassSummary> classSummaries = new ArrayList<>();
+        List<ClassScoreSummary> classScoreSummaries = new ArrayList<>();
+        Map<Long, List<ClassAchievement>> coAchievementMap = new LinkedHashMap<>();
+        Map<Long, List<ClassAchievement>> ipAchievementMap = new LinkedHashMap<>();
+
+        for (TeachingClass teachingClass : teachingClasses) {
+            List<TeacherClassStudentResponse> students = studentClassMapper.selectStudentsByClassId(teachingClass.getClassId());
+            int studentCount = students == null ? 0 : students.size();
+
+            List<AssessmentPointAverage> apAverages = new ArrayList<>();
+            Map<Long, Float> apAverageMap = new LinkedHashMap<>();
+            for (AssessmentPoint assessmentPoint : assessmentPoints) {
+                List<StudentAssessmentScore> scores = sasMapper.selectList(
+                        new LambdaQueryWrapper<StudentAssessmentScore>()
+                                .eq(StudentAssessmentScore::getClassId, teachingClass.getClassId())
+                                .eq(StudentAssessmentScore::getApId, assessmentPoint.getApId()));
+                float averageScore = 0;
+                if (!scores.isEmpty()) {
+                    float sum = scores.stream()
+                            .map(StudentAssessmentScore::getActualScore)
+                            .reduce(0f, Float::sum);
+                    averageScore = sum / scores.size();
+                }
+                float scoreRate = assessmentPoint.getFullScore() > 0 ? averageScore / assessmentPoint.getFullScore() : 0;
+                apAverages.add(AssessmentPointAverage.builder()
+                        .apId(assessmentPoint.getApId())
+                        .apName(assessmentPoint.getApName())
+                        .fullScore(assessmentPoint.getFullScore())
+                        .averageScore(averageScore)
+                        .scoreRate(scoreRate)
+                        .build());
+                apAverageMap.put(assessmentPoint.getApId(), averageScore);
+            }
+
+            List<CourseObjectiveAchievement> coaList = coaMapper.selectList(
+                    new LambdaQueryWrapper<CourseObjectiveAchievement>()
+                            .eq(CourseObjectiveAchievement::getClassId, teachingClass.getClassId()));
+            Map<Long, CourseObjectiveAchievement> coaMap = coaList.stream()
+                    .collect(Collectors.toMap(CourseObjectiveAchievement::getCoId, item -> item, (left, right) -> right));
+            List<ObjectiveAchievementDetail> objectiveDetails = new ArrayList<>();
+            for (CourseObjective objective : objectives) {
+                CourseObjectiveAchievement achievement = coaMap.get(objective.getCoId());
+                float averageAchievement = achievement == null ? 0 : achievement.getAverageAchievement();
+                objectiveDetails.add(ObjectiveAchievementDetail.builder()
+                        .coId(objective.getCoId())
+                        .objectiveCode(objective.getObjectiveCode())
+                        .description(objective.getCoDescription())
+                        .averageAchievement(averageAchievement)
+                        .build());
+                coAchievementMap.computeIfAbsent(objective.getCoId(), key -> new ArrayList<>())
+                        .add(ClassAchievement.builder()
+                                .classId(teachingClass.getClassId())
+                                .className(teachingClass.getClassName())
+                                .achievement(averageAchievement)
+                                .build());
+            }
+
+            List<CourseIndicatorAchievement> ciaList = ciaMapper.selectList(
+                    new LambdaQueryWrapper<CourseIndicatorAchievement>()
+                            .eq(CourseIndicatorAchievement::getClassId, teachingClass.getClassId()));
+            List<IndicatorAchievementDetail> indicatorDetails = new ArrayList<>();
+            for (CourseIndicatorAchievement achievement : ciaList) {
+                if (!scopedIndicatorIds.isEmpty() && !scopedIndicatorIds.contains(achievement.getIpId())) {
+                    continue;
+                }
+                IndicatorPoint indicatorPoint = indicatorPointMap.get(achievement.getIpId());
+                if (indicatorPoint == null) {
+                    indicatorPoint = indicatorPointMapper.selectById(achievement.getIpId());
+                    if (indicatorPoint != null) {
+                        indicatorPointMap.put(indicatorPoint.getIpId(), indicatorPoint);
+                    }
+                }
+                indicatorDetails.add(IndicatorAchievementDetail.builder()
+                        .ipId(achievement.getIpId())
+                        .ipCode(indicatorPoint == null ? "" : indicatorPoint.getIpCode())
+                        .ipDescription(indicatorPoint == null ? "" : indicatorPoint.getIpDescription())
+                        .achievement(achievement.getAchievement())
+                        .build());
+                ipAchievementMap.computeIfAbsent(achievement.getIpId(), key -> new ArrayList<>())
+                        .add(ClassAchievement.builder()
+                                .classId(teachingClass.getClassId())
+                                .className(teachingClass.getClassName())
+                                .achievement(achievement.getAchievement())
+                                .build());
+            }
+
+            classReports.add(TeachingClassReport.builder()
+                    .classId(teachingClass.getClassId())
+                    .classCode(teachingClass.getClassCode())
+                    .className(teachingClass.getClassName())
+                    .termCode("")
+                    .studentCount(studentCount)
+                    .calcStatus(teachingClass.getCalcStatus())
+                    .assessmentPointAverages(apAverages)
+                    .objectiveAchievementDetails(objectiveDetails)
+                    .indicatorAchievementDetails(indicatorDetails)
+                    .build());
+            classSummaries.add(ClassSummary.builder()
+                    .classId(teachingClass.getClassId())
+                    .classCode(teachingClass.getClassCode())
+                    .className(teachingClass.getClassName())
+                    .termCode("")
+                    .studentCount(studentCount)
+                    .calcStatus(teachingClass.getCalcStatus())
+                    .build());
+            classScoreSummaries.add(ClassScoreSummary.builder()
+                    .classId(teachingClass.getClassId())
+                    .classCode(teachingClass.getClassCode())
+                    .className(teachingClass.getClassName())
+                    .termCode("")
+                    .studentCount(studentCount)
+                    .calcStatus(teachingClass.getCalcStatus())
+                    .apAverages(apAverageMap)
+                    .build());
+        }
+
+        List<ObjectiveAchievementSummary> objectiveSummaries = new ArrayList<>();
+        for (CourseObjective objective : objectives) {
+            List<ClassAchievement> classAchievements = coAchievementMap.getOrDefault(objective.getCoId(), List.of());
+            float courseAverage = classAchievements.isEmpty() ? 0
+                    : (float) classAchievements.stream().mapToDouble(ClassAchievement::getAchievement).average().orElse(0);
+            objectiveSummaries.add(ObjectiveAchievementSummary.builder()
+                    .coId(objective.getCoId())
+                    .objectiveCode(objective.getObjectiveCode())
+                    .description(objective.getCoDescription())
+                    .classAchievements(classAchievements)
+                    .courseAverage(courseAverage)
+                    .averageAchievement(courseAverage)
+                    .build());
+        }
+
+        List<IndicatorAchievementSummary> indicatorSummaries = new ArrayList<>();
+        Collection<IndicatorPoint> summaryIndicators = scopedIndicators.isEmpty() ? indicatorPointMap.values() : scopedIndicators;
+        for (IndicatorPoint indicatorPoint : summaryIndicators) {
+            if (indicatorPoint == null || indicatorPoint.getIpId() == null) {
+                continue;
+            }
+            List<ClassAchievement> classAchievements = ipAchievementMap.getOrDefault(indicatorPoint.getIpId(), List.of());
+            float courseAchievement = classAchievements.isEmpty() ? 0
+                    : (float) classAchievements.stream().mapToDouble(ClassAchievement::getAchievement).average().orElse(0);
+            indicatorSummaries.add(IndicatorAchievementSummary.builder()
+                    .ipId(indicatorPoint.getIpId())
+                    .ipCode(indicatorPoint.getIpCode())
+                    .ipDescription(indicatorPoint.getIpDescription())
+                    .classAchievements(classAchievements)
+                    .courseAchievement(courseAchievement)
+                    .averageAchievement(courseAchievement)
+                    .build());
+        }
+
+        return CourseReportResponse.builder()
+                .courseId(request.getCourseId())
+                .courseCode(course.getCourseCode())
+                .courseName(course.getCourseName())
+                .gradeYear(request.getGradeYear())
+                .majorId(majorId)
+                .credit(course.getCredit())
+                .majorName(major == null ? "" : nvl(major.getMajorName()))
+                .teacherName(teacherName)
+                .classCount(classSummaries.size())
+                .classSummaries(classSummaries)
+                .assessmentPoints(assessmentPointHeaders)
+                .classScoreSummaries(classScoreSummaries)
+                .teachingClasses(classReports)
+                .objectiveAchievements(objectiveSummaries)
+                .indicatorAchievements(indicatorSummaries)
+                .build();
+    }
+
+    @Override
     public byte[] exportCourseReportExcel(CourseReportRequest request) {
         CourseReportResponse report = getCourseReport(request);
 
@@ -393,13 +676,19 @@ public class CourseReportServiceImpl implements CourseReportService {
             contentStream.newLineAtOffset(margin, yPosition);
             contentStream.showText("课程级评价报表");
             contentStream.endText();
-            yPosition -= lineHeight * 2;
+            yPosition -= lineHeight;
 
             // 课程基本信息
             contentStream.setFont(font, 12);
             contentStream.beginText();
             contentStream.newLineAtOffset(margin, yPosition);
             contentStream.showText("课程编码：" + report.getCourseCode() + "    课程名称：" + report.getCourseName());
+            contentStream.endText();
+            yPosition -= lineHeight;
+
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("专业：" + nvl(report.getMajorName()) + "    授课教师：" + nvl(report.getTeacherName()));
             contentStream.endText();
             yPosition -= lineHeight;
 
@@ -429,26 +718,26 @@ public class CourseReportServiceImpl implements CourseReportService {
                 yPosition -= lineHeight;
 
                 // 考核点平均分表头
-                contentStream.setFont(boldFont, 10);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-                contentStream.showText("考核点                    满分    平均分    得分率");
-                contentStream.endText();
+                float assessmentNameX = margin;
+                float fullScoreX = margin + 260;
+                float averageScoreX = margin + 340;
+                float scoreRateX = margin + 430;
+                drawPdfText(contentStream, boldFont, 10, "考核点", assessmentNameX, yPosition);
+                drawPdfRightAlignedText(contentStream, boldFont, 10, "满分", fullScoreX, yPosition);
+                drawPdfRightAlignedText(contentStream, boldFont, 10, "平均分", averageScoreX, yPosition);
+                drawPdfRightAlignedText(contentStream, boldFont, 10, "得分率", scoreRateX, yPosition);
                 yPosition -= lineHeight;
 
                 // 考核点数据
-                contentStream.setFont(font, 10);
                 for (AssessmentPointAverage ap : tc.getAssessmentPointAverages()) {
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(margin, yPosition);
-                    String apName = ap.getApName();
-                    if (apName.length() > 20) {
-                        apName = apName.substring(0, 17) + "...";
-                    }
-                    contentStream.showText(String.format("%-20s %6.1f %8.1f %6.1f%%",
-                            apName, ap.getFullScore(), ap.getAverageScore(),
-                            ap.getScoreRate() * 100));
-                    contentStream.endText();
+                    String apName = truncatePdfText(ap.getApName(), 20);
+                    drawPdfText(contentStream, font, 10, apName, assessmentNameX, yPosition);
+                    drawPdfRightAlignedText(contentStream, font, 10,
+                            String.format(Locale.ROOT, "%.1f", ap.getFullScore()), fullScoreX, yPosition);
+                    drawPdfRightAlignedText(contentStream, font, 10,
+                            String.format(Locale.ROOT, "%.1f", ap.getAverageScore()), averageScoreX, yPosition);
+                    drawPdfRightAlignedText(contentStream, font, 10,
+                            String.format(Locale.ROOT, "%.4f", ap.getScoreRate()), scoreRateX, yPosition);
                     yPosition -= lineHeight;
                 }
                 yPosition -= lineHeight;
@@ -469,9 +758,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                     if (desc.length() > 40) {
                         desc = desc.substring(0, 37) + "...";
                     }
-                    contentStream.showText(String.format("%s - %s：%.1f%%",
+                    contentStream.showText(String.format("%s - %s：%.4f",
                             co.getObjectiveCode(), desc,
-                            co.getAverageAchievement() * 100));
+                            co.getAverageAchievement()));
                     contentStream.endText();
                     yPosition -= lineHeight;
                 }
@@ -493,9 +782,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                     if (ipDesc.length() > 40) {
                         ipDesc = ipDesc.substring(0, 37) + "...";
                     }
-                    contentStream.showText(String.format("%s - %s：%.1f%%",
+                    contentStream.showText(String.format("%s - %s：%.4f",
                             ip.getIpCode(), ipDesc,
-                            ip.getAchievement() * 100));
+                            ip.getAchievement()));
                     contentStream.endText();
                     yPosition -= lineHeight;
                 }
@@ -534,9 +823,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                 if (desc.length() > 40) {
                     desc = desc.substring(0, 37) + "...";
                 }
-                contentStream.showText(String.format("%s - %s：%.1f%%",
+                contentStream.showText(String.format("%s - %s：%.4f",
                         co.getObjectiveCode(), desc,
-                        co.getAverageAchievement() * 100));
+                        co.getAverageAchievement()));
                 contentStream.endText();
                 yPosition -= lineHeight;
             }
@@ -558,9 +847,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                 if (ipDesc.length() > 40) {
                     ipDesc = ipDesc.substring(0, 37) + "...";
                 }
-                contentStream.showText(String.format("%s - %s：%.1f%%",
+                contentStream.showText(String.format("%s - %s：%.4f",
                         ip.getIpCode(), ipDesc,
-                        ip.getAverageAchievement() * 100));
+                        ip.getAverageAchievement()));
                 contentStream.endText();
                 yPosition -= lineHeight;
             }
@@ -574,6 +863,101 @@ public class CourseReportServiceImpl implements CourseReportService {
         } catch (IOException e) {
             throw new BusinessException(500, "生成PDF报表失败：" + e.getMessage());
         }
+    }
+
+    private Long resolveReportMajorId(Long courseId, Integer gradeYear, Long requestedMajorId) {
+        List<CourseMajor> bindings = courseMajorMapper.selectList(new LambdaQueryWrapper<CourseMajor>()
+                .eq(CourseMajor::getCourseId, courseId)
+                .eq(CourseMajor::getGradeYear, gradeYear));
+        List<Long> majorIds = bindings.stream()
+                .map(CourseMajor::getMajorId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (requestedMajorId != null) {
+            if (!majorIds.contains(requestedMajorId)) {
+                throw new BusinessException(400, "Selected major is not bound to the course in this grade");
+            }
+            return requestedMajorId;
+        }
+        if (majorIds.size() == 1) {
+            return majorIds.get(0);
+        }
+        if (majorIds.isEmpty()) {
+            throw new BusinessException(400, "No course-major binding found for the selected course and grade");
+        }
+        throw new BusinessException(400, "Major is required because the selected course and grade map to multiple majors");
+    }
+
+    private void drawPdfText(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream,
+                             org.apache.pdfbox.pdmodel.font.PDFont font,
+                             float fontSize,
+                             String text,
+                             float x,
+                             float y) throws IOException {
+        contentStream.setFont(font, fontSize);
+        contentStream.beginText();
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(nvl(text));
+        contentStream.endText();
+    }
+
+    private void drawPdfRightAlignedText(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream,
+                                         org.apache.pdfbox.pdmodel.font.PDFont font,
+                                         float fontSize,
+                                         String text,
+                                         float rightX,
+                                         float y) throws IOException {
+        String safeText = nvl(text);
+        float textWidth = font.getStringWidth(safeText) / 1000 * fontSize;
+        drawPdfText(contentStream, font, fontSize, safeText, rightX - textWidth, y);
+    }
+
+    private String truncatePdfText(String text, int maxLength) {
+        String safeText = nvl(text);
+        if (safeText.length() <= maxLength) {
+            return safeText;
+        }
+        if (maxLength <= 3) {
+            return safeText.substring(0, maxLength);
+        }
+        return safeText.substring(0, maxLength - 3) + "...";
+    }
+
+    private boolean classMatchesProgram(Long classId, Long majorId, Integer gradeYear) {
+        if (majorId == null || gradeYear == null) {
+            return true;
+        }
+        List<TeacherClassStudentResponse> students = studentClassMapper.selectStudentsByClassId(classId);
+        if (students == null || students.isEmpty()) {
+            return true;
+        }
+        return students.stream().allMatch(student ->
+                Objects.equals(student.getMajorId(), majorId) && Objects.equals(student.getEnrollmentYear(), gradeYear));
+    }
+
+    private List<IndicatorPoint> listScopedIndicators(Long courseId, Long majorId, Integer gradeYear) {
+        if (courseId == null || majorId == null || gradeYear == null) {
+            return List.of();
+        }
+        return courseIndicatorSupportMapper.selectCourseIndicatorSupports(majorId, gradeYear, courseId, null).stream()
+                .collect(Collectors.toMap(
+                        CourseIndicatorSupportResponse::getIpId,
+                        item -> {
+                            IndicatorPoint indicatorPoint = new IndicatorPoint();
+                            indicatorPoint.setIpId(item.getIpId());
+                            indicatorPoint.setIpCode(item.getIpCode());
+                            indicatorPoint.setIpDescription(item.getIpDescription());
+                            indicatorPoint.setGrId(item.getGrId());
+                            indicatorPoint.setStatus(item.getIpStatus());
+                            return indicatorPoint;
+                        },
+                        (left, right) -> left,
+                        LinkedHashMap::new))
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(IndicatorPoint::getIpCode, Comparator.nullsLast(String::compareTo)))
+                .collect(Collectors.toList());
     }
 
     private CellStyle createTitleStyle(Workbook workbook) {
@@ -639,6 +1023,7 @@ public class CourseReportServiceImpl implements CourseReportService {
 
     private CellStyle createInfoValueStyle(Workbook workbook) {
         CellStyle style = createDataStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
         return style;
     }
@@ -737,7 +1122,7 @@ public class CourseReportServiceImpl implements CourseReportService {
         if (value == null) {
             return "-";
         }
-        return String.format(Locale.ROOT, "%.2f%%", value * 100);
+        return String.format(Locale.ROOT, "%.4f", value);
     }
 
     private String firstNonBlank(String first, String second) {
