@@ -330,7 +330,7 @@
           <section v-if="drillLevel >= 4 && rawScores.rows && rawScores.rows.length" class="drill-section">
             <div class="drill-section-header">
               <h3>
-                <el-tag type="info" effect="dark" size="small">L4</el-tag>
+                <el-tag class="level-tag--l4" size="small">L4</el-tag>
                 原始成绩明细
                 <span class="drill-context">
                   （考核点：{{ selectedAssessmentPoint.apName }} | 满分：{{ selectedAssessmentPoint.fullScore }}）
@@ -343,7 +343,7 @@
               <el-table-column prop="studentName" label="姓名" width="120" />
               <el-table-column label="成绩" width="120" align="center">
                 <template #default="{ row }">
-                  {{ formatScore(row.scores?.[selectedApIndex]) }}
+                  {{ formatScore(row.actualScore) }}
                 </template>
               </el-table-column>
               <template #empty>
@@ -374,8 +374,12 @@ import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { listMajorGradeYearTermsApi, getTemplatePreviewDataApi } from '@/api/assessment'
-import { getCourseReportApi } from '@/api/courseReport'
+import { listMajorGradeYearTermsApi } from '@/api/assessment'
+import {
+  exportAchievementLedgerApi,
+  getCourseToObjectiveTraceApi,
+  getObjectiveToScoreTraceApi,
+} from '@/api/achievementTrace'
 import { getMajorReportApi, triggerDownload as triggerLedgerDownload } from '@/api/report'
 
 const router = useRouter()
@@ -591,16 +595,35 @@ async function drillToCourse(row) {
   drillLevel.value = 2
 
   try {
-    const data = await getCourseReportApi({
-      courseId: row.courseId,
-      gradeYear: filters.gradeYear,
+    const data = await getCourseToObjectiveTraceApi({
+      classId: row.classId,
+      ipId: selectedIndicator.value?.ipId,
     })
-    courseReportData.value = data
+    courseReportData.value = {
+      courseId: data?.courseId,
+      courseCode: data?.courseCode,
+      courseName: data?.courseName,
+      teachingClasses: [
+        {
+          classId: data?.classId,
+          classCode: data?.classCode,
+          className: data?.className,
+          objectiveAchievementDetails: (data?.objectiveContributions || []).map((item) => ({
+            coId: item.coId,
+            objectiveCode: item.objectiveCode,
+            description: item.coDescription,
+            averageAchievement: item.objectiveAchievement,
+            internalWeight: item.internalWeight,
+            weightedContribution: item.weightedContribution,
+          })),
+          assessmentPointAverages: [],
+        },
+      ],
+    }
     if (!currentClassDetail.value?.objectiveAchievementDetails?.length) {
       ElMessage.info('该课程下暂无课程目标数据')
     }
-  } catch (error) {
-    ElMessage.error(error.message || '加载课程目标数据失败')
+  } catch {
     drillLevel.value = 1
   } finally {
     courseLoading.value = false
@@ -608,7 +631,7 @@ async function drillToCourse(row) {
 }
 
 // Drill to Level 3: Assessment points
-function drillToObjective(row) {
+async function drillToObjective(row) {
   if (!row) return
   selectedObjective.value = row
   selectedAssessmentPoint.value = null
@@ -617,10 +640,39 @@ function drillToObjective(row) {
   drillLevel.value = 3
   context.objectiveCode = row.objectiveCode
   context.apName = ''
+
+  if (!currentClassDetail.value?.classId || !row.coId) {
+    ElMessage.info('无法获取课程目标追溯信息')
+    return
+  }
+
+  try {
+    const data = await getObjectiveToScoreTraceApi({
+      classId: currentClassDetail.value.classId,
+      coId: row.coId,
+    })
+    currentClassDetail.value.assessmentPointAverages = (data?.assessmentPoints || []).map((item) => ({
+      apId: item.apId,
+      apName: item.apName,
+      fullScore: item.fullScore,
+      averageScore: item.averageScore,
+      scoreRate:
+        item.fullScore && item.averageScore !== null && item.averageScore !== undefined
+          ? Number(item.averageScore) / Number(item.fullScore)
+          : null,
+      studentScores: item.studentScores || [],
+    }))
+
+    if (!currentClassDetail.value.assessmentPointAverages.length) {
+      ElMessage.info('暂无考核点数据')
+    }
+  } catch {
+    drillLevel.value = 2
+  }
 }
 
 // Drill to Level 4: Raw scores
-async function drillToAssessmentPoint(row) {
+function drillToAssessmentPoint(row) {
   if (!row) return
   selectedAssessmentPoint.value = row
   rawScores.rows = []
@@ -634,17 +686,12 @@ async function drillToAssessmentPoint(row) {
 
   const apIndex = currentClassDetail.value.assessmentPointAverages?.indexOf(row) ?? -1
   selectedApIndex.value = apIndex
-
-  rawScoreLoading.value = true
-  try {
-    const data = await getTemplatePreviewDataApi({ classId: currentClassDetail.value.classId })
-    rawScores.rows = data?.rows || []
-    rawScores.headers = data?.dynamicHeaders || []
-  } catch (error) {
-    ElMessage.error(error.message || '加载原始成绩失败')
-  } finally {
-    rawScoreLoading.value = false
-  }
+  rawScores.rows = (row.studentScores || []).map((item) => ({
+    studentNo: item.studentNo,
+    studentName: item.studentName,
+    actualScore: item.actualScore,
+  }))
+  rawScores.headers = []
 }
 
 // Go back one level
@@ -690,10 +737,39 @@ function goBack() {
 }
 
 // Export ledger
-function exportLedger() {
+async function exportLedger() {
   if (exportStatus.value === 'exporting') return
+  if (!canQuery.value) {
+    ElMessage.info('请先选择专业和年级')
+    return
+  }
   exportStatus.value = 'exporting'
   exportMessage.value = ''
+
+  const majorName = context.majorName || selectedMajor.value?.majorName || '专业'
+  const gradeYear = context.gradeYear || filters.gradeYear || ''
+
+  try {
+    const blob = await exportAchievementLedgerApi({
+      majorId: filters.majorId,
+      gradeYear: filters.gradeYear,
+      termId: majorReport.termId || undefined,
+    })
+    triggerLedgerDownload(blob, `穿透式台账_${majorName}_${gradeYear}级.xlsx`)
+    exportStatus.value = 'success'
+    exportMessage.value = ''
+    setTimeout(() => {
+      if (exportStatus.value === 'success') exportStatus.value = 'idle'
+    }, 3000)
+    return
+  } catch (error) {
+    exportStatus.value = 'failure'
+    exportMessage.value = error.message || '导出失败，请重试'
+    setTimeout(() => {
+      if (exportStatus.value === 'failure') exportStatus.value = 'idle'
+    }, 4000)
+    return
+  }
 
   try {
     const htmlParts = []
@@ -834,7 +910,7 @@ onMounted(async () => {
   margin: 0;
   color: #64748b;
   line-height: 1.75;
-  max-width: 720px;
+  max-width: none;
 }
 
 .page-content {
@@ -946,6 +1022,12 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 400;
   color: #64748b;
+}
+
+.drill-section-header :deep(.level-tag--l4) {
+  background-color: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
 }
 
 .drill-hint {

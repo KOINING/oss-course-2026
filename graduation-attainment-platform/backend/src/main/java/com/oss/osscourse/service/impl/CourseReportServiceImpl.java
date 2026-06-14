@@ -10,6 +10,7 @@ import com.oss.osscourse.mapper.*;
 import com.oss.osscourse.service.CourseReportService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
@@ -226,96 +227,133 @@ public class CourseReportServiceImpl implements CourseReportService {
                 .build();
     }
 
-    @Override
+            @Override
     public byte[] exportCourseReportExcel(CourseReportRequest request) {
         CourseReportResponse report = getCourseReport(request);
 
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("课程级评价报表");
+        try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("\u8bfe\u7a0b\u7ea7\u8bc4\u4ef7\u62a5\u8868");
+            int lastColumn = 5;
 
-            // 创建标题样式
+            CellStyle titleStyle = createTitleStyle(workbook);
+            CellStyle sectionStyle = createSectionStyle(workbook);
+            CellStyle subSectionStyle = createSubSectionStyle(workbook);
             CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle infoLabelStyle = createInfoLabelStyle(workbook);
+            CellStyle infoValueStyle = createInfoValueStyle(workbook);
             CellStyle dataStyle = createDataStyle(workbook);
+            CellStyle centeredDataStyle = createCenteredDataStyle(workbook);
+            CellStyle emphasisStyle = createEmphasisStyle(workbook);
 
             int rowIndex = 0;
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u8bfe\u7a0b\u7ea7\u8bc4\u4ef7\u62a5\u8868", titleStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "\u8bfe\u7a0b\u4ee3\u7801", report.getCourseCode(), "\u8bfe\u7a0b\u540d\u79f0", report.getCourseName(), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "\u5e74\u7ea7", report.getGradeYear(), "\u5b66\u5206", report.getCredit(), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "\u4e13\u4e1a", report.getMajorName(), "\u6d89\u53ca\u6559\u5b66\u73ed", safeSize(report.getTeachingClasses()), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex++;
 
-            // 第一部分：课程基本信息
-            Row titleRow = sheet.createRow(rowIndex++);
-            Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("课程级评价报表");
-            titleCell.setCellStyle(headerStyle);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u4e00\u3001\u5404\u6559\u5b66\u73ed\u660e\u7ec6", sectionStyle, lastColumn);
+            for (TeachingClassReport teachingClass : safeList(report.getTeachingClasses())) {
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u6559\u5b66\u73ed\uff1a" + nvl(teachingClass.getClassName()) + "    \u5b66\u751f\u6570\uff1a" + nvl(teachingClass.getStudentCount()), subSectionStyle, lastColumn);
 
-            Row infoRow1 = sheet.createRow(rowIndex++);
-            infoRow1.createCell(0).setCellValue("课程编码");
-            infoRow1.createCell(1).setCellValue(report.getCourseCode());
-            infoRow1.createCell(2).setCellValue("课程名称");
-            infoRow1.createCell(3).setCellValue(report.getCourseName());
-
-            Row infoRow2 = sheet.createRow(rowIndex++);
-            infoRow2.createCell(0).setCellValue("年级");
-            infoRow2.createCell(1).setCellValue(report.getGradeYear());
-            infoRow2.createCell(2).setCellValue("学分");
-            infoRow2.createCell(3).setCellValue(report.getCredit());
-
-            rowIndex++; // 空行
-
-            // 第二部分：各教学班明细
-            for (TeachingClassReport tc : report.getTeachingClasses()) {
-                Row tcTitleRow = sheet.createRow(rowIndex++);
-                tcTitleRow.createCell(0).setCellValue("教学班：" + tc.getClassName());
-                tcTitleRow.getCell(0).setCellStyle(headerStyle);
-
-                // 考核点平均分
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. \u8003\u6838\u70b9\u5e73\u5747\u5206", subSectionStyle, lastColumn);
                 Row apHeaderRow = sheet.createRow(rowIndex++);
-                apHeaderRow.createCell(0).setCellValue("考核点");
-                apHeaderRow.createCell(1).setCellValue("满分");
-                apHeaderRow.createCell(2).setCellValue("平均分");
-                apHeaderRow.createCell(3).setCellValue("得分率");
-
-                for (AssessmentPointAverage ap : tc.getAssessmentPointAverages()) {
+                writeCell(apHeaderRow.createCell(0), "\u8003\u6838\u70b9", headerStyle);
+                writeCell(apHeaderRow.createCell(1), "\u6ee1\u5206", headerStyle);
+                writeCell(apHeaderRow.createCell(2), "\u5e73\u5747\u5206", headerStyle);
+                writeCell(apHeaderRow.createCell(3), "\u5f97\u5206\u7387", headerStyle);
+                mergeCells(sheet, apHeaderRow.getRowNum(), apHeaderRow.getRowNum(), 3, 5, headerStyle);
+                for (AssessmentPointAverage ap : safeList(teachingClass.getAssessmentPointAverages())) {
                     Row apRow = sheet.createRow(rowIndex++);
-                    apRow.createCell(0).setCellValue(ap.getApName());
-                    apRow.createCell(1).setCellValue(ap.getFullScore());
-                    apRow.createCell(2).setCellValue(ap.getAverageScore());
-                    apRow.createCell(3).setCellValue(String.format("%.1f%%", ap.getScoreRate() * 100));
+                    writeCell(apRow.createCell(0), ap.getApName(), dataStyle);
+                    writeCell(apRow.createCell(1), ap.getFullScore(), centeredDataStyle);
+                    writeCell(apRow.createCell(2), ap.getAverageScore(), centeredDataStyle);
+                    writeCell(apRow.createCell(3), formatPercent(ap.getScoreRate()), centeredDataStyle);
+                    mergeCells(sheet, apRow.getRowNum(), apRow.getRowNum(), 3, 5, centeredDataStyle);
                 }
-
-                rowIndex++; // 空行
-
-                // 课程目标达成度
-                Row coHeaderRow = sheet.createRow(rowIndex++);
-                coHeaderRow.createCell(0).setCellValue("课程目标");
-                coHeaderRow.createCell(1).setCellValue("描述");
-                coHeaderRow.createCell(2).setCellValue("达成度");
-
-                for (ObjectiveAchievementDetail co : tc.getObjectiveAchievementDetails()) {
-                    Row coRow = sheet.createRow(rowIndex++);
-                    coRow.createCell(0).setCellValue(co.getObjectiveCode());
-                    coRow.createCell(1).setCellValue(co.getDescription());
-                    coRow.createCell(2).setCellValue(String.format("%.1f%%", co.getAverageAchievement() * 100));
+                if (safeList(teachingClass.getAssessmentPointAverages()).isEmpty()) {
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8003\u6838\u70b9\u5e73\u5747\u5206\u6570\u636e", dataStyle, lastColumn);
                 }
+                rowIndex++;
 
-                rowIndex++; // 空行
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. \u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6", subSectionStyle, lastColumn);
+                Row objectiveHeaderRow = sheet.createRow(rowIndex++);
+                writeCell(objectiveHeaderRow.createCell(0), "\u76ee\u6807\u7f16\u53f7", headerStyle);
+                writeCell(objectiveHeaderRow.createCell(1), "\u76ee\u6807\u540d\u79f0", headerStyle);
+                writeCell(objectiveHeaderRow.createCell(2), "\u8fbe\u6210\u5ea6", headerStyle);
+                mergeCells(sheet, objectiveHeaderRow.getRowNum(), objectiveHeaderRow.getRowNum(), 2, 5, headerStyle);
+                for (ObjectiveAchievementDetail objective : safeList(teachingClass.getObjectiveAchievementDetails())) {
+                    Row objectiveRow = sheet.createRow(rowIndex++);
+                    writeCell(objectiveRow.createCell(0), objective.getObjectiveCode(), centeredDataStyle);
+                    writeCell(objectiveRow.createCell(1), firstNonBlank(objective.getObjectiveName(), objective.getDescription()), dataStyle);
+                    writeCell(objectiveRow.createCell(2), formatPercent(objective.getAverageAchievement()), centeredDataStyle);
+                    mergeCells(sheet, objectiveRow.getRowNum(), objectiveRow.getRowNum(), 2, 5, centeredDataStyle);
+                }
+                if (safeList(teachingClass.getObjectiveAchievementDetails()).isEmpty()) {
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6\u6570\u636e", dataStyle, lastColumn);
+                }
+                rowIndex++;
+
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "3. \u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6", subSectionStyle, lastColumn);
+                Row indicatorHeaderRow = sheet.createRow(rowIndex++);
+                writeCell(indicatorHeaderRow.createCell(0), "\u6307\u6807\u70b9\u7f16\u53f7", headerStyle);
+                writeCell(indicatorHeaderRow.createCell(1), "\u6307\u6807\u70b9\u63cf\u8ff0", headerStyle);
+                writeCell(indicatorHeaderRow.createCell(2), "\u8fbe\u6210\u5ea6", headerStyle);
+                mergeCells(sheet, indicatorHeaderRow.getRowNum(), indicatorHeaderRow.getRowNum(), 2, 5, headerStyle);
+                for (IndicatorAchievementDetail indicator : safeList(teachingClass.getIndicatorAchievementDetails())) {
+                    Row indicatorRow = sheet.createRow(rowIndex++);
+                    writeCell(indicatorRow.createCell(0), indicator.getIpCode(), centeredDataStyle);
+                    writeCell(indicatorRow.createCell(1), indicator.getIpDescription(), dataStyle);
+                    writeCell(indicatorRow.createCell(2), formatPercent(indicator.getAchievement()), centeredDataStyle);
+                    mergeCells(sheet, indicatorRow.getRowNum(), indicatorRow.getRowNum(), 2, 5, centeredDataStyle);
+                }
+                if (safeList(teachingClass.getIndicatorAchievementDetails()).isEmpty()) {
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6\u6570\u636e", dataStyle, lastColumn);
+                }
+                rowIndex++;
             }
 
-            // 第三部分：汇总
-            Row summaryTitleRow = sheet.createRow(rowIndex++);
-            summaryTitleRow.createCell(0).setCellValue("课程目标达成度汇总");
-            summaryTitleRow.getCell(0).setCellStyle(headerStyle);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u4e8c\u3001\u6c47\u603b\u7ed3\u679c", sectionStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. \u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6\u6c47\u603b", subSectionStyle, lastColumn);
+            Row objectiveSummaryHeaderRow = sheet.createRow(rowIndex++);
+            writeCell(objectiveSummaryHeaderRow.createCell(0), "\u76ee\u6807\u7f16\u53f7", headerStyle);
+            writeCell(objectiveSummaryHeaderRow.createCell(1), "\u76ee\u6807\u540d\u79f0", headerStyle);
+            writeCell(objectiveSummaryHeaderRow.createCell(2), "\u5e73\u5747\u8fbe\u6210\u5ea6", headerStyle);
+            mergeCells(sheet, objectiveSummaryHeaderRow.getRowNum(), objectiveSummaryHeaderRow.getRowNum(), 2, 5, headerStyle);
+            for (ObjectiveAchievementSummary objective : safeList(report.getObjectiveAchievements())) {
+                Row objectiveRow = sheet.createRow(rowIndex++);
+                writeCell(objectiveRow.createCell(0), objective.getObjectiveCode(), centeredDataStyle);
+                writeCell(objectiveRow.createCell(1), firstNonBlank(objective.getObjectiveName(), objective.getDescription()), dataStyle);
+                writeCell(objectiveRow.createCell(2), formatPercent(firstNonNull(objective.getCourseAverage(), objective.getAverageAchievement())), emphasisStyle);
+                mergeCells(sheet, objectiveRow.getRowNum(), objectiveRow.getRowNum(), 2, 5, emphasisStyle);
+            }
+            if (safeList(report.getObjectiveAchievements()).isEmpty()) {
+                rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u76ee\u6807\u6c47\u603b\u6570\u636e", dataStyle, lastColumn);
+            }
+            rowIndex++;
 
-            for (ObjectiveAchievementSummary co : report.getObjectiveAchievements()) {
-                Row coRow = sheet.createRow(rowIndex++);
-                coRow.createCell(0).setCellValue(co.getObjectiveCode());
-                coRow.createCell(1).setCellValue(co.getDescription());
-                coRow.createCell(2).setCellValue(String.format("%.1f%%", co.getAverageAchievement() * 100));
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. \u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6\u6c47\u603b", subSectionStyle, lastColumn);
+            Row indicatorSummaryHeaderRow = sheet.createRow(rowIndex++);
+            writeCell(indicatorSummaryHeaderRow.createCell(0), "\u6307\u6807\u70b9\u7f16\u53f7", headerStyle);
+            writeCell(indicatorSummaryHeaderRow.createCell(1), "\u6307\u6807\u70b9\u63cf\u8ff0", headerStyle);
+            writeCell(indicatorSummaryHeaderRow.createCell(2), "\u5e73\u5747\u8fbe\u6210\u5ea6", headerStyle);
+            mergeCells(sheet, indicatorSummaryHeaderRow.getRowNum(), indicatorSummaryHeaderRow.getRowNum(), 2, 5, headerStyle);
+            for (IndicatorAchievementSummary indicator : safeList(report.getIndicatorAchievements())) {
+                Row indicatorRow = sheet.createRow(rowIndex++);
+                writeCell(indicatorRow.createCell(0), indicator.getIpCode(), centeredDataStyle);
+                writeCell(indicatorRow.createCell(1), indicator.getIpDescription(), dataStyle);
+                writeCell(indicatorRow.createCell(2), formatPercent(firstNonNull(indicator.getCourseAchievement(), indicator.getAverageAchievement())), emphasisStyle);
+                mergeCells(sheet, indicatorRow.getRowNum(), indicatorRow.getRowNum(), 2, 5, emphasisStyle);
+            }
+            if (safeList(report.getIndicatorAchievements()).isEmpty()) {
+                rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u6c47\u603b\u6570\u636e", dataStyle, lastColumn);
             }
 
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            applySheetLayout(sheet);
             workbook.write(outputStream);
             return outputStream.toByteArray();
-
         } catch (IOException e) {
-            throw new BusinessException(500, "生成Excel报表失败：" + e.getMessage());
+            throw new BusinessException(500, "\u751f\u6210Excel\u62a5\u8868\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
@@ -538,30 +576,198 @@ public class CourseReportServiceImpl implements CourseReportService {
         }
     }
 
-    private CellStyle createHeaderStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
+    private CellStyle createTitleStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
         style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 16);
+        style.setFont(font);
+        return style;
+    }
 
+    private CellStyle createSectionStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setFillForegroundColor(IndexedColors.SEA_GREEN.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setColor(IndexedColors.WHITE.getIndex());
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createSubSectionStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.LEFT);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
         Font font = workbook.createFont();
         font.setBold(true);
         style.setFont(font);
+        return style;
+    }
 
+    private CellStyle createHeaderStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setWrapText(true);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createInfoLabelStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createInfoValueStyle(Workbook workbook) {
+        CellStyle style = createDataStyle(workbook);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
         return style;
     }
 
     private CellStyle createDataStyle(Workbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setWrapText(true);
+        return style;
+    }
+
+    private CellStyle createCenteredDataStyle(Workbook workbook) {
+        CellStyle style = createDataStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        return style;
+    }
+
+    private CellStyle createEmphasisStyle(Workbook workbook) {
+        CellStyle style = createCenteredDataStyle(workbook);
+        style.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createBaseStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         style.setBorderBottom(BorderStyle.THIN);
         style.setBorderTop(BorderStyle.THIN);
         style.setBorderLeft(BorderStyle.THIN);
         style.setBorderRight(BorderStyle.THIN);
-
         return style;
+    }
+
+    private int writeMergedTitleRow(Sheet sheet, int rowIndex, String title, CellStyle style, int lastColumn) {
+        Row row = sheet.createRow(rowIndex++);
+        Cell cell = row.createCell(0);
+        cell.setCellValue(title == null ? "" : title);
+        mergeCells(sheet, row.getRowNum(), row.getRowNum(), 0, lastColumn, style);
+        return rowIndex;
+    }
+
+    private int writeInfoRow(Sheet sheet, int rowIndex, String label1, Object value1, String label2, Object value2,
+                             CellStyle labelStyle, CellStyle valueStyle, int lastColumn) {
+        Row row = sheet.createRow(rowIndex++);
+        writeCell(row.createCell(0), label1, labelStyle);
+        writeCell(row.createCell(1), value1, valueStyle);
+        mergeCells(sheet, row.getRowNum(), row.getRowNum(), 1, 2, valueStyle);
+        writeCell(row.createCell(3), label2, labelStyle);
+        writeCell(row.createCell(4), value2, valueStyle);
+        mergeCells(sheet, row.getRowNum(), row.getRowNum(), 4, lastColumn, valueStyle);
+        return rowIndex;
+    }
+
+    private int writeEmptyHintRow(Sheet sheet, int rowIndex, String message, CellStyle style, int lastColumn) {
+        Row row = sheet.createRow(rowIndex++);
+        Cell cell = row.createCell(0);
+        cell.setCellValue(message);
+        mergeCells(sheet, row.getRowNum(), row.getRowNum(), 0, lastColumn, style);
+        return rowIndex;
+    }
+
+    private void mergeCells(Sheet sheet, int firstRow, int lastRow, int firstCol, int lastCol, CellStyle style) {
+        sheet.addMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
+        for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) {
+                row = sheet.createRow(rowIndex);
+            }
+            for (int colIndex = firstCol; colIndex <= lastCol; colIndex++) {
+                Cell cell = row.getCell(colIndex);
+                if (cell == null) {
+                    cell = row.createCell(colIndex);
+                }
+                cell.setCellStyle(style);
+            }
+        }
+    }
+
+    private void writeCell(Cell cell, Object value, CellStyle style) {
+        if (style != null) {
+            cell.setCellStyle(style);
+        }
+        if (value == null) {
+            cell.setBlank();
+        } else if (value instanceof Number number) {
+            cell.setCellValue(number.doubleValue());
+        } else {
+            cell.setCellValue(String.valueOf(value));
+        }
+    }
+
+    private String formatPercent(Float value) {
+        if (value == null) {
+            return "-";
+        }
+        return String.format(Locale.ROOT, "%.2f%%", value * 100);
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second == null ? "" : second;
+    }
+
+    private Float firstNonNull(Float first, Float second) {
+        return first != null ? first : second;
+    }
+
+    private int safeSize(List<?> list) {
+        return list == null ? 0 : list.size();
+    }
+
+    private <T> List<T> safeList(List<T> list) {
+        return list == null ? List.of() : list;
+    }
+
+    private String nvl(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private void applySheetLayout(Sheet sheet) {
+        int[] widths = {16, 28, 14, 14, 18, 18};
+        for (int i = 0; i < widths.length; i++) {
+            sheet.setColumnWidth(i, widths[i] * 256);
+        }
+        sheet.createFreezePane(0, 4);
     }
 }

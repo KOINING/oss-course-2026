@@ -130,7 +130,7 @@
         <el-table-column label="阻断原因" min-width="220">
           <template #default="{ row }">{{ row.blockReason || '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column v-if="canApproveUnlock" label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button
               link
@@ -168,6 +168,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import { useUserStore } from '@/stores/user'
 import {
   approveUnlockApi,
   calculateMajorLevelApi,
@@ -176,6 +177,7 @@ import {
   listMajorGradeYearTermsApi,
 } from '@/api/assessment'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const aggregating = ref(false)
 const unlockingClassId = ref(null)
@@ -200,6 +202,7 @@ const majorResult = reactive({
 })
 
 const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear))
+const canApproveUnlock = computed(() => userStore.roleCodes.includes('academic_affairs'))
 const selectedMajor = computed(() => filterOptions.majors.find((item) => item.majorId === filters.majorId) || null)
 const currentGradeYears = computed(() => (selectedMajor.value?.gradeYearScopes || []).map((item) => item.gradeYear))
 const courses = computed(() => dashboardData.courses || [])

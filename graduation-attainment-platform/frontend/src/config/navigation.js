@@ -7,7 +7,7 @@ export const ROLE_META = {
       '负责系统初始化配置、维护全局基础字典，并管理其他业务角色的账号与基础权限。',
   },
   academic_affairs: {
-    label: '教务管理人员',
+    label: '教务管理员',
     summary:
       '负责课程、教学班和学生主数据维护，执行课程清单与教学班学生关联导入，并跟踪教学业务数据准备进度。',
   },
@@ -158,7 +158,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['admin'],
         moduleTitle: '系统管理',
         summary:
-          '用于管理教务管理人员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
+          '用于管理教务管理员、专业负责人和课程主讲教师的账号，完成账号启停、角色分配与基础权限维护。',
         entities: ['sys_user', 'sys_role', 'sys_user_role', 'sys_role_permission'],
         componentKey: 'account-role-management',
       },
@@ -197,13 +197,13 @@ export const NAVIGATION_SECTIONS = [
     children: [
       {
         key: 'reports',
-        label: '报表与底稿',
+        label: '课程级评价报表',
         path: '/reports',
         routeName: ROUTE_NAMES.REPORTS,
-        roles: ['academic_affairs', 'program_director', 'instructor'],
+        roles: ['instructor'],
         moduleTitle: '模块 D：报表生成与底稿导出',
         summary:
-          '聚合课程级和专业级的计算结果，生成课程评价表、专业分析报表以及可用于归档与抽查的底稿。',
+          '聚合课程级计算结果，生成课程级评价报表，用于教师查看、归档和导出课程目标与指标点达成情况。',
         entities: [
           'CourseObjectiveAchievement',
           'CourseIndicatorAchievement',
@@ -212,13 +212,13 @@ export const NAVIGATION_SECTIONS = [
       },
       {
         key: 'drill-down-ledger',
-        label: '穿透式台账',
+        label: '专业级报告与台账',
         path: '/drill-down-ledger',
         routeName: ROUTE_NAMES.DRILL_DOWN_LEDGER,
         roles: ['academic_affairs', 'program_director'],
         moduleTitle: '模块 D：报表生成与底稿导出',
         summary:
-          '从专业级毕业要求指标点逐层下钻至原始成绩的穿透式台账，支持 Excel 导出。覆盖专业级指标点、课程级指标点、课程目标、考核点和原始成绩五个层级。',
+          '围绕专业级报告、雷达图和穿透式台账开展查看与导出，支持从专业级指标点逐层下钻到课程、课程目标、考核点和原始成绩。',
         entities: [
           'MajorIndicatorAchievement',
           'CourseIndicatorAchievement',
@@ -248,12 +248,21 @@ export function getVisibleSections(roleCodes = []) {
       section.key === 'home'
         ? section.children
         : section.children
-            .filter((item) => item.roles.some((roleCode) => roleSet.has(roleCode)))
+            .filter((item) => isVisibleForRoleSet(item, roleSet))
             .map((item) => ({
               ...item,
               label: resolveVisibleLabel(item, roleSet),
             })),
   })).filter((section) => section.children.length > 0)
+}
+
+function isVisibleForRoleSet(item, roleSet) {
+  if (item.key === 'reports') {
+    return roleSet.has('instructor')
+      && !roleSet.has('program_director')
+      && !roleSet.has('academic_affairs')
+  }
+  return item.roles.some((roleCode) => roleSet.has(roleCode))
 }
 
 function resolveVisibleLabel(item, roleSet) {

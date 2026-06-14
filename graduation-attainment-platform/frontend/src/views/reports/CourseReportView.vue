@@ -197,18 +197,20 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Document as DocumentIcon } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
 import { listMyTeachingClassesApi } from '@/api/teacherContext'
 import { getCourseReportApi, exportCourseReportExcelApi, exportCourseReportPdfApi } from '@/api/courseReport'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))
 
 const filters = reactive({ courseId: null, gradeYear: null })
+const teachingClassContexts = ref([])
 const courses = ref([])
 const gradeYears = ref([])
 const reportData = ref(null)
@@ -220,7 +222,8 @@ const canQuery = computed(() => filters.courseId && filters.gradeYear)
 
 async function loadCourses() {
   try {
-    const list = await listMyTeachingClassesApi({})
+    const list = (await listMyTeachingClassesApi({})) || []
+    teachingClassContexts.value = list
     const seen = new Set()
     courses.value = list.filter((item) => {
       if (seen.has(item.courseId)) return false
@@ -237,7 +240,7 @@ function onCourseChange() {
   gradeYears.value = []
   reportData.value = null
   if (!filters.courseId) return
-  const matched = courses.value.filter((c) => c.courseId === filters.courseId)
+  const matched = teachingClassContexts.value.filter((c) => c.courseId === filters.courseId)
   const years = [...new Set(matched.map((c) => c.gradeYear).filter(Boolean))]
   gradeYears.value = years.sort((a, b) => b - a)
 }
@@ -255,12 +258,103 @@ async function loadReport() {
       courseId: filters.courseId,
       gradeYear: filters.gradeYear,
     })
-    reportData.value = data
+    reportData.value = normalizeCourseReport(data)
   } catch {
     ElMessage.error('加载报表数据失败')
   } finally {
     loading.value = false
   }
+}
+
+function selectInitialContext() {
+  if (!teachingClassContexts.value.length) return false
+
+  const routeCourseId = Number(route.query.courseId)
+  const routeGradeYear = Number(route.query.gradeYear)
+  const matchedByRoute = teachingClassContexts.value.find((item) =>
+    item.courseId === routeCourseId && item.gradeYear === routeGradeYear,
+  )
+
+  const target = matchedByRoute || teachingClassContexts.value[0]
+  if (!target) return false
+
+  filters.courseId = target.courseId
+  const matched = teachingClassContexts.value.filter((item) => item.courseId === target.courseId)
+  const years = [...new Set(matched.map((item) => item.gradeYear).filter(Boolean))]
+  gradeYears.value = years.sort((a, b) => b - a)
+  filters.gradeYear = target.gradeYear || gradeYears.value[0] || null
+  return Boolean(filters.courseId && filters.gradeYear)
+}
+
+function normalizeCourseReport(data) {
+  if (!data) return null
+
+  const classSummaries = Array.isArray(data.classSummaries) && data.classSummaries.length
+    ? data.classSummaries
+    : (data.teachingClasses || []).map((cls) => ({
+        classId: cls.classId,
+        classCode: cls.classCode,
+        className: cls.className,
+        termCode: cls.termCode,
+        studentCount: cls.studentCount,
+        calcStatus: cls.calcStatus,
+      }))
+
+  const assessmentPoints = Array.isArray(data.assessmentPoints) && data.assessmentPoints.length
+    ? data.assessmentPoints
+    : ((data.teachingClasses?.[0]?.assessmentPointAverages) || []).map((ap) => ({
+        apId: ap.apId,
+        apName: ap.apName,
+        fullScore: ap.fullScore,
+      }))
+
+  const classScoreSummaries = Array.isArray(data.classScoreSummaries) && data.classScoreSummaries.length
+    ? data.classScoreSummaries
+    : (data.teachingClasses || []).map((cls) => ({
+        classId: cls.classId,
+        classCode: cls.classCode,
+        className: cls.className,
+        termCode: cls.termCode,
+        studentCount: cls.studentCount,
+        calcStatus: cls.calcStatus,
+        apAverages: Object.fromEntries(
+          (cls.assessmentPointAverages || []).map((ap) => [ap.apId, ap.averageScore]),
+        ),
+      }))
+
+  const objectiveAchievements = (data.objectiveAchievements || []).map((row) => ({
+    ...row,
+    objectiveName: row.objectiveName || row.description || row.objectiveCode || '',
+    courseAverage: row.courseAverage ?? row.averageAchievement ?? null,
+    classAchievements: normalizeClassAchievements(row.classAchievements),
+  }))
+
+  const indicatorAchievements = (data.indicatorAchievements || []).map((row) => ({
+    ...row,
+    courseAchievement: row.courseAchievement ?? row.averageAchievement ?? null,
+    classAchievements: normalizeClassAchievements(row.classAchievements),
+  }))
+
+  return {
+    ...data,
+    majorName: data.majorName || '',
+    classCount: data.classCount ?? classSummaries.length,
+    classSummaries,
+    assessmentPoints,
+    classScoreSummaries,
+    objectiveAchievements,
+    indicatorAchievements,
+  }
+}
+
+function normalizeClassAchievements(value) {
+  if (!value) return {}
+  if (!Array.isArray(value)) return value
+  return Object.fromEntries(
+    value
+      .filter((item) => item?.classId !== null && item?.classId !== undefined)
+      .map((item) => [item.classId, item.achievement]),
+  )
 }
 
 function formatAchievement(val) {
@@ -328,6 +422,9 @@ onMounted(async () => {
     return
   }
   await loadCourses()
+  if (selectInitialContext()) {
+    await loadReport()
+  }
 })
 </script>
 

@@ -34,6 +34,7 @@ import java.util.List;
 public class AssessmentQueryController {
 
     private static final List<String> ALLOWED_ROLES = List.of("program_director", "academic_affairs");
+    private static final List<String> UNLOCK_ROLES = List.of("academic_affairs");
 
     private final AssessmentQueryService assessmentQueryService;
     private final MajorReportService majorReportService;
@@ -65,12 +66,12 @@ public class AssessmentQueryController {
     }
 
     @PostMapping("/approveUnlock")
-    @Operation(summary = "专业负责人或教务执行教学班解锁")
+    @Operation(summary = "教务执行教学班解锁")
     public Result<Void> approveUnlock(
             @Valid @RequestBody UnlockRequestApproveRequest request,
             @RequestAttribute("userId") Long userId,
             @RequestAttribute("roles") List<String> roles) {
-        ensureAccess(roles);
+        ensureUnlockAccess(roles);
         assessmentQueryService.approveUnlock(request, userId);
         return Result.ok("教学班已解锁", null);
     }
@@ -108,6 +109,12 @@ public class AssessmentQueryController {
     private void ensureAccess(List<String> roles) {
         if (roles == null || roles.stream().noneMatch(ALLOWED_ROLES::contains)) {
             throw new com.oss.osscourse.common.BusinessException(403, "当前账号无权访问专业级看板或结果");
+        }
+    }
+
+    private void ensureUnlockAccess(List<String> roles) {
+        if (roles == null || roles.stream().noneMatch(UNLOCK_ROLES::contains)) {
+            throw new com.oss.osscourse.common.BusinessException(403, "当前账号无权执行教学班解锁");
         }
     }
 }
