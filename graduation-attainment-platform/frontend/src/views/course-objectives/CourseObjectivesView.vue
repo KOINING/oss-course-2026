@@ -4,10 +4,10 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 B：课程目标与考核点</p>
             <h1>课程目标配置</h1>
             <p class="page-summary">
-              课程目标属于课程级配置，但教师端需要基于当前教学班确认专业、年级和学期口径。
+              课程目标属于课程级配置，教师端基于当前教学班确认专业、年级和课程评价口径。
+              本系统中的教学班表示该专业该届学生在某门必修课程上的评价单元。
               进入页面后默认加载一个课程与教学班，不再显示空白页。
             </p>
           </div>
@@ -431,12 +431,23 @@ onMounted(async () => {
 
 <style scoped>
 .course-objectives-page {
-  padding: 20px;
+  padding: 0;
 }
 
 .page-card {
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-card :deep(.el-card__header) {
+  padding: 0 0 24px;
+  border-bottom: none;
+}
+
+.page-card :deep(.el-card__body) {
+  padding: 0;
 }
 
 .page-header h1 {

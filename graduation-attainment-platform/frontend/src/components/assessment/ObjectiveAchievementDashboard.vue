@@ -2,7 +2,7 @@
   <div class="objective-dashboard">
     <EmptyState
       v-if="!dashboard?.resultReady"
-      description="当前教学班尚未生成课程目标达成结果"
+      description="当前教学班评价单元尚未生成课程目标达成结果"
     />
 
     <template v-else>
@@ -147,8 +147,8 @@ const calcStatusType = computed(() => {
 })
 const lockHint = computed(() => (
   props.dashboard?.locked
-    ? '当前教学班成绩与课程级结果已锁定。教师可提交解锁申请，待专业负责人或教务管理员审批后再重新导入和计算。'
-    : '当前教学班尚未锁定。教师可继续核对成绩，确认完整后再执行计算并锁定。'
+    ? '当前教学班评价单元成绩与课程级结果已锁定。教师可提交解锁申请，待专业负责人或教务管理员审批后再重新导入和计算。'
+    : '当前教学班评价单元尚未锁定。教师可继续核对成绩，确认完整后再执行计算并锁定。'
 ))
 
 function formatDecimal(value) {

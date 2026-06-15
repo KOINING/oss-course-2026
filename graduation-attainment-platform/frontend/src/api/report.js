@@ -2,7 +2,7 @@ import request from './request'
 
 /**
  * 获取专业级评价报告数据（报表统一结果源）
- * @param {Object} params - { majorId, gradeYear, termId? }
+ * @param {Object} params - { majorId, gradeYear }
  */
 export function getMajorReportApi(params) {
   return request.post('/report/majorReport', params)

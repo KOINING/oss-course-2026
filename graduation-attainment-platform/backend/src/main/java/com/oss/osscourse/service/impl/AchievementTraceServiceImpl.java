@@ -32,24 +32,38 @@ import com.oss.osscourse.mapper.StudentMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
 import com.oss.osscourse.service.AchievementTraceService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AchievementTraceServiceImpl implements AchievementTraceService {
+
+    private static final int LEDGER_LAST_COLUMN = 18;
+    private static final DateTimeFormatter EXPORT_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AchievementTraceMapper achievementTraceMapper;
     private final TeachingClassMapper teachingClassMapper;
@@ -216,6 +230,16 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     @Override
     public byte[] exportAchievementLedger(MajorToCourseTraceRequest request) {
         List<AchievementLedgerRow> rows = listLedgerRows(request);
+        if (rows != null) {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            buildMergedLedgerWorkbook(workbook, rows);
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new BusinessException(500, "导出追溯台账失败");
+        }
+        }
+
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFSheet sheet = workbook.createSheet("达成度追溯台账");
             String[] headers = {
@@ -317,6 +341,398 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
         return left * right;
     }
 
+    private void buildMergedLedgerWorkbook(XSSFWorkbook workbook, List<AchievementLedgerRow> rows) {
+        XSSFSheet sheet = workbook.createSheet("\u7a7f\u900f\u5f0f\u53f0\u8d26");
+        CellStyle titleStyle = createTitleStyle(workbook);
+        CellStyle infoStyle = createInfoStyle(workbook);
+        CellStyle majorSectionStyle = createSectionStyle(workbook, IndexedColors.DARK_BLUE, true);
+        CellStyle indicatorSectionStyle = createSectionStyle(workbook, IndexedColors.TEAL, true);
+        CellStyle courseSectionStyle = createSectionStyle(workbook, IndexedColors.SEA_GREEN, true);
+        CellStyle detailSectionStyle = createSectionStyle(workbook, IndexedColors.LIGHT_ORANGE, false);
+        CellStyle headerStyle = createHeaderStyle(workbook);
+        CellStyle detailHeaderStyle = createDetailHeaderStyle(workbook);
+        CellStyle bodyStyle = createBodyStyle(workbook, false);
+        CellStyle centeredBodyStyle = createBodyStyle(workbook, true);
+
+        AchievementLedgerRow first = rows.get(0);
+        String majorName = first.getMajorName() == null ? "" : first.getMajorName();
+        String termCode = first.getTermCode() == null ? "-" : first.getTermCode();
+
+        Map<Long, List<AchievementLedgerRow>> rowsByIp = rows.stream()
+                .filter(row -> row.getIpId() != null)
+                .collect(Collectors.groupingBy(AchievementLedgerRow::getIpId, LinkedHashMap::new, Collectors.toList()));
+
+        int rowIndex = 0;
+        rowIndex = writeMergedTextRow(
+                sheet,
+                rowIndex,
+                "\u7a7f\u900f\u5f0f\u53f0\u8d26 - " + majorName + " " + first.getGradeYear() + "\u7ea7",
+                titleStyle,
+                5,
+                30
+        );
+        rowIndex = writeMergedTextRow(
+                sheet,
+                rowIndex,
+                "\u7edf\u8ba1\u5b66\u671f\uff1a" + termCode + " | \u5bfc\u51fa\u65f6\u95f4\uff1a" + LocalDateTime.now().format(EXPORT_TIME_FORMATTER),
+                infoStyle,
+                5,
+                22
+        );
+        rowIndex++;
+
+        rowIndex = writeMergedTextRow(sheet, rowIndex, "\u4e00\u3001\u4e13\u4e1a\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6", majorSectionStyle, 4, 24);
+        Row majorHeaderRow = sheet.createRow(rowIndex++);
+        String[] majorHeaders = {
+                "\u6307\u6807\u70b9\u7f16\u53f7", "\u6307\u6807\u70b9\u63cf\u8ff0", "\u6bd5\u4e1a\u8981\u6c42", "\u4e13\u4e1a\u7ea7\u8fbe\u6210\u5ea6 Gk", "\u652f\u6491\u8bfe\u7a0b\u6570"
+        };
+        for (int i = 0; i < majorHeaders.length; i++) {
+            writeCell(majorHeaderRow.createCell(i), majorHeaders[i], headerStyle);
+        }
+
+        for (List<AchievementLedgerRow> ipRows : rowsByIp.values()) {
+            AchievementLedgerRow ipFirst = ipRows.get(0);
+            int contributingCourseCount = (int) ipRows.stream()
+                    .filter(row -> row.getCourseId() != null && row.getClassId() != null)
+                    .map(row -> row.getCourseId() + ":" + row.getClassId())
+                    .distinct()
+                    .count();
+
+            Row row = sheet.createRow(rowIndex++);
+            writeCell(row.createCell(0), ipFirst.getIpCode(), centeredBodyStyle);
+            writeCell(row.createCell(1), ipFirst.getIpDescription(), bodyStyle);
+            writeCell(row.createCell(2), ipFirst.getGrCode(), centeredBodyStyle);
+            writeCell(row.createCell(3), ipFirst.getFinalAchievement(), centeredBodyStyle);
+            writeCell(row.createCell(4), contributingCourseCount, centeredBodyStyle);
+        }
+
+        rowIndex++;
+
+        for (List<AchievementLedgerRow> ipRows : rowsByIp.values()) {
+            AchievementLedgerRow ipFirst = ipRows.get(0);
+            rowIndex = writeMergedTextRow(
+                    sheet,
+                    rowIndex,
+                    "\u4e8c\u3001\u6307\u6807\u70b9 " + valueOrEmpty(ipFirst.getIpCode()) + " \u652f\u6491\u8bfe\u7a0b\u6982\u89c8",
+                    indicatorSectionStyle,
+                    5,
+                    24
+            );
+
+            Row courseHeaderRow = sheet.createRow(rowIndex++);
+            String[] courseHeaders = {
+                    "\u8bfe\u7a0b\u4ee3\u7801", "\u8bfe\u7a0b\u540d\u79f0", "\u6559\u5b66\u73ed", "\u8bfe\u7a0b\u7ea7\u8fbe\u6210\u5ea6 Ek", "\u5b8f\u89c2\u6743\u91cd W", "\u52a0\u6743\u8d21\u732e"
+            };
+            for (int i = 0; i < courseHeaders.length; i++) {
+                writeCell(courseHeaderRow.createCell(i), courseHeaders[i], headerStyle);
+            }
+
+            Map<String, AchievementLedgerRow> courseRows = ipRows.stream()
+                    .filter(row -> row.getCourseId() != null && row.getClassId() != null)
+                    .collect(Collectors.toMap(
+                            row -> row.getCourseId() + ":" + row.getClassId(),
+                            row -> row,
+                            (left, right) -> left,
+                            LinkedHashMap::new
+                    ));
+
+            for (AchievementLedgerRow courseRow : courseRows.values()) {
+                Row row = sheet.createRow(rowIndex++);
+                writeCell(row.createCell(0), courseRow.getCourseCode(), centeredBodyStyle);
+                writeCell(row.createCell(1), courseRow.getCourseName(), bodyStyle);
+                writeCell(row.createCell(2), courseRow.getClassName(), bodyStyle);
+                writeCell(row.createCell(3), courseRow.getCourseIndicatorAchievement(), centeredBodyStyle);
+                writeCell(row.createCell(4), courseRow.getMacroWeight(), centeredBodyStyle);
+                writeCell(row.createCell(5), multiply(courseRow.getCourseIndicatorAchievement(), courseRow.getMacroWeight()), centeredBodyStyle);
+            }
+
+            rowIndex++;
+            for (Map.Entry<String, AchievementLedgerRow> courseEntry : courseRows.entrySet()) {
+                AchievementLedgerRow courseFirst = courseEntry.getValue();
+                List<AchievementLedgerRow> currentCourseRows = ipRows.stream()
+                        .filter(row -> Objects.equals(row.getCourseId(), courseFirst.getCourseId())
+                                && Objects.equals(row.getClassId(), courseFirst.getClassId()))
+                        .toList();
+                Map<Long, List<AchievementLedgerRow>> rowsByObjective = currentCourseRows.stream()
+                        .filter(row -> row.getCoId() != null)
+                        .collect(Collectors.groupingBy(AchievementLedgerRow::getCoId, LinkedHashMap::new, Collectors.toList()));
+                if (rowsByObjective.isEmpty()) {
+                    continue;
+                }
+
+                rowIndex = writeMergedTextRow(
+                        sheet,
+                        rowIndex,
+                        "\u4e09\u3001\u8bfe\u7a0b " + valueOrEmpty(courseFirst.getCourseName())
+                                + " | \u6559\u5b66\u73ed " + valueOrEmpty(courseFirst.getClassName()),
+                        courseSectionStyle,
+                        5,
+                        24
+                );
+
+                rowIndex = writeHeaderRow(sheet, rowIndex, courseHeaders, headerStyle);
+                Row singleCourseRow = sheet.createRow(rowIndex++);
+                writeCell(singleCourseRow.createCell(0), courseFirst.getCourseCode(), centeredBodyStyle);
+                writeCell(singleCourseRow.createCell(1), courseFirst.getCourseName(), bodyStyle);
+                writeCell(singleCourseRow.createCell(2), courseFirst.getClassName(), bodyStyle);
+                writeCell(singleCourseRow.createCell(3), courseFirst.getCourseIndicatorAchievement(), centeredBodyStyle);
+                writeCell(singleCourseRow.createCell(4), courseFirst.getMacroWeight(), centeredBodyStyle);
+                writeCell(singleCourseRow.createCell(5), multiply(courseFirst.getCourseIndicatorAchievement(), courseFirst.getMacroWeight()), centeredBodyStyle);
+
+                rowIndex = writeMergedTextRow(
+                        sheet,
+                        rowIndex,
+                        "3.1 \u8bfe\u7a0b\u76ee\u6807\u660e\u7ec6",
+                        infoStyle,
+                        4,
+                        20
+                );
+                rowIndex = writeHeaderRow(
+                        sheet,
+                        rowIndex,
+                        new String[]{
+                                "\u76ee\u6807\u7f16\u7801", "\u76ee\u6807\u63cf\u8ff0", "\u73ed\u7ea7\u5e73\u5747\u8fbe\u6210\u5ea6",
+                                "\u5185\u90e8\u6743\u91cd", "\u52a0\u6743\u8d21\u732e"
+                        },
+                        headerStyle
+                );
+
+                for (List<AchievementLedgerRow> objectiveRows : rowsByObjective.values()) {
+                    AchievementLedgerRow objectiveFirst = objectiveRows.get(0);
+                    Row objectiveRow = sheet.createRow(rowIndex++);
+                    writeCell(objectiveRow.createCell(0), objectiveFirst.getObjectiveCode(), centeredBodyStyle);
+                    writeCell(objectiveRow.createCell(1), objectiveFirst.getCoDescription(), bodyStyle);
+                    writeCell(objectiveRow.createCell(2), objectiveFirst.getObjectiveAchievement(), centeredBodyStyle);
+                    writeCell(objectiveRow.createCell(3), objectiveFirst.getInternalWeight(), centeredBodyStyle);
+                    writeCell(objectiveRow.createCell(4), multiply(objectiveFirst.getObjectiveAchievement(), objectiveFirst.getInternalWeight()), centeredBodyStyle);
+
+                    rowIndex = writeMergedTextRow(
+                            sheet,
+                            rowIndex,
+                            "\u56db\u3001\u76ee\u6807 " + valueOrEmpty(objectiveFirst.getObjectiveCode()) + " \u5f97\u5206\u660e\u7ec6",
+                            detailSectionStyle,
+                            4,
+                            22
+                    );
+                    rowIndex = writeHeaderRow(
+                            sheet,
+                            rowIndex,
+                            new String[]{
+                                    "\u8003\u6838\u70b9", "\u6ee1\u5206", "\u5b66\u53f7", "\u59d3\u540d", "\u539f\u59cb\u6210\u7ee9"
+                            },
+                            detailHeaderStyle
+                    );
+
+                    for (AchievementLedgerRow detailRow : objectiveRows) {
+                        Row scoreRow = sheet.createRow(rowIndex++);
+                        writeCell(scoreRow.createCell(0), detailRow.getApName(), bodyStyle);
+                        writeCell(scoreRow.createCell(1), detailRow.getFullScore(), centeredBodyStyle);
+                        writeCell(scoreRow.createCell(2), detailRow.getStudentNo(), centeredBodyStyle);
+                        writeCell(scoreRow.createCell(3), detailRow.getStudentName(), centeredBodyStyle);
+                        writeCell(scoreRow.createCell(4), detailRow.getActualScore(), centeredBodyStyle);
+                    }
+                    rowIndex++;
+                }
+            }
+
+            rowIndex++;
+        }
+
+        sheet.createFreezePane(0, 3);
+        for (int i = 0; i <= 5; i++) {
+            sheet.autoSizeColumn(i);
+            int width = Math.min(Math.max(sheet.getColumnWidth(i) + 512, 14 * 256), 42 * 256);
+            sheet.setColumnWidth(i, width);
+        }
+    }
+
+    private int writeHeaderRow(XSSFSheet sheet, int rowIndex, String[] headers, CellStyle headerStyle) {
+        Row row = sheet.createRow(rowIndex);
+        row.setHeightInPoints(20);
+        for (int i = 0; i < headers.length; i++) {
+            writeCell(row.createCell(i), headers[i], headerStyle);
+        }
+        return rowIndex + 1;
+    }
+
+    private int writeMergedTextRow(XSSFSheet sheet, int rowIndex, String text, CellStyle style, int lastColumn) {
+        return writeMergedTextRow(sheet, rowIndex, text, style, lastColumn, 20);
+    }
+
+    private int writeMergedTextRow(XSSFSheet sheet, int rowIndex, String text, CellStyle style, int lastColumn, int heightInPoints) {
+        Row row = sheet.createRow(rowIndex);
+        row.setHeightInPoints(heightInPoints);
+        writeCell(row.createCell(0), text, style);
+        for (int column = 1; column <= lastColumn; column++) {
+            writeCell(row.createCell(column), "", style);
+        }
+        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 0, lastColumn));
+        return rowIndex + 1;
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private CellStyle createTitleStyle(XSSFWorkbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 14);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createInfoStyle(XSSFWorkbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        return style;
+    }
+
+    private CellStyle createSectionStyle(XSSFWorkbook workbook, IndexedColors fillColor, boolean whiteFont) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(HorizontalAlignment.LEFT);
+        style.setFillForegroundColor(fillColor.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        if (whiteFont) {
+            font.setColor(IndexedColors.WHITE.getIndex());
+        }
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createHeaderStyle(XSSFWorkbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createDetailHeaderStyle(XSSFWorkbook workbook) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = workbook.createFont();
+        font.setBold(true);
+        style.setFont(font);
+        return style;
+    }
+
+    private CellStyle createBodyStyle(XSSFWorkbook workbook, boolean centered) {
+        CellStyle style = createBaseStyle(workbook);
+        style.setAlignment(centered ? HorizontalAlignment.CENTER : HorizontalAlignment.LEFT);
+        return style;
+    }
+
+    private CellStyle createBaseStyle(XSSFWorkbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setWrapText(true);
+        return style;
+    }
+
+    private void mergeLedgerCells(XSSFSheet sheet, List<AchievementLedgerRow> rows, int dataStartRow) {
+        mergeColumns(sheet, rows, dataStartRow, new int[]{0, 1, 2}, this::isSameMajorScope);
+        mergeColumns(sheet, rows, dataStartRow, new int[]{3}, this::isSameRequirementScope);
+        mergeColumns(sheet, rows, dataStartRow, new int[]{4, 5}, this::isSameIndicatorScope);
+        mergeColumns(sheet, rows, dataStartRow, new int[]{6, 7, 8, 9, 10}, this::isSameClassScope);
+        mergeColumns(sheet, rows, dataStartRow, new int[]{11, 12, 13}, this::isSameObjectiveScope);
+        mergeColumns(sheet, rows, dataStartRow, new int[]{14, 15}, this::isSameAssessmentPointScope);
+    }
+
+    private void mergeColumns(XSSFSheet sheet,
+                              List<AchievementLedgerRow> rows,
+                              int dataStartRow,
+                              int[] columns,
+                              BiPredicate<AchievementLedgerRow, AchievementLedgerRow> sameGroup) {
+        if (rows.isEmpty()) {
+            return;
+        }
+        int groupStart = 0;
+        for (int index = 1; index <= rows.size(); index++) {
+            boolean groupEnded = index == rows.size() || !sameGroup.test(rows.get(index - 1), rows.get(index));
+            if (!groupEnded) {
+                continue;
+            }
+            int firstRow = dataStartRow + groupStart;
+            int lastRow = dataStartRow + index - 1;
+            if (lastRow > firstRow) {
+                for (int column : columns) {
+                    sheet.addMergedRegion(new CellRangeAddress(firstRow, lastRow, column, column));
+                }
+            }
+            groupStart = index;
+        }
+    }
+
+    private boolean isSameMajorScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return Objects.equals(left.getMajorId(), right.getMajorId())
+                && Objects.equals(left.getGradeYear(), right.getGradeYear())
+                && Objects.equals(left.getTermId(), right.getTermId());
+    }
+
+    private boolean isSameRequirementScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return isSameMajorScope(left, right)
+                && Objects.equals(left.getGrId(), right.getGrId());
+    }
+
+    private boolean isSameIndicatorScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return isSameRequirementScope(left, right)
+                && Objects.equals(left.getIpId(), right.getIpId());
+    }
+
+    private boolean isSameClassScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return isSameIndicatorScope(left, right)
+                && Objects.equals(left.getClassId(), right.getClassId());
+    }
+
+    private boolean isSameObjectiveScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return isSameClassScope(left, right)
+                && Objects.equals(left.getCoId(), right.getCoId());
+    }
+
+    private boolean isSameAssessmentPointScope(AchievementLedgerRow left, AchievementLedgerRow right) {
+        return isSameObjectiveScope(left, right)
+                && Objects.equals(left.getApId(), right.getApId());
+    }
+
+    private void writeMergedLedgerRow(Row row, AchievementLedgerRow item, CellStyle mergedCellStyle, CellStyle bodyStyle) {
+        int col = 0;
+        writeCell(row.createCell(col++), item.getMajorName(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getGradeYear(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getTermCode(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getGrCode(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getIpCode(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getFinalAchievement(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getCourseCode(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getCourseName(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getClassName(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getCourseIndicatorAchievement(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getMacroWeight(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getObjectiveCode(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getObjectiveAchievement(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getInternalWeight(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getApName(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getFullScore(), mergedCellStyle);
+        writeCell(row.createCell(col++), item.getStudentNo(), bodyStyle);
+        writeCell(row.createCell(col++), item.getStudentName(), bodyStyle);
+        writeCell(row.createCell(col), item.getActualScore(), bodyStyle);
+    }
+
     private void writeRow(Row row, AchievementLedgerRow item) {
         int col = 0;
         writeCell(row.createCell(col++), item.getMajorName());
@@ -338,6 +754,11 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
         writeCell(row.createCell(col++), item.getStudentNo());
         writeCell(row.createCell(col++), item.getStudentName());
         writeCell(row.createCell(col), item.getActualScore());
+    }
+
+    private void writeCell(Cell cell, Object value, CellStyle style) {
+        cell.setCellStyle(style);
+        writeCell(cell, value);
     }
 
     private void writeCell(Cell cell, Object value) {

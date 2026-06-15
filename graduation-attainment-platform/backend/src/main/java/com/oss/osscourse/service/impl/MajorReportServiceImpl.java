@@ -130,7 +130,7 @@ public class MajorReportServiceImpl implements MajorReportService {
                 .collect(Collectors.toMap(Course::getCourseId, item -> item));
 
         // 6. 获取这些课程在指定年级下的教学班（已锁定）
-        List<TeachingClass> teachingClasses = listLockedTeachingClasses(supportCourseIds, request.getGradeYear());
+        List<TeachingClass> teachingClasses = listLockedTeachingClasses(request.getMajorId(), request.getGradeYear(), supportCourseIds);
         Map<Long, TeachingClass> classByCourseMap = new LinkedHashMap<>();
         for (TeachingClass tc : teachingClasses) {
             classByCourseMap.putIfAbsent(tc.getCourseId(), tc);
@@ -642,12 +642,13 @@ public class MajorReportServiceImpl implements MajorReportService {
     /**
      * 获取指定课程集合在指定年级下已锁定的教学班
      */
-    private List<TeachingClass> listLockedTeachingClasses(Set<Long> courseIds, Integer gradeYear) {
+    private List<TeachingClass> listLockedTeachingClasses(Long majorId, Integer gradeYear, Set<Long> courseIds) {
         if (courseIds.isEmpty()) {
             return List.of();
         }
         return teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
                         .in(TeachingClass::getCourseId, courseIds)
+                        .eq(TeachingClass::getMajorId, majorId)
                         .eq(TeachingClass::getGradeYear, gradeYear)
                         .eq(TeachingClass::getCalcStatus, "locked")
                         .orderByAsc(TeachingClass::getCourseId)

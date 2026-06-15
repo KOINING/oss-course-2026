@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 B：内部权重配置</p>
             <h1>课程目标对指标点的内部权重</h1>
             <p class="page-summary">
               根据《软件需求规格说明书》B-2，教师端只展示当前课程在当前专业、年级版本下负责支撑的指标点，
@@ -476,12 +475,23 @@ onMounted(async () => {
 
 <style scoped>
 .course-weight-page {
-  padding: 20px;
+  padding: 0;
 }
 
 .page-card {
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-card :deep(.el-card__header) {
+  padding: 0 0 24px;
+  border-bottom: none;
+}
+
+.page-card :deep(.el-card__body) {
+  padding: 0;
 }
 
 .page-header h1 {

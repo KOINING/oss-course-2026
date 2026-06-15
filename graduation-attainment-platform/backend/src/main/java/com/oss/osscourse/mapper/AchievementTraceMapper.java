@@ -62,6 +62,7 @@ public interface AchievementTraceMapper {
             "JOIN course c ON c.course_id = cis.course_id",
             "LEFT JOIN teaching_class tc",
             "  ON tc.course_id = c.course_id",
+            " AND tc.major_id = gr.major_id",
             " AND tc.grade_year = gr.grade_year",
             " <if test='termId != null'>AND tc.term_id = #{termId}</if>",
             "LEFT JOIN academic_term term ON term.term_id = COALESCE(mia.term_id, tc.term_id)",

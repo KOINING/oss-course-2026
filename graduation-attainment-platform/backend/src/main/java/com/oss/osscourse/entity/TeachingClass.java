@@ -13,6 +13,7 @@ public class TeachingClass {
     private String classCode;
     private String className;
     private Long courseId;
+    private Long majorId;
     private Long termId;
     private Long teacherId;
     private Integer gradeYear;

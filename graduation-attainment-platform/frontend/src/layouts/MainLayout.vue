@@ -12,7 +12,7 @@
       >
         <template v-for="section in visibleSections" :key="section.key">
           <el-menu-item
-            v-if="section.key === 'home'"
+            v-if="isFlatSection(section)"
             :index="section.children[0].path"
           >
             <el-icon>
@@ -87,9 +87,7 @@ const iconMap = {
 
 const activeMenu = computed(() => route.path)
 
-const visibleSections = computed(() =>
-  getVisibleSections(userStore.roleCodes),
-)
+const visibleSections = computed(() => getVisibleSections(userStore.roleCodes))
 
 const roleLabels = computed(() => {
   const roles = getRoleDetails(userStore.roleCodes)
@@ -98,6 +96,10 @@ const roleLabels = computed(() => {
 
 function resolveIcon(iconName) {
   return iconMap[iconName] || HomeFilled
+}
+
+function isFlatSection(section) {
+  return section.key === 'home' || section.children.length === 1
 }
 
 function handleLogout() {

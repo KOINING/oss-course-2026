@@ -4,7 +4,6 @@
       <template #header>
         <div class="module-header">
           <div>
-            <p class="module-section">{{ route.meta.moduleTitle }}</p>
             <h1>{{ route.meta.title }}</h1>
           </div>
           <el-tag type="warning" effect="plain">骨架页</el-tag>

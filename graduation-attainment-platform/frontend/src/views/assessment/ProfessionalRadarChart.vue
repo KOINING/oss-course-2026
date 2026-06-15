@@ -71,14 +71,11 @@ function bindMouseEvents() {
     const dist = Math.sqrt(dx * dx + dy * dy)
     const outerR = (Math.min(w, h) / 2) * 0.68
 
-    // only show tooltip when mouse is near the radar data ring
     if (dist < outerR * 0.25 || dist > outerR * 1.15) {
       tooltip.visible = false
       return
     }
 
-    // atan2(dy,dx) gives angle from +x axis CCW; negate to go CCW in screen
-    // then rotate so 0 = top
     let angle = -Math.atan2(dy, dx) - Math.PI / 2
     if (angle < 0) angle += 2 * Math.PI
 
@@ -89,8 +86,6 @@ function bindMouseEvents() {
     tooltip.ipCode = item.ipCode || ''
     tooltip.ipDescription = item.ipDescription || ''
     tooltip.value = formatDecimal(item.finalAchievement)
-
-    const containerRect = containerRef.value.getBoundingClientRect()
     tooltip.x = event.offsetX + 12
     tooltip.y = event.offsetY - 10
     tooltip.visible = true
@@ -177,6 +172,15 @@ function resizeChart() {
   chart?.resize()
 }
 
+function exportImage() {
+  if (!chart) return null
+  return chart.getDataURL({
+    type: 'png',
+    pixelRatio: 2,
+    backgroundColor: '#ffffff',
+  })
+}
+
 watch(
   () => props.indicatorAchievements,
   async () => {
@@ -192,6 +196,10 @@ window.addEventListener('resize', resizeChart)
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeChart)
   chart?.dispose()
+})
+
+defineExpose({
+  exportImage,
 })
 </script>
 

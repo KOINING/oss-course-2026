@@ -16,6 +16,12 @@ public class TeachingClassQueryRequest {
     @Schema(description = "所属课程ID")
     private Long courseId;
 
+    @Schema(description = "所属专业ID")
+    private Long majorId;
+
+    @Schema(description = "所属年级")
+    private Integer gradeYear;
+
     @Schema(description = "所属学期ID")
     private Long termId;
 

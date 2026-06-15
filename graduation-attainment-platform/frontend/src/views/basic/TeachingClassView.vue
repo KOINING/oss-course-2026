@@ -9,7 +9,8 @@ import {
   updateTeachingClassApi,
   updateTeachingClassStatusApi,
 } from '@/api/teachingClass'
-import { listCoursesApi } from '@/api/course'
+import { listCoursesApi, listCourseGradeYearsApi } from '@/api/course'
+import { listMajorsForSelectApi } from '@/api/basic'
 import { listAcademicTermsApi } from '@/api/academicTerm'
 import { listTeachersForSelectApi } from '@/api/teacher'
 import { listStudentsApi } from '@/api/student'
@@ -32,6 +33,8 @@ const formRef = ref(null)
 const autoOpenHandled = ref(false)
 
 const courseOptions = ref([])
+const majorOptions = ref([])
+const gradeYearOptions = ref([])
 const termOptions = ref([])
 const teacherOptions = ref([])
 const studentDirectory = ref([])
@@ -48,6 +51,8 @@ const calcStatusOptions = [
 const filters = reactive({
   classCode: '',
   className: '',
+  majorId: null,
+  gradeYear: null,
   courseId: null,
   termId: null,
   teacherId: null,
@@ -58,6 +63,8 @@ const form = reactive({
   classId: null,
   classCode: '',
   className: '',
+  majorId: null,
+  gradeYear: null,
   courseId: null,
   termId: null,
   teacherId: null,
@@ -66,6 +73,8 @@ const form = reactive({
 const formRules = {
   classCode: [{ required: true, message: '请输入教学班编号', trigger: 'blur' }],
   className: [{ required: true, message: '请输入教学班名称', trigger: 'blur' }],
+  majorId: [{ required: true, message: '请选择专业', trigger: 'change' }],
+  gradeYear: [{ required: true, message: '请选择年级', trigger: 'change' }],
   courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
   termId: [{ required: true, message: '请选择学期', trigger: 'change' }],
   teacherId: [{ required: true, message: '请选择教师', trigger: 'change' }],
@@ -80,8 +89,9 @@ const relationTitle = computed(() => {
 function resetFilters() {
   filters.classCode = ''
   filters.className = ''
+  filters.majorId = null
+  filters.gradeYear = null
   filters.courseId = null
-  filters.termId = null
   filters.teacherId = null
   filters.calcStatus = ''
 }
@@ -90,6 +100,8 @@ function resetForm() {
   form.classId = null
   form.classCode = ''
   form.className = ''
+  form.majorId = null
+  form.gradeYear = null
   form.courseId = null
   form.termId = null
   form.teacherId = null
@@ -99,8 +111,9 @@ function normalizeFilters() {
   return {
     classCode: filters.classCode || undefined,
     className: filters.className || undefined,
+    majorId: filters.majorId || undefined,
+    gradeYear: filters.gradeYear || undefined,
     courseId: filters.courseId || undefined,
-    termId: filters.termId || undefined,
     teacherId: filters.teacherId || undefined,
     calcStatus: filters.calcStatus || undefined,
   }
@@ -151,12 +164,16 @@ function mapRelationRows(records = []) {
 }
 
 async function loadOptions() {
-  const [courses, terms, teachers] = await Promise.all([
+  const [courses, majors, gradeYears, terms, teachers] = await Promise.all([
     listCoursesApi({ status: 1 }),
+    listMajorsForSelectApi(),
+    listCourseGradeYearsApi(),
     listAcademicTermsApi(),
     listTeachersForSelectApi(),
   ])
   courseOptions.value = courses || []
+  majorOptions.value = majors || []
+  gradeYearOptions.value = gradeYears || []
   termOptions.value = terms || []
   teacherOptions.value = teachers || []
 }
@@ -209,6 +226,8 @@ function openEditDialog(row) {
     classId: row.classId,
     classCode: row.classCode,
     className: row.className,
+    majorId: row.majorId,
+    gradeYear: row.gradeYear,
     courseId: row.courseId,
     termId: row.termId,
     teacherId: row.teacherId,
@@ -227,6 +246,8 @@ async function handleSubmit() {
       classId: form.classId,
       classCode: form.classCode.trim(),
       className: form.className.trim(),
+      majorId: form.majorId,
+      gradeYear: form.gradeYear,
       courseId: form.courseId,
       termId: form.termId,
       teacherId: form.teacherId,
@@ -314,7 +335,6 @@ onMounted(async () => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ route.meta.moduleTitle }}</p>
             <h1>{{ route.meta.title }}</h1>
             <p class="page-summary">{{ route.meta.summary }}</p>
           </div>
@@ -323,7 +343,7 @@ onMounted(async () => {
 
       <el-alert type="info" :closable="false" class="page-tip" show-icon>
         <template #title>
-          本页负责教学班主数据和教学班名单关联查看。新增关联以“教学班学生关联导入”为主，手工加入学生不在本轮范围内。
+          本系统中的教学班指“专业 + 年级 + 必修课程”的课程评价单元，原则上同一专业同一年级同一必修课程对应一个教学班。新增关联以“教学班学生关联导入”为主。
         </template>
       </el-alert>
 
@@ -334,6 +354,26 @@ onMounted(async () => {
         <el-form-item label="教学班名称">
           <el-input v-model.trim="filters.className" placeholder="请输入教学班名称" clearable />
         </el-form-item>
+        <el-form-item label="专业">
+          <el-select v-model="filters.majorId" placeholder="全部专业" clearable filterable style="width: 200px">
+            <el-option
+              v-for="major in majorOptions"
+              :key="major.majorId"
+              :label="major.majorName"
+              :value="major.majorId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="年级">
+          <el-select v-model="filters.gradeYear" placeholder="全部年级" clearable style="width: 140px">
+            <el-option
+              v-for="year in gradeYearOptions"
+              :key="year"
+              :label="`${year}级`"
+              :value="year"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="课程">
           <el-select v-model="filters.courseId" placeholder="全部课程" clearable filterable style="width: 200px">
             <el-option
@@ -341,16 +381,6 @@ onMounted(async () => {
               :key="course.courseId"
               :label="`${course.courseCode} - ${course.courseName}`"
               :value="course.courseId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="学期">
-          <el-select v-model="filters.termId" placeholder="全部学期" clearable style="width: 180px">
-            <el-option
-              v-for="term in termOptions"
-              :key="term.termId"
-              :label="term.termCode"
-              :value="term.termId"
             />
           </el-select>
         </el-form-item>
@@ -388,6 +418,10 @@ onMounted(async () => {
       <el-table v-loading="tableLoading" :data="rows" border stripe>
         <el-table-column prop="classCode" label="教学班编号" min-width="140" />
         <el-table-column prop="className" label="教学班名称" min-width="180" />
+        <el-table-column prop="majorName" label="专业" min-width="180" />
+        <el-table-column prop="gradeYear" label="年级" width="100" align="center">
+          <template #default="{ row }">{{ row.gradeYear ? `${row.gradeYear}级` : '-' }}</template>
+        </el-table-column>
         <el-table-column prop="courseCode" label="课程代码" min-width="120" />
         <el-table-column prop="courseName" label="课程名称" min-width="180" />
         <el-table-column prop="termCode" label="学期" min-width="140" />
@@ -438,7 +472,27 @@ onMounted(async () => {
             <el-input v-model.trim="form.classCode" placeholder="如 TC2024CS01" maxlength="32" />
           </el-form-item>
           <el-form-item label="教学班名称" prop="className">
-            <el-input v-model.trim="form.className" placeholder="请输入教学班名称" maxlength="50" />
+            <el-input v-model.trim="form.className" placeholder="如 计算机科学与技术2022级-数据结构" maxlength="50" />
+          </el-form-item>
+          <el-form-item label="专业" prop="majorId">
+            <el-select v-model="form.majorId" placeholder="请选择专业" filterable style="width: 100%">
+              <el-option
+                v-for="major in majorOptions"
+                :key="major.majorId"
+                :label="major.majorName"
+                :value="major.majorId"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="年级" prop="gradeYear">
+            <el-select v-model="form.gradeYear" placeholder="请选择年级" style="width: 100%">
+              <el-option
+                v-for="year in gradeYearOptions"
+                :key="year"
+                :label="`${year}级`"
+                :value="year"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="课程" prop="courseId">
             <el-select v-model="form.courseId" placeholder="请选择课程" filterable style="width: 100%">
@@ -486,6 +540,7 @@ onMounted(async () => {
               {{ currentTeachingClass?.courseName || '-' }} / {{ currentTeachingClass?.termCode || '-' }}
             </p>
             <h3>教学班学生关联</h3>
+            <p class="relation-drawer__hint">该名单应覆盖本专业本年级修读该必修课程的学生。</p>
           </div>
           <el-button
             type="primary"

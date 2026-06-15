@@ -1,7 +1,7 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import {
   getSupportMatrixApi,
   listCoursesApi,
@@ -17,6 +17,7 @@ const filters = reactive({
   gradeYear: null,
   courseId: null,
 })
+const route = useRoute()
 
 const majorOptions = ref([])
 const gradeYearOptions = ref([])
@@ -28,10 +29,11 @@ const resetLoading = ref(false)
 const courses = ref([])
 const indicators = ref([])
 const matrixMap = ref({})
-const matrixScrollRef = ref(null)
-const groupHeaderRowRef = ref(null)
-const indicatorHeaderRowRef = ref(null)
+const matrixTableRef = ref(null)
+const summaryScrollRef = ref(null)
 let matrixSnapshot = {}
+let tableBodyScrollEl = null
+let syncingScroll = false
 
 function formatGradeYear(gradeYear) {
   return gradeYear ? `${gradeYear}级` : '-'
@@ -64,16 +66,6 @@ const visibleCourses = computed(() => {
   if (!filters.courseId) return courses.value
   return courses.value.filter((course) => course.courseId === filters.courseId)
 })
-
-function syncStickyMetrics() {
-  const matrixScroll = matrixScrollRef.value
-  if (!matrixScroll) return
-  const groupHeaderHeight = groupHeaderRowRef.value?.offsetHeight ?? 0
-  const indicatorHeaderHeight = indicatorHeaderRowRef.value?.offsetHeight ?? 0
-  matrixScroll.style.setProperty('--matrix-group-header-height', `${groupHeaderHeight}px`)
-  matrixScroll.style.setProperty('--matrix-indicator-header-top', `${groupHeaderHeight}px`)
-  matrixScroll.style.setProperty('--matrix-header-total-height', `${groupHeaderHeight + indicatorHeaderHeight}px`)
-}
 
 async function loadMajorOptions() {
   majorOptions.value = (await listMajorsForMatrixApi()) || []
@@ -130,6 +122,41 @@ function buildMatrixMap(relations) {
   return nextMap
 }
 
+function getTableBodyScrollEl() {
+  const tableEl = matrixTableRef.value?.$el
+  return tableEl?.querySelector('.el-table__body-wrapper .el-scrollbar__wrap') ?? null
+}
+
+function handleTableBodyScroll() {
+  if (syncingScroll || !tableBodyScrollEl || !summaryScrollRef.value) return
+  syncingScroll = true
+  summaryScrollRef.value.scrollLeft = tableBodyScrollEl.scrollLeft
+  syncingScroll = false
+}
+
+function handleSummaryScroll() {
+  if (syncingScroll || !tableBodyScrollEl || !summaryScrollRef.value) return
+  syncingScroll = true
+  tableBodyScrollEl.scrollLeft = summaryScrollRef.value.scrollLeft
+  syncingScroll = false
+}
+
+function detachMatrixScrollSync() {
+  tableBodyScrollEl?.removeEventListener('scroll', handleTableBodyScroll)
+  summaryScrollRef.value?.removeEventListener('scroll', handleSummaryScroll)
+  tableBodyScrollEl = null
+}
+
+async function setupMatrixScrollSync() {
+  await nextTick()
+  detachMatrixScrollSync()
+  tableBodyScrollEl = getTableBodyScrollEl()
+  if (!tableBodyScrollEl || !summaryScrollRef.value) return
+  tableBodyScrollEl.addEventListener('scroll', handleTableBodyScroll)
+  summaryScrollRef.value.addEventListener('scroll', handleSummaryScroll)
+  summaryScrollRef.value.scrollLeft = tableBodyScrollEl.scrollLeft
+}
+
 async function loadMatrix() {
   if (!filters.majorId || !filters.gradeYear) {
     ElMessage.warning('请先选择专业和年级。')
@@ -148,11 +175,31 @@ async function loadMatrix() {
     indicators.value = indicatorRows || []
     matrixMap.value = buildMatrixMap(relationRows || [])
     matrixSnapshot = JSON.parse(JSON.stringify(matrixMap.value))
-    await nextTick()
-    syncStickyMetrics()
+    await setupMatrixScrollSync()
   } finally {
     tableLoading.value = false
   }
+}
+
+async function initializeDefaultMatrix() {
+  await loadMajorOptions()
+  if (!majorOptions.value.length) return
+
+  const queryMajorId = Number(route.query.majorId)
+  const matchedMajor = Number.isFinite(queryMajorId)
+    ? majorOptions.value.find((major) => Number(major.majorId) === queryMajorId)
+    : null
+  filters.majorId = matchedMajor?.majorId ?? majorOptions.value[0].majorId
+
+  await loadGradeYearOptions(filters.majorId)
+  if (!gradeYearOptions.value.length) return
+
+  const queryGradeYear = Number(route.query.gradeYear)
+  filters.gradeYear = Number.isFinite(queryGradeYear) && gradeYearOptions.value.includes(queryGradeYear)
+    ? queryGradeYear
+    : gradeYearOptions.value[0]
+
+  await loadMatrix()
 }
 
 function resetFilters() {
@@ -165,7 +212,6 @@ function resetFilters() {
   indicators.value = []
   matrixMap.value = {}
   matrixSnapshot = {}
-  syncStickyMetrics()
 }
 
 function handleLocalReset() {
@@ -213,6 +259,20 @@ function getColumnSum(ipId) {
 
 function isColumnValid(ipId) {
   return Math.abs(getColumnSum(ipId) - 1) < 0.0001
+}
+
+function renderGroupHeader(group) {
+  return h('div', { class: 'matrix-group-header' }, [
+    h('div', { class: 'matrix-group-header__code' }, group.grCode),
+    h('div', { class: 'matrix-group-header__desc' }, group.grDescription),
+  ])
+}
+
+function renderIndicatorHeader(indicator) {
+  return h('div', { class: 'matrix-dynamic-header' }, [
+    h('div', { class: 'matrix-dynamic-header__code' }, indicator.ipCode),
+    h('div', { class: 'matrix-dynamic-header__desc' }, indicator.ipDescription),
+  ])
 }
 
 async function handleSave() {
@@ -271,21 +331,12 @@ async function handleServerReset() {
   }
 }
 
-watch(
-  () => [indicatorGroups.value.length, indicators.value.length, visibleCourses.value.length],
-  async () => {
-    await nextTick()
-    syncStickyMetrics()
-  },
-)
-
 onMounted(() => {
-  loadMajorOptions()
-  window.addEventListener('resize', syncStickyMetrics)
+  initializeDefaultMatrix()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', syncStickyMetrics)
+  detachMatrixScrollSync()
 })
 </script>
 
@@ -295,7 +346,6 @@ onBeforeUnmount(() => {
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">模块 A</p>
             <h1>支撑矩阵配置</h1>
             <p class="page-summary">
               按专业和年级配置课程对指标点的支撑关系，列权重校验始终基于当前版本下的全部课程。
@@ -347,48 +397,51 @@ onBeforeUnmount(() => {
       <div v-loading="tableLoading" class="matrix-wrap">
         <el-empty v-if="!tableLoading && indicators.length === 0" description="请选择专业和年级后查询支撑矩阵。" />
 
-        <div v-else ref="matrixScrollRef" class="matrix-scroll">
-          <table class="matrix-table">
-            <thead>
-              <tr ref="groupHeaderRowRef">
-                <th class="corner-cell" rowspan="2">
-                  <div class="corner-title">课程 / 毕业要求</div>
-                  <div class="corner-stats">
-                    <span>毕业要求: {{ graduationRequirementCount }}</span>
-                    <span>指标点: {{ indicators.length }}</span>
-                    <span>课程: {{ courses.length }}</span>
-                  </div>
-                </th>
-                <th
-                  v-for="group in indicatorGroups"
-                  :key="`${group.grId}-${group.gradeYear}`"
-                  :colspan="group.indicators.length"
-                  class="group-cell"
-                >
-                  <div class="group-code">{{ group.grCode }}</div>
-                  <div class="group-desc">{{ group.grDescription }}</div>
-                </th>
-              </tr>
-              <tr ref="indicatorHeaderRowRef">
-                <th v-for="indicator in indicators" :key="indicator.ipId" class="indicator-cell">
-                  <div class="indicator-code">{{ indicator.ipCode }}</div>
-                  <div class="indicator-desc">{{ indicator.ipDescription }}</div>
-                </th>
-              </tr>
-            </thead>
+        <div v-else class="matrix-table-shell">
+          <div class="matrix-table-meta">
+            <span>固定列：课程</span>
+            <span>毕业要求：{{ graduationRequirementCount }}</span>
+            <span>指标点：{{ indicators.length }}</span>
+            <span>课程：{{ courses.length }}</span>
+          </div>
 
-            <tbody>
-              <tr v-for="course in visibleCourses" :key="course.courseId">
-                <td class="course-cell">{{ course.courseName }}</td>
-                <td v-for="indicator in indicators" :key="indicator.ipId" class="value-cell">
-                  <div class="cell-inner">
+          <el-table
+            ref="matrixTableRef"
+            :data="visibleCourses"
+            border
+            max-height="620"
+            class="matrix-el-table"
+          >
+            <el-table-column prop="courseName" label="课程 / 毕业要求" width="220" fixed="left">
+              <template #default="{ row }">
+                <div class="course-name-cell">{{ row.courseName }}</div>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              v-for="group in indicatorGroups"
+              :key="`${group.grId}-${group.gradeYear}`"
+              :label="group.grCode"
+              :render-header="() => renderGroupHeader(group)"
+              align="center"
+            >
+              <el-table-column
+                v-for="indicator in group.indicators"
+                :key="indicator.ipId"
+                :label="indicator.ipCode"
+                :render-header="() => renderIndicatorHeader(indicator)"
+                min-width="178"
+                align="center"
+              >
+                <template #default="{ row }">
+                  <div class="matrix-edit-cell">
                     <el-checkbox
-                      :model-value="isChecked(course.courseId, indicator.ipId)"
-                      @change="(value) => onCheckChange(course.courseId, indicator.ipId, value)"
+                      :model-value="isChecked(row.courseId, indicator.ipId)"
+                      @change="(value) => onCheckChange(row.courseId, indicator.ipId, value)"
                     />
                     <el-input-number
-                      :model-value="getWeight(course.courseId, indicator.ipId)"
-                      :disabled="!isChecked(course.courseId, indicator.ipId)"
+                      :model-value="getWeight(row.courseId, indicator.ipId)"
+                      :disabled="!isChecked(row.courseId, indicator.ipId)"
                       :min="0"
                       :max="1"
                       :step="0.05"
@@ -396,26 +449,39 @@ onBeforeUnmount(() => {
                       controls-position="right"
                       size="small"
                       class="weight-input"
-                      @change="(value) => onWeightChange(course.courseId, indicator.ipId, value)"
+                      @change="(value) => onWeightChange(row.courseId, indicator.ipId, value)"
                     />
                   </div>
-                </td>
-              </tr>
+                </template>
+              </el-table-column>
+            </el-table-column>
+          </el-table>
 
-              <tr class="sum-row">
-                <td class="sum-label">列权重合计</td>
-                <td v-for="indicator in indicators" :key="indicator.ipId" class="sum-cell">
-                  <div class="sum-inner">
-                    <span :class="isColumnValid(indicator.ipId) ? 'sum-valid' : 'sum-invalid'">
-                      {{ getColumnSum(indicator.ipId).toFixed(2) }}
-                    </span>
-                    <el-icon v-if="isColumnValid(indicator.ipId)" color="#16a34a"><CircleCheck /></el-icon>
-                    <el-icon v-else color="#dc2626"><CircleClose /></el-icon>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div ref="summaryScrollRef" class="matrix-summary-scroll">
+            <div
+              class="matrix-summary-grid"
+              :style="{
+                minWidth: `${220 + indicators.length * 178}px`,
+                gridTemplateColumns: `220px repeat(${indicators.length}, minmax(178px, 1fr))`,
+              }"
+            >
+              <div class="matrix-summary-label">列权重合计</div>
+              <div
+                v-for="indicator in indicators"
+                :key="indicator.ipId"
+                class="matrix-summary-cell"
+              >
+                <span :class="isColumnValid(indicator.ipId) ? 'summary-valid' : 'summary-invalid'">
+                  <span class="summary-value">{{ getColumnSum(indicator.ipId).toFixed(2) }}</span>
+                  <span
+                    :class="isColumnValid(indicator.ipId)
+                      ? 'summary-icon summary-icon--valid'
+                      : 'summary-icon summary-icon--invalid'"
+                  />
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -431,6 +497,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .support-matrix-page {
   padding: 16px;
+}
+
+.page-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .page-header h1 {
@@ -458,116 +530,104 @@ onBeforeUnmount(() => {
   min-height: 240px;
 }
 
-.matrix-scroll {
-  --matrix-group-header-height: 0px;
-  --matrix-indicator-header-top: 0px;
-  --matrix-header-total-height: 0px;
-  position: relative;
-  max-height: 78vh;
-  overflow-x: auto;
-  overflow-y: auto;
-  border: 1px solid #dbe2ea;
+.matrix-table-shell {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-}
-
-.matrix-table {
-  width: 100%;
-  min-width: max-content;
-  border-collapse: collapse;
-}
-
-.matrix-table th,
-.matrix-table td {
-  border: 1px solid #dbe2ea;
-  padding: 10px 8px;
-  vertical-align: top;
   background: #fff;
 }
 
-.corner-cell {
-  position: sticky;
-  top: 0;
-  left: 0;
-  min-width: 180px;
-  background: #eef4ff;
-  font-weight: 600;
-  z-index: 7;
-  border-bottom: 1px solid #cbd5e1;
-  box-shadow: inset 0 -1px 0 #cbd5e1, 1px 0 0 #dbe2ea;
-}
-
-.corner-title {
-  font-size: 18px;
-  line-height: 1.4;
-}
-
-.corner-stats {
+.matrix-table-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 10px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
+  gap: 18px;
+  align-items: center;
+  padding: 12px 16px;
+  color: #6b7280;
+  font-size: 13px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.group-cell {
-  position: sticky;
-  top: 0;
-  min-width: 144px;
-  max-width: 144px;
-  background: #eef4ff;
-  z-index: 5;
-  border-bottom: 1px solid #cbd5e1;
-  box-shadow: inset 0 -1px 0 #cbd5e1;
+.matrix-el-table {
+  width: 100%;
 }
 
-.group-code,
-.indicator-code {
-  font-weight: 600;
-}
-
-.group-desc,
-.indicator-desc {
-  margin-top: 6px;
-  white-space: normal;
-  word-break: break-word;
-  line-height: 1.5;
-  color: #475569;
-  font-size: 12px;
-}
-
-.indicator-cell {
-  position: sticky;
-  top: var(--matrix-indicator-header-top);
-  min-width: 144px;
-  max-width: 144px;
-  background: #f7faff;
-  z-index: 4;
-  border-bottom: 1px solid #cbd5e1;
-  box-shadow: inset 0 -1px 0 #cbd5e1;
-}
-
-.course-cell {
-  position: sticky;
-  left: 0;
-  min-width: 180px;
-  background: #f8fafc;
-  font-weight: 500;
-  z-index: 3;
-  box-shadow: inset 0 -1px 0 #e2e8f0, 1px 0 0 #dbe2ea;
-}
-
-.value-cell {
-  text-align: center;
+.matrix-el-table :deep(.el-table__header th) {
+  color: #111827;
   background: #fff;
 }
 
-.cell-inner {
+.matrix-el-table :deep(.el-table__header .is-group th) {
+  background: #fff;
+}
+
+.matrix-el-table :deep(.el-table__body tr),
+.matrix-el-table :deep(.el-table__body tr td),
+.matrix-el-table :deep(.el-table__body tr.el-table__row--striped td) {
+  background: #fff;
+}
+
+.course-name-cell {
+  color: #1f2937;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.matrix-group-header {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.matrix-group-header__code {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.matrix-group-header__desc {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.matrix-dynamic-header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
+  min-height: 78px;
+  justify-content: center;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.matrix-dynamic-header__code {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.matrix-dynamic-header__desc {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.matrix-edit-cell {
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -575,45 +635,108 @@ onBeforeUnmount(() => {
   width: 78px;
 }
 
-.sum-row {
+.matrix-summary-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #f8fafc;
+  border-top: 1px solid #dbe2ea;
+  scrollbar-width: none;
+}
+
+.matrix-summary-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.matrix-summary-grid {
+  display: grid;
+  width: max-content;
+  min-height: 48px;
+  color: #334155;
   background: #f8fafc;
 }
 
-.sum-label {
+.matrix-summary-label,
+.matrix-summary-cell {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #e5e7eb;
+}
+
+.matrix-summary-label {
   position: sticky;
   left: 0;
-  bottom: 0;
-  font-weight: 600;
-  background: #f8fafc !important;
-  z-index: 6;
-  border-top: 1px solid #cbd5e1;
-  box-shadow: inset 0 1px 0 #cbd5e1, 1px 0 0 #dbe2ea;
-}
-
-.sum-cell {
-  position: sticky;
-  bottom: 0;
-  text-align: center;
-  background: #f8fafc !important;
   z-index: 2;
-  border-top: 1px solid #cbd5e1;
-  box-shadow: inset 0 1px 0 #cbd5e1;
+  color: #334155;
+  font-weight: 800;
+  background: #f8fafc;
 }
 
-.sum-inner {
+.summary-valid,
+.summary-invalid {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.sum-valid {
+.summary-valid {
   color: #16a34a;
-  font-weight: 600;
 }
 
-.sum-invalid {
+.summary-invalid {
   color: #dc2626;
-  font-weight: 600;
+}
+
+.summary-icon {
+  position: relative;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.summary-icon--valid {
+  color: #22c55e;
+}
+
+.summary-icon--valid::after {
+  position: absolute;
+  width: 6px;
+  height: 3px;
+  border-bottom: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
+  content: '';
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.summary-icon--invalid {
+  color: #dc2626;
+}
+
+.summary-icon--invalid::before,
+.summary-icon--invalid::after {
+  position: absolute;
+  width: 7px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 999px;
+  content: '';
+}
+
+.summary-icon--invalid::before {
+  transform: rotate(45deg);
+}
+
+.summary-icon--invalid::after {
+  transform: rotate(-45deg);
 }
 
 .bottom-actions {

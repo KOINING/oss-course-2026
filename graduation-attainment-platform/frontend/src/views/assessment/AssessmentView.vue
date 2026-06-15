@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">{{ pageSection }}</p>
             <h1>{{ pageTitle }}</h1>
             <p class="page-summary">{{ pageSummary }}</p>
           </div>
@@ -57,7 +56,6 @@ const isDirectorOrAcademic = computed(() =>
   userStore.roleCodes.some((role) => ['program_director', 'academic_affairs'].includes(role)),
 )
 const hasAnyAccess = computed(() => isInstructor.value || isDirectorOrAcademic.value)
-const pageSection = computed(() => route.meta.moduleTitle || '模块 C')
 
 const pageTitle = computed(() => {
   if (isInstructor.value) {
@@ -72,7 +70,7 @@ const pageTitle = computed(() => {
 const pageSummary = computed(() => {
   if (isInstructor.value) {
     return instructorTab.value === 'template'
-      ? '查看当前教学班成绩、锁定状态、课程目标级达成度以及课程级毕业要求指标点达成度，并在满足条件后执行课程级计算。'
+      ? '查看当前教学班评价单元的成绩、锁定状态、课程目标级达成度以及课程级毕业要求指标点达成度，并在满足条件后执行课程级计算。'
       : '按系统模板导入和保存原始成绩，为课程级达成度计算提供可追溯的数据输入。'
   }
   if (isDirectorOrAcademic.value) {

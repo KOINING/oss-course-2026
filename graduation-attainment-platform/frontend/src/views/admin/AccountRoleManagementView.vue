@@ -4,7 +4,6 @@
       <template #header>
         <div class="page-header">
           <div>
-            <p class="page-section">系统管理</p>
             <h1>账号与角色管理</h1>
             <p class="page-summary">
               管理教务管理员、专业负责人和课程主讲教师账号，并完成角色分配与启停控制。

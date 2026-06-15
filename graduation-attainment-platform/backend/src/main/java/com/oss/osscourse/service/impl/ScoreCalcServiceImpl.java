@@ -782,7 +782,8 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(404, "专业不存在");
         }
 
-        AcademicTerm term = academicTermMapper.selectById(request.getTermId());
+        Long snapshotTermId = resolveMajorSnapshotTermId(request);
+        AcademicTerm term = snapshotTermId == null ? null : academicTermMapper.selectById(snapshotTermId);
         if (term == null) {
             throw new BusinessException(404, "学期不存在");
         }
@@ -799,8 +800,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<TeachingClass> teachingClasses = teachingClassMapper.selectList(
                 new LambdaQueryWrapper<TeachingClass>()
                         .in(TeachingClass::getCourseId, courseIds)
+                        .eq(TeachingClass::getMajorId, request.getMajorId())
                         .eq(TeachingClass::getGradeYear, request.getGradeYear())
-                        .eq(TeachingClass::getTermId, request.getTermId()));
+                        .eq(TeachingClass::getTermId, snapshotTermId));
         if (teachingClasses.isEmpty()) {
             throw new BusinessException(400, "当前专业在该年级和学期下没有教学班数据");
         }
@@ -818,6 +820,15 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<CourseIndicatorSupport> courseIndicatorSupports = cisMapper.selectList(
                 new LambdaQueryWrapper<CourseIndicatorSupport>()
                         .in(CourseIndicatorSupport::getCourseId, courseIds));
+        List<Long> configuredIpIds = listConfiguredIndicators(request.getMajorId(), request.getGradeYear()).stream()
+                .map(IndicatorPoint::getIpId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!configuredIpIds.isEmpty()) {
+            courseIndicatorSupports = courseIndicatorSupports.stream()
+                    .filter(item -> configuredIpIds.contains(item.getIpId()))
+                    .toList();
+        }
 
         Map<Long, Float> ipFinalAchievement = new HashMap<>();
         Map<Long, List<CourseIndicatorAchievement>> ipCiaMap = courseIndicatorAchievements.stream()
@@ -852,7 +863,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                     new LambdaQueryWrapper<MajorIndicatorAchievement>()
                             .eq(MajorIndicatorAchievement::getMajorId, request.getMajorId())
                             .eq(MajorIndicatorAchievement::getGradeYear, request.getGradeYear())
-                            .eq(MajorIndicatorAchievement::getTermId, request.getTermId())
+                            .eq(MajorIndicatorAchievement::getTermId, snapshotTermId)
                             .eq(MajorIndicatorAchievement::getIpId, ipId));
             if (existing != null) {
                 existing.setFinalAchievement(finalAchievement);
@@ -861,7 +872,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 MajorIndicatorAchievement entity = new MajorIndicatorAchievement();
                 entity.setMajorId(request.getMajorId());
                 entity.setGradeYear(request.getGradeYear());
-                entity.setTermId(request.getTermId());
+                entity.setTermId(snapshotTermId);
                 entity.setIpId(ipId);
                 entity.setFinalAchievement(finalAchievement);
                 miaMapper.insert(entity);
@@ -880,8 +891,8 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .majorId(request.getMajorId())
                 .majorName(major.getMajorName())
                 .gradeYear(request.getGradeYear())
-                .termId(request.getTermId())
-                .termCode(term.getTermCode())
+                .termId(snapshotTermId)
+                .termCode(term == null ? null : term.getTermCode())
                 .indicatorAchievements(indicatorAchievements)
                 .build();
     }
@@ -905,6 +916,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<TeachingClass> teachingClasses = teachingClassMapper.selectList(
                 new LambdaQueryWrapper<TeachingClass>()
                         .in(TeachingClass::getCourseId, courseIds)
+                        .eq(TeachingClass::getMajorId, majorId)
                         .eq(TeachingClass::getTermId, termId));
 
         List<CourseCalcStatusResponse.CourseStatus> courseStatuses = new ArrayList<>();
@@ -1055,6 +1067,20 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
     private String courseIndicatorKey(Long courseId, Long ipId) {
         return courseId + "_" + ipId;
+    }
+
+    private Long resolveMajorSnapshotTermId(MajorCalcRequest request) {
+        if (request.getTermId() != null) {
+            return request.getTermId();
+        }
+        return teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                        .eq(TeachingClass::getMajorId, request.getMajorId())
+                        .eq(TeachingClass::getGradeYear, request.getGradeYear()))
+                .stream()
+                .map(TeachingClass::getTermId)
+                .filter(Objects::nonNull)
+                .max(Long::compareTo)
+                .orElse(null);
     }
 
     private List<IndicatorPoint> listConfiguredIndicators(Long majorId, Integer gradeYear) {

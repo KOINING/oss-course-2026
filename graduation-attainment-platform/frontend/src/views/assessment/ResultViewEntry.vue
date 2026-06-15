@@ -38,7 +38,7 @@
           </div>
           <div class="entry-card__body">
             <h3>课程级状态</h3>
-            <p>当前范围内共有 {{ dashboard.courses.length }} 个教学班，其中 {{ lockedCount }} 个已锁定。</p>
+            <p>当前范围内共 {{ dashboard.courses.length }} 个教学班，其中 {{ lockedCount }} 个已锁定。</p>
           </div>
           <div class="entry-card__status">
             <el-tag :type="dashboard.aggregationAllowed ? 'success' : 'warning'" effect="light">
@@ -106,8 +106,8 @@
           :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果。'"
         />
         <template v-else>
-          <div v-if="majorResult.termCode" class="term-info">
-            统计学期：{{ majorResult.termCode }}
+          <div class="term-info">
+            归档口径：{{ selectedMajor?.majorName || '-' }} / {{ filters.gradeYear ? `${filters.gradeYear} 级` : '-' }}
           </div>
           <el-table :data="majorResult.indicatorAchievements || []" border size="small">
             <el-table-column prop="ipCode" label="指标点" width="120" />
@@ -123,7 +123,18 @@
         <template #header>
           <span class="info-card-title">毕业要求指标点达成度雷达图</span>
         </template>
+        <div class="radar-export-row">
+          <el-button
+            type="primary"
+            plain
+            :icon="Download"
+            @click="exportRadarChart"
+          >
+            导出全专业评价雷达图
+          </el-button>
+        </div>
         <ProfessionalRadarChart
+          ref="radarChartRef"
           :indicator-achievements="majorResult.indicatorAchievements"
         />
       </el-card>
@@ -147,6 +158,7 @@ import {
 
 const loading = ref(false)
 const loadError = ref('')
+const radarChartRef = ref(null)
 
 const filterOptions = reactive({ majors: [] })
 const filters = reactive({ majorId: null, gradeYear: null })
@@ -283,6 +295,22 @@ async function exportReport() {
   }
 }
 
+function exportRadarChart() {
+  const dataUrl = radarChartRef.value?.exportImage?.()
+  if (!dataUrl) {
+    ElMessage.error('雷达图尚未生成，暂时无法导出')
+    return
+  }
+  const link = document.createElement('a')
+  const majorName = selectedMajor.value?.majorName || '专业'
+  link.href = dataUrl
+  link.download = `${majorName}${filters.gradeYear}级全专业评价雷达图.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('雷达图导出成功')
+}
+
 function formatDecimal(value) {
   if (value === undefined || value === null) return '-'
   return Number(value).toFixed(4)
@@ -365,5 +393,11 @@ onMounted(() => {
   padding: 8px 0 16px;
   font-size: 13px;
   color: #64748b;
+}
+
+.radar-export-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 12px;
 }
 </style>
