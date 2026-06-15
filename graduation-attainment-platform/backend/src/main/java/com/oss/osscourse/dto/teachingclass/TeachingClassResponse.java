@@ -33,6 +33,15 @@ public class TeachingClassResponse {
     @Schema(description = "所属课程代码", example = "CS201")
     private String courseCode;
 
+    @Schema(description = "所属专业ID", example = "1")
+    private Long majorId;
+
+    @Schema(description = "所属专业名称", example = "计算机科学与技术")
+    private String majorName;
+
+    @Schema(description = "所属年级", example = "2022")
+    private Integer gradeYear;
+
     @Schema(description = "所属学期ID", example = "1")
     private Long termId;
 

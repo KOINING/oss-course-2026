@@ -21,8 +21,7 @@ public interface TeachingClassMapper extends BaseMapper<TeachingClass> {
             "FROM teaching_class tc",
             "JOIN course c ON c.course_id = tc.course_id",
             "LEFT JOIN academic_term at ON at.term_id = tc.term_id",
-            "JOIN teacher t ON t.id = tc.teacher_id",
-            "LEFT JOIN major m ON m.major_id = t.major_id",
+            "LEFT JOIN major m ON m.major_id = tc.major_id",
             "WHERE tc.teacher_id = #{teacherId}",
             "<if test='courseId != null'>AND tc.course_id = #{courseId}</if>",
             "<if test='termId != null'>AND tc.term_id = #{termId}</if>",
@@ -48,8 +47,7 @@ public interface TeachingClassMapper extends BaseMapper<TeachingClass> {
             "FROM teaching_class tc",
             "JOIN course c ON c.course_id = tc.course_id",
             "LEFT JOIN academic_term at ON at.term_id = tc.term_id",
-            "JOIN teacher t ON t.id = tc.teacher_id",
-            "LEFT JOIN major m ON m.major_id = t.major_id",
+            "LEFT JOIN major m ON m.major_id = tc.major_id",
             "WHERE tc.class_id = #{classId}"
     })
     TeacherTeachingClassResponse selectTeachingClassContext(@Param("classId") Long classId);

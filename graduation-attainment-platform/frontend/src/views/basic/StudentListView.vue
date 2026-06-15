@@ -193,7 +193,7 @@ onMounted(async () => {
 
       <el-alert type="info" :closable="false" class="page-tip" show-icon>
         <template #title>
-          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班学生关联请在教学班管理或数据导入页维护。
+          本页仅维护学生主数据，包括学号、姓名、专业、入学年份和学籍状态。教学班学生关联请在教学班管理或数据导入页维护；教学班代表该专业该届某门必修课程的评价单元。
         </template>
       </el-alert>
 

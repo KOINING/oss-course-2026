@@ -9,7 +9,7 @@ export const ROLE_META = {
   academic_affairs: {
     label: '教务管理员',
     summary:
-      '负责课程、教学班和学生主数据维护，执行课程清单与教学班学生关联导入，并跟踪教学业务数据准备进度。',
+      '负责必修课程、教学班和学生主数据维护，执行课程清单与教学班学生关联导入，并跟踪教学业务数据准备进度。',
   },
   program_director: {
     label: '专业负责人',
@@ -67,7 +67,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['academic_affairs'],
         moduleTitle: '基础数据与导入',
         summary:
-          '管理课程代码、课程名称、学分及课程与专业的关联关系，并承接课程清单导入业务。',
+          '管理必修课程代码、课程名称、学分及课程与专业年级培养方案的关联关系，并承接课程清单导入业务。',
         entities: ['Course'],
       },
       {
@@ -78,7 +78,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['academic_affairs'],
         moduleTitle: '基础数据与导入',
         summary:
-          '管理课程对应的教学班信息，并承接教学班学生关联查看、移除与批量导入。',
+          '管理“专业 + 年级 + 必修课程”形成的教学班评价单元，并承接教学班学生关联查看、移除与批量导入。',
         entities: ['TeachingClass', 'StudentClass'],
       },
       {
@@ -111,7 +111,7 @@ export const NAVIGATION_SECTIONS = [
         roles: ['academic_affairs'],
         moduleTitle: '基础数据与导入',
         summary:
-          '通过 Excel 模板批量导入课程清单、学生基础信息和教学班学生关联，支持逐行校验、错误定位与结果预览。',
+          '通过 Excel 模板批量导入必修课程清单、学生基础信息和教学班学生关联，支持逐行校验、错误定位与结果预览。',
         entities: ['Course', 'Student', 'StudentClass'],
       },
       {

@@ -71,7 +71,7 @@
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班尚未满足模板与成绩预览前置条件</template>
+        <template #title>当前教学班评价单元尚未满足模板与成绩预览前置条件</template>
         <template #default>
           <ul class="block-reason-list">
             <li v-for="reason in scoreContext.blockReasons" :key="reason">{{ reason }}</li>
@@ -85,7 +85,7 @@
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班已锁定</template>
+        <template #title>当前教学班评价单元已锁定</template>
         <template #default>
           当前显示成绩与课程级结果仅允许查看。
           <span v-if="objectiveDashboard?.unlockRequested">
@@ -106,12 +106,12 @@
 
       <EmptyState
         v-else-if="!previewLoading && !selectedClassId"
-        description="当前没有可用教学班。"
+        description="当前没有可用教学班评价单元。"
       />
 
       <EmptyState
         v-else-if="!previewLoading && !scoreContext?.canGenerateTemplate"
-        description="当前教学班前置条件未满足，暂不能生成模板或预览成绩。"
+        description="当前教学班评价单元前置条件未满足，暂不能生成模板或预览成绩。"
       />
 
       <EmptyState
@@ -121,7 +121,7 @@
 
       <EmptyState
         v-else-if="!previewLoading && students.length === 0"
-        description="当前教学班暂无学生名单。"
+        description="当前教学班评价单元暂无学生名单。"
       />
 
       <div v-else class="template-table-wrapper" v-loading="previewLoading">

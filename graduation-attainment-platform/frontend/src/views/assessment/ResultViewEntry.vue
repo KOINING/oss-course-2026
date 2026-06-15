@@ -106,8 +106,8 @@
           :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果。'"
         />
         <template v-else>
-          <div v-if="majorResult.termCode" class="term-info">
-            统计学期：{{ majorResult.termCode }}
+          <div class="term-info">
+            归档口径：{{ selectedMajor?.majorName || '-' }} / {{ filters.gradeYear ? `${filters.gradeYear} 级` : '-' }}
           </div>
           <el-table :data="majorResult.indicatorAchievements || []" border size="small">
             <el-table-column prop="ipCode" label="指标点" width="120" />

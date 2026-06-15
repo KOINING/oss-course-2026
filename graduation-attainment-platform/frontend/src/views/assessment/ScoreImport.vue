@@ -18,7 +18,7 @@
 
       <div v-if="contextInfo" class="context-info">
         <el-tag type="info" effect="plain">{{ contextInfo.gradeYear ? `${contextInfo.gradeYear}级` : '-' }}</el-tag>
-        <el-tag type="info" effect="plain">{{ contextInfo.termCode || '-' }}</el-tag>
+        <el-tag type="info" effect="plain">学期：{{ contextInfo.termCode || '-' }}</el-tag>
       </div>
 
       <el-tag v-if="scoreContext?.calcStatus" :type="calcStatusType" effect="light">
@@ -35,7 +35,7 @@
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班尚未满足成绩录入前置条件</template>
+        <template #title>当前教学班评价单元尚未满足成绩录入前置条件</template>
         <template #default>
           <ul class="block-reason-list">
             <li v-for="reason in scoreContext.blockReasons" :key="reason">{{ reason }}</li>
@@ -123,7 +123,7 @@
             <template #header>
               <div class="score-preview-header">
                 <div>
-                  <span>当前教学班成绩预览</span>
+                  <span>当前教学班评价单元成绩预览</span>
                   <div class="score-preview-meta">
                     <span>已录入 {{ filledScoreCount }}/{{ expectedScoreCount }} 个成绩单元格</span>
                     <el-tag :type="scoreSheetComplete ? 'success' : 'warning'" effect="plain" size="small">
@@ -136,7 +136,7 @@
 
             <EmptyState
               v-if="!selectedClassId || !scoreRows.length || !assessmentPoints.length"
-              description="当前教学班暂无可展示的成绩数据"
+              description="当前教学班评价单元暂无可展示的成绩数据"
             />
             <ScoreSheetTable
               v-else

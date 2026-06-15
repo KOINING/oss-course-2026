@@ -60,13 +60,12 @@ public class CourseReportServiceImpl implements CourseReportService {
 
         LambdaQueryWrapper<TeachingClass> tcWrapper = new LambdaQueryWrapper<>();
         tcWrapper.eq(TeachingClass::getCourseId, request.getCourseId())
+                .eq(TeachingClass::getMajorId, majorId)
                 .eq(TeachingClass::getGradeYear, request.getGradeYear());
         if (request.getTermId() != null) {
             tcWrapper.eq(TeachingClass::getTermId, request.getTermId());
         }
-        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper).stream()
-                .filter(item -> classMatchesProgram(item.getClassId(), majorId, request.getGradeYear()))
-                .collect(Collectors.toList());
+        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper);
         if (teachingClasses.isEmpty()) {
             throw new BusinessException(404, "No teaching class matches the selected course, major and grade");
         }

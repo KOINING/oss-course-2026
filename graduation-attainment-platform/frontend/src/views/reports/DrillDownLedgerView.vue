@@ -78,11 +78,6 @@
                   <span class="label">年级：</span>
                   <el-tag type="primary" effect="plain" size="small">{{ context.gradeYear ? `${context.gradeYear} 级` : '-' }}</el-tag>
                 </span>
-                <span class="breadcrumb-sep">&gt;</span>
-                <span class="breadcrumb-item">
-                  <span class="label">统计学期：</span>
-                  <el-tag type="primary" effect="plain" size="small">{{ context.termCode || '-' }}</el-tag>
-                </span>
                 <template v-if="context.ipCode">
                   <span class="breadcrumb-sep">&gt;</span>
                   <span class="breadcrumb-item">
@@ -753,7 +748,6 @@ async function exportLedger() {
     const blob = await exportAchievementLedgerApi({
       majorId: filters.majorId,
       gradeYear: filters.gradeYear,
-      termId: majorReport.termId || undefined,
     })
     triggerLedgerDownload(blob, `穿透式台账_${majorName}_${gradeYear}级.xlsx`)
     exportStatus.value = 'success'
@@ -781,7 +775,7 @@ async function exportLedger() {
     const majorName = context.majorName || selectedMajor.value?.majorName || ''
     const gradeYear = context.gradeYear || filters.gradeYear || ''
     htmlParts.push(`<h2>穿透式台账 — ${majorName} ${gradeYear}级</h2>`)
-    htmlParts.push(`<p>统计学期：${context.termCode || '-'} | 导出时间：${new Date().toLocaleString()}</p>`)
+    htmlParts.push(`<p>归档口径：${majorName} ${gradeYear}级 | 导出时间：${new Date().toLocaleString()}</p>`)
 
     // Level 0: Major indicators
     if (majorReport.indicatorAchievements?.length) {

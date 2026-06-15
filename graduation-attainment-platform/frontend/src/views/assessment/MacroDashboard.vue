@@ -230,7 +230,6 @@ function buildPayload() {
   return {
     majorId: filters.majorId,
     gradeYear: filters.gradeYear,
-    termId: dashboardData.termId,
   }
 }
 

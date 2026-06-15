@@ -138,7 +138,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                     .build();
         }
 
-        List<TeachingClass> teachingClasses = listSupportTeachingClasses(courseIds, request.getGradeYear());
+        List<TeachingClass> teachingClasses = listSupportTeachingClasses(request.getMajorId(), request.getGradeYear(), courseIds);
         if (teachingClasses.isEmpty()) {
             return MacroDashboardResponse.builder()
                     .majorId(major.getMajorId())
@@ -217,7 +217,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
     public MajorCalcResultResponse getMajorCalcResult(MacroDashboardRequest request) {
         Major major = requireMajor(request.getMajorId());
         List<Long> courseIds = listSupportCourseIds(request.getMajorId(), request.getGradeYear());
-        List<TeachingClass> teachingClasses = listSupportTeachingClasses(courseIds, request.getGradeYear());
+        List<TeachingClass> teachingClasses = listSupportTeachingClasses(request.getMajorId(), request.getGradeYear(), courseIds);
         boolean aggregationAllowed = !teachingClasses.isEmpty()
                 && teachingClasses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
 
@@ -297,17 +297,9 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         ciaMapper.delete(new LambdaQueryWrapper<CourseIndicatorAchievement>()
                 .eq(CourseIndicatorAchievement::getClassId, request.getClassId()));
 
-        List<Long> affectedMajorIds = courseMajorMapper.selectList(new LambdaQueryWrapper<CourseMajor>()
-                        .eq(CourseMajor::getCourseId, teachingClass.getCourseId())
-                        .eq(CourseMajor::getGradeYear, teachingClass.getGradeYear()))
-                .stream()
-                .map(CourseMajor::getMajorId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (!affectedMajorIds.isEmpty()) {
+        if (teachingClass.getMajorId() != null) {
             miaMapper.delete(new LambdaQueryWrapper<MajorIndicatorAchievement>()
-                    .in(MajorIndicatorAchievement::getMajorId, affectedMajorIds)
+                    .eq(MajorIndicatorAchievement::getMajorId, teachingClass.getMajorId())
                     .eq(MajorIndicatorAchievement::getGradeYear, teachingClass.getGradeYear()));
         }
     }
@@ -392,12 +384,13 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                 .toList();
     }
 
-    private List<TeachingClass> listSupportTeachingClasses(List<Long> courseIds, Integer gradeYear) {
+    private List<TeachingClass> listSupportTeachingClasses(Long majorId, Integer gradeYear, List<Long> courseIds) {
         if (courseIds == null || courseIds.isEmpty()) {
             return List.of();
         }
         return teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
                 .in(TeachingClass::getCourseId, courseIds)
+                .eq(TeachingClass::getMajorId, majorId)
                 .eq(TeachingClass::getGradeYear, gradeYear)
                 .orderByAsc(TeachingClass::getTermId)
                 .orderByAsc(TeachingClass::getCourseId)

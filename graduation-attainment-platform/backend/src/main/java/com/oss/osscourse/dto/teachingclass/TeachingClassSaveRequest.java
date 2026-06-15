@@ -27,6 +27,14 @@ public class TeachingClassSaveRequest {
     @Schema(description = "所属课程ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long courseId;
 
+    @NotNull(message = "所属专业不能为空")
+    @Schema(description = "所属专业ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long majorId;
+
+    @NotNull(message = "所属年级不能为空")
+    @Schema(description = "所属年级", example = "2022", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Integer gradeYear;
+
     @NotNull(message = "所属学期不能为空")
     @Schema(description = "所属学期ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long termId;

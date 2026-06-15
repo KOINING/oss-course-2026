@@ -8,11 +8,15 @@ import com.oss.osscourse.dto.teachingclass.TeachingClassSaveRequest;
 import com.oss.osscourse.dto.teachingclass.TeachingClassStatusRequest;
 import com.oss.osscourse.entity.AcademicTerm;
 import com.oss.osscourse.entity.Course;
+import com.oss.osscourse.entity.CourseMajor;
+import com.oss.osscourse.entity.Major;
 import com.oss.osscourse.entity.StudentClass;
 import com.oss.osscourse.entity.Teacher;
 import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.AcademicTermMapper;
+import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
+import com.oss.osscourse.mapper.MajorMapper;
 import com.oss.osscourse.mapper.StudentClassMapper;
 import com.oss.osscourse.mapper.TeacherMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
@@ -24,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,6 +38,8 @@ public class TeachingClassServiceImpl implements TeachingClassService {
 
     private final TeachingClassMapper teachingClassMapper;
     private final CourseMapper courseMapper;
+    private final CourseMajorMapper courseMajorMapper;
+    private final MajorMapper majorMapper;
     private final AcademicTermMapper academicTermMapper;
     private final TeacherMapper teacherMapper;
     private final StudentClassMapper studentClassMapper;
@@ -50,6 +57,12 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             }
             if (request.getCourseId() != null) {
                 wrapper.eq(TeachingClass::getCourseId, request.getCourseId());
+            }
+            if (request.getMajorId() != null) {
+                wrapper.eq(TeachingClass::getMajorId, request.getMajorId());
+            }
+            if (request.getGradeYear() != null) {
+                wrapper.eq(TeachingClass::getGradeYear, request.getGradeYear());
             }
             if (request.getTermId() != null) {
                 wrapper.eq(TeachingClass::getTermId, request.getTermId());
@@ -95,6 +108,13 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             throw new BusinessException(400, "所选课程不存在");
         }
 
+        Major major = majorMapper.selectById(request.getMajorId());
+        if (major == null) {
+            throw new BusinessException(400, "所选专业不存在");
+        }
+
+        validateCourseMajorBinding(request.getCourseId(), request.getMajorId(), request.getGradeYear());
+
         AcademicTerm term = academicTermMapper.selectById(request.getTermId());
         if (term == null) {
             throw new BusinessException(400, "所选学期不存在");
@@ -114,12 +134,14 @@ public class TeachingClassServiceImpl implements TeachingClassService {
 
     private void createTeachingClass(TeachingClassSaveRequest request) {
         validateClassCodeUnique(request.getClassCode().trim(), null);
-        validateClassNameUnique(request.getCourseId(), request.getTermId(), request.getClassName().trim(), null);
+        validateMajorGradeCourseUnique(request.getMajorId(), request.getGradeYear(), request.getCourseId(), null);
 
         TeachingClass teachingClass = new TeachingClass();
         teachingClass.setClassCode(request.getClassCode().trim());
         teachingClass.setClassName(request.getClassName().trim());
         teachingClass.setCourseId(request.getCourseId());
+        teachingClass.setMajorId(request.getMajorId());
+        teachingClass.setGradeYear(request.getGradeYear());
         teachingClass.setTermId(request.getTermId());
         teachingClass.setTeacherId(request.getTeacherId());
         teachingClass.setCalcStatus("unsubmitted");
@@ -136,17 +158,21 @@ public class TeachingClassServiceImpl implements TeachingClassService {
                 new LambdaQueryWrapper<StudentClass>().eq(StudentClass::getClassId, request.getClassId()));
         if (studentCount != null && studentCount > 0) {
             if (!teachingClass.getCourseId().equals(request.getCourseId())
+                    || !teachingClass.getMajorId().equals(request.getMajorId())
+                    || !teachingClass.getGradeYear().equals(request.getGradeYear())
                     || !teachingClass.getTermId().equals(request.getTermId())) {
-                throw new BusinessException(400, "该教学班已有学生关联，不允许修改所属课程或学期");
+                throw new BusinessException(400, "该教学班已有学生关联，不允许修改所属专业、年级、课程或学期");
             }
         }
 
         validateClassCodeUnique(request.getClassCode().trim(), request.getClassId());
-        validateClassNameUnique(request.getCourseId(), request.getTermId(), request.getClassName().trim(), request.getClassId());
+        validateMajorGradeCourseUnique(request.getMajorId(), request.getGradeYear(), request.getCourseId(), request.getClassId());
 
         teachingClass.setClassCode(request.getClassCode().trim());
         teachingClass.setClassName(request.getClassName().trim());
         teachingClass.setCourseId(request.getCourseId());
+        teachingClass.setMajorId(request.getMajorId());
+        teachingClass.setGradeYear(request.getGradeYear());
         teachingClass.setTermId(request.getTermId());
         teachingClass.setTeacherId(request.getTeacherId());
         teachingClassMapper.updateById(teachingClass);
@@ -199,16 +225,26 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         }
     }
 
-    private void validateClassNameUnique(Long courseId, Long termId, String className, Long currentClassId) {
+    private void validateCourseMajorBinding(Long courseId, Long majorId, Integer gradeYear) {
+        Long count = courseMajorMapper.selectCount(new LambdaQueryWrapper<CourseMajor>()
+                .eq(CourseMajor::getCourseId, courseId)
+                .eq(CourseMajor::getMajorId, majorId)
+                .eq(CourseMajor::getGradeYear, gradeYear));
+        if (count == null || count == 0) {
+            throw new BusinessException(400, "该课程未绑定到所选专业和年级培养方案");
+        }
+    }
+
+    private void validateMajorGradeCourseUnique(Long majorId, Integer gradeYear, Long courseId, Long currentClassId) {
         LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<TeachingClass>()
-                .eq(TeachingClass::getCourseId, courseId)
-                .eq(TeachingClass::getTermId, termId)
-                .eq(TeachingClass::getClassName, className);
+                .eq(TeachingClass::getMajorId, majorId)
+                .eq(TeachingClass::getGradeYear, gradeYear)
+                .eq(TeachingClass::getCourseId, courseId);
         if (currentClassId != null) {
             wrapper.ne(TeachingClass::getClassId, currentClassId);
         }
         if (teachingClassMapper.selectOne(wrapper) != null) {
-            throw new BusinessException(400, "同一课程同一学期内教学班名称已存在");
+            throw new BusinessException(400, "同一专业同一年级同一课程已存在教学班");
         }
     }
 
@@ -218,11 +254,16 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         }
 
         Set<Long> courseIds = classes.stream().map(TeachingClass::getCourseId).collect(Collectors.toSet());
+        Set<Long> majorIds = classes.stream().map(TeachingClass::getMajorId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> termIds = classes.stream().map(TeachingClass::getTermId).collect(Collectors.toSet());
         Set<Long> teacherIds = classes.stream().map(TeachingClass::getTeacherId).collect(Collectors.toSet());
 
         Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
                 .collect(Collectors.toMap(Course::getCourseId, course -> course));
+        Map<Long, Major> majorMap = majorIds.isEmpty()
+                ? Map.of()
+                : majorMapper.selectBatchIds(majorIds).stream()
+                .collect(Collectors.toMap(Major::getMajorId, major -> major));
         Map<Long, AcademicTerm> termMap = academicTermMapper.selectBatchIds(termIds).stream()
                 .collect(Collectors.toMap(AcademicTerm::getTermId, term -> term));
         Map<Long, Teacher> teacherMap = teacherMapper.selectBatchIds(teacherIds).stream()
@@ -236,6 +277,9 @@ public class TeachingClassServiceImpl implements TeachingClassService {
                         .courseId(item.getCourseId())
                         .courseName(courseMap.get(item.getCourseId()) != null ? courseMap.get(item.getCourseId()).getCourseName() : null)
                         .courseCode(courseMap.get(item.getCourseId()) != null ? courseMap.get(item.getCourseId()).getCourseCode() : null)
+                        .majorId(item.getMajorId())
+                        .majorName(majorMap.get(item.getMajorId()) != null ? majorMap.get(item.getMajorId()).getMajorName() : null)
+                        .gradeYear(item.getGradeYear())
                         .termId(item.getTermId())
                         .termCode(termMap.get(item.getTermId()) != null ? termMap.get(item.getTermId()).getTermCode() : null)
                         .teacherId(item.getTeacherId())

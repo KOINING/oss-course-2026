@@ -61,7 +61,7 @@ const studentClassImportSucceeded = computed(
 const headerMeta = computed(() => ({
   title: route.meta.title || '数据导入',
   summary:
-    route.meta.summary || '支持课程清单、学生信息和教学班学生关系导入，并提供逐行校验结果。',
+    route.meta.summary || '支持必修课程清单、学生信息和教学班学生关系导入，并提供逐行校验结果。',
 }))
 
 watch(
@@ -357,11 +357,11 @@ function goToStudentList() {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="学生教学班关系导入" name="student-classes">
+        <el-tab-pane label="教学班学生关系导入" name="student-classes">
           <div class="tab-layout">
             <section class="upload-section">
               <div class="section-header">
-                <h3>上传学生教学班关系</h3>
+                <h3>上传教学班学生关系</h3>
                 <el-button
                   type="primary"
                   plain
@@ -381,6 +381,13 @@ function goToStudentList() {
                   {{ header }}
                 </el-tag>
               </div>
+
+              <el-alert
+                type="info"
+                :closable="false"
+                class="import-tip"
+                title="教学班在本系统中表示“专业 + 年级 + 必修课程”的课程评价单元，名单应覆盖该专业该届修读该课程的学生。"
+              />
 
               <el-upload
                 ref="studentClassUploadRef"
@@ -426,7 +433,7 @@ function goToStudentList() {
             </section>
 
             <ImportResultPreview
-              title="学生教学班关系导入结果"
+              title="教学班学生关系导入结果"
               :summary="studentClassResult.summary"
               :failed-items="studentClassResult.failedItems"
               :loading="studentClassImporting"
