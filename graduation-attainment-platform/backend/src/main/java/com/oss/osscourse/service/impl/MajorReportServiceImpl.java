@@ -110,19 +110,31 @@ public class MajorReportServiceImpl implements MajorReportService {
                         (left, right) -> right,
                         LinkedHashMap::new));
 
-        // 如果当前请求没有结果
-        if (majorResults.isEmpty() && targetTermId == null) {
+        // 专业级报告只展示正式专业级计算快照；无 Gk 结果时不返回课程级过程明细。
+        if (majorResults.isEmpty()) {
             return buildEmptyReport(major, request.getGradeYear(), indicatorPoints);
         }
-
-        Long finalTermId = targetTermId != null
-                ? targetTermId
-                : (majorResults.isEmpty() ? null : majorResults.get(0).getTermId());
 
         // 5. 获取支撑课程信息和教学班
         Set<Long> supportCourseIds = matrixRelations.stream()
                 .map(MatrixRelationResponse::getCourseId)
                 .collect(Collectors.toSet());
+        List<TeachingClass> allTeachingClasses = listSupportTeachingClasses(
+                request.getMajorId(), request.getGradeYear(), supportCourseIds);
+        boolean aggregationAllowed = !allTeachingClasses.isEmpty()
+                && allTeachingClasses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
+        if (!aggregationAllowed) {
+            return buildUnavailableReport(
+                    major,
+                    request.getGradeYear(),
+                    "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。",
+                    supportCourseIds.size(),
+                    (int) allTeachingClasses.stream().filter(item -> "locked".equals(item.getCalcStatus())).count());
+        }
+
+        Long finalTermId = targetTermId != null
+                ? targetTermId
+                : (majorResults.isEmpty() ? null : majorResults.get(0).getTermId());
 
         Map<Long, Course> courseMap = supportCourseIds.isEmpty()
                 ? Map.of()
@@ -130,7 +142,9 @@ public class MajorReportServiceImpl implements MajorReportService {
                 .collect(Collectors.toMap(Course::getCourseId, item -> item));
 
         // 6. 获取这些课程在指定年级下的教学班（已锁定）
-        List<TeachingClass> teachingClasses = listLockedTeachingClasses(request.getMajorId(), request.getGradeYear(), supportCourseIds);
+        List<TeachingClass> teachingClasses = allTeachingClasses.stream()
+                .filter(item -> "locked".equals(item.getCalcStatus()))
+                .toList();
         Map<Long, TeachingClass> classByCourseMap = new LinkedHashMap<>();
         for (TeachingClass tc : teachingClasses) {
             classByCourseMap.putIfAbsent(tc.getCourseId(), tc);
@@ -222,7 +236,7 @@ public class MajorReportServiceImpl implements MajorReportService {
                 .reportGeneratedAt(LocalDateTime.now())
                 .resultReady(!rows.isEmpty() && rows.stream().anyMatch(r -> r.getFinalAchievement() != null))
                 .message(rows.isEmpty() || rows.stream().noneMatch(r -> r.getFinalAchievement() != null)
-                        ? "当前年级尚未生成专业级汇总结果，请先执行专业级计算"
+                        ? "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。"
                         : null)
                 .indicatorAchievements(rows)
                 .dataSourceSummary(summary)
@@ -233,6 +247,11 @@ public class MajorReportServiceImpl implements MajorReportService {
     public byte[] exportMajorReport(MajorReportRequest request) {
         // 与 assembleMajorReport 共用同一结果源
         MajorReportResponse report = assembleMajorReport(request);
+        if (!Boolean.TRUE.equals(report.getResultReady())) {
+            throw new BusinessException(400, report.getMessage() == null
+                    ? "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。"
+                    : report.getMessage());
+        }
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             XSSFSheet sheet = workbook.createSheet("专业级达成度评价报告");
@@ -656,6 +675,22 @@ public class MajorReportServiceImpl implements MajorReportService {
     }
 
     /**
+     * 获取指定课程集合在当前专业年级下的全部教学班。
+     */
+    private List<TeachingClass> listSupportTeachingClasses(Long majorId, Integer gradeYear, Set<Long> courseIds) {
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+        return teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                .in(TeachingClass::getCourseId, courseIds)
+                .eq(TeachingClass::getMajorId, majorId)
+                .eq(TeachingClass::getGradeYear, gradeYear)
+                .orderByAsc(TeachingClass::getTermId)
+                .orderByAsc(TeachingClass::getCourseId)
+                .orderByAsc(TeachingClass::getClassCode));
+    }
+
+    /**
      * 解析学期编码
      */
     private String resolveTermCode(Long termId) {
@@ -671,32 +706,24 @@ public class MajorReportServiceImpl implements MajorReportService {
      */
     private MajorReportResponse buildEmptyReport(Major major, Integer gradeYear,
                                                   List<MatrixIndicatorPointResponse> indicatorPoints) {
-        List<IndicatorReportRow> emptyRows = indicatorPoints.stream()
-                .map(ip -> IndicatorReportRow.builder()
-                        .ipId(ip.getIpId())
-                        .ipCode(ip.getIpCode())
-                        .ipDescription(ip.getIpDescription())
-                        .grCode(ip.getGrCode())
-                        .finalAchievement(null)
-                        .contributingCourseCount(0)
-                        .totalWeightSum(null)
-                        .contributingCourses(List.of())
-                        .build())
-                .toList();
+        return buildUnavailableReport(major, gradeYear, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。", 0, 0);
+    }
 
+    private MajorReportResponse buildUnavailableReport(Major major, Integer gradeYear, String message,
+                                                       int supportCourseCount, int lockedClassCount) {
         return MajorReportResponse.builder()
                 .majorId(major.getMajorId())
                 .majorName(major.getMajorName())
                 .gradeYear(gradeYear)
                 .reportGeneratedAt(LocalDateTime.now())
                 .resultReady(false)
-                .message("当前年级尚未生成专业级汇总结果，请先执行专业级计算")
-                .indicatorAchievements(emptyRows)
+                .message(message)
+                .indicatorAchievements(List.of())
                 .dataSourceSummary(DataSourceSummary.builder()
                         .sourceTable("major_indicator_achievement")
-                        .supportCourseCount(0)
-                        .lockedClassCount(0)
-                        .remark("无专业级计算结果")
+                        .supportCourseCount(supportCourseCount)
+                        .lockedClassCount(lockedClassCount)
+                        .remark(message)
                         .build())
                 .build();
     }

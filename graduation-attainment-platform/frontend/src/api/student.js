@@ -23,3 +23,7 @@ export function updateStudentStatusApi(data) {
 export function listStudentsForSelectApi() {
   return request.post('/admin/listStudentsForSelect')
 }
+
+export function listStudentEnrollmentYearsApi() {
+  return request.post('/admin/listStudentEnrollmentYears')
+}

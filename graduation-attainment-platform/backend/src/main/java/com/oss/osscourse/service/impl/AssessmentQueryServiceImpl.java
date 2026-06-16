@@ -227,7 +227,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                     .majorName(major.getMajorName())
                     .gradeYear(request.getGradeYear())
                     .resultReady(false)
-                    .message("当前仍有支撑课程未完成计算或未锁定，专业级结果暂不展示")
+                    .message("当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。")
                     .indicatorAchievements(List.of())
                     .build();
         }
@@ -259,7 +259,7 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
                 .resultReady(indicatorAchievements.stream().anyMatch(item -> item.getFinalAchievement() != null))
                 .message(indicatorAchievements.stream().anyMatch(item -> item.getFinalAchievement() != null)
                         ? "专业级汇总结果已生成"
-                        : "当前年级尚未生成专业级汇总结果")
+                        : "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。")
                 .indicatorAchievements(indicatorAchievements)
                 .build();
     }

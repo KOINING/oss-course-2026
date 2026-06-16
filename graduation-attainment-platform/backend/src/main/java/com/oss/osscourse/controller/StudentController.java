@@ -62,6 +62,14 @@ public class StudentController {
         return Result.ok(studentService.listStudentsForSelect());
     }
 
+    @PostMapping("/listStudentEnrollmentYears")
+    @Operation(summary = "查询学生入学年份下拉列表", description = "返回学生主数据中已存在的入学年份")
+    public Result<List<Integer>> listStudentEnrollmentYears(
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentService.listEnrollmentYears());
+    }
+
     @PostMapping("/importStudents")
     @Operation(summary = "导入学生基础信息", description = "上传 Excel 批量导入学生主数据")
     public Result<StudentImportResult> importStudents(

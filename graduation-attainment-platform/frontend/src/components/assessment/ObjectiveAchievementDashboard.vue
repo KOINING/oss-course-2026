@@ -39,22 +39,54 @@
       <div class="dashboard-grid">
         <el-card shadow="never" class="chart-card">
           <template #header>
-            <div class="card-title">课程目标班级平均达成度 C̄j</div>
+            <div class="card-title">
+              课程目标班级平均达成度
+              <span class="math-symbol text-math-symbol"><span class="math-overline">C</span><sub>j</sub></span>
+            </div>
           </template>
           <div ref="summaryChartRef" class="chart-box"></div>
         </el-card>
 
         <el-card shadow="never" class="chart-card">
           <template #header>
-            <div class="card-title">学生-课程目标达成热力图 Cij</div>
+            <div class="card-title">课程目标达成区间人数分布</div>
           </template>
-          <div ref="heatmapChartRef" class="chart-box chart-box--tall"></div>
+          <div ref="bandChartRef" class="chart-box"></div>
         </el-card>
       </div>
 
       <el-card shadow="never" class="detail-card">
         <template #header>
-          <div class="card-title">课程级毕业要求指标点达成度 Ek</div>
+          <div class="card-title">
+            学生目标达成明细
+            <span class="math-symbol text-math-symbol">C<sub>ij</sub></span>
+          </div>
+        </template>
+        <el-table :data="studentAchievementRows" border size="small" max-height="420">
+          <el-table-column prop="studentNo" label="学号" width="140" fixed="left" />
+          <el-table-column prop="studentName" label="姓名" width="120" fixed="left" />
+          <el-table-column
+            v-for="(objective, index) in dashboard.objectiveSummaries || []"
+            :key="objective.coId"
+            :label="objective.objectiveCode"
+            min-width="140"
+            align="center"
+            sortable
+            :sort-method="(left, right) => compareObjectiveAchievement(left, right, index)"
+          >
+            <template #default="{ row }">
+              {{ formatDecimal(row._objectiveAchievements?.[index]) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-card shadow="never" class="detail-card">
+        <template #header>
+          <div class="card-title">
+            课程级毕业要求指标点达成度
+            <span class="math-symbol text-math-symbol">E<sub>k</sub></span>
+          </div>
         </template>
         <el-table :data="dashboard.indicatorAchievements || []" border size="small">
           <el-table-column prop="ipCode" label="指标点" width="140" />
@@ -69,27 +101,6 @@
               <el-tag :type="row.locked ? 'success' : 'warning'" effect="plain" size="small">
                 {{ row.locked ? '已锁定' : '未锁定' }}
               </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
-
-      <el-card shadow="never" class="detail-card">
-        <template #header>
-          <div class="card-title">学生目标达成明细</div>
-        </template>
-        <el-table :data="dashboard.studentRows || []" border size="small" max-height="420">
-          <el-table-column prop="studentNo" label="学号" width="140" fixed="left" />
-          <el-table-column prop="studentName" label="姓名" width="120" fixed="left" />
-          <el-table-column
-            v-for="(objective, index) in dashboard.objectiveSummaries || []"
-            :key="objective.coId"
-            :label="objective.objectiveCode"
-            min-width="140"
-            align="center"
-          >
-            <template #default="{ row }">
-              {{ formatDecimal(row.achievements?.[index]) }}
             </template>
           </el-table-column>
         </el-table>
@@ -111,21 +122,39 @@ const props = defineProps({
 })
 
 const summaryChartRef = ref(null)
-const heatmapChartRef = ref(null)
+const bandChartRef = ref(null)
 
 let summaryChart = null
-let heatmapChart = null
+let bandChart = null
 
 const objectiveLabels = computed(() => (props.dashboard?.objectiveSummaries || []).map((item) => item.objectiveCode))
 const objectiveAverages = computed(() => (props.dashboard?.objectiveSummaries || []).map((item) => Number(item.averageAchievement ?? 0)))
-const studentLabels = computed(() =>
-  (props.dashboard?.studentRows || []).map((item) => `${item.studentName} (${item.studentNo})`),
-)
-const heatmapData = computed(() => {
-  const rows = props.dashboard?.studentRows || []
-  return rows.flatMap((row, rowIndex) =>
-    (row.achievements || []).map((value, colIndex) => [colIndex, rowIndex, value == null ? '-' : Number(value)]),
-  )
+const objectiveValues = computed(() => objectiveLabels.value.map((_, objectiveIndex) =>
+  (props.dashboard?.studentRows || [])
+    .map((row) => normalizeAchievement(row.achievements?.[objectiveIndex]))
+    .filter((value) => value !== null),
+))
+const studentAchievementRows = computed(() => (props.dashboard?.studentRows || []).map((row) => ({
+  ...row,
+  _objectiveAchievements: (props.dashboard?.objectiveSummaries || []).map((_, index) =>
+    normalizeAchievement(row.achievements?.[index]),
+  ),
+})))
+const achievementBands = computed(() => {
+  const bands = [
+    { key: 'notReached', name: '<0.60 未达成', color: '#dc2626' },
+    { key: 'basic', name: '0.60-0.70 基本达成', color: '#f59e0b' },
+    { key: 'good', name: '0.70-0.85 良好', color: '#3b82f6' },
+    { key: 'excellent', name: '>=0.85 优秀', color: '#16a34a' },
+  ]
+  const counts = bands.reduce((map, band) => ({ ...map, [band.key]: [] }), {})
+  objectiveValues.value.forEach((values) => {
+    counts.notReached.push(values.filter((value) => value < 0.6).length)
+    counts.basic.push(values.filter((value) => value >= 0.6 && value < 0.7).length)
+    counts.good.push(values.filter((value) => value >= 0.7 && value < 0.85).length)
+    counts.excellent.push(values.filter((value) => value >= 0.85).length)
+  })
+  return bands.map((band) => ({ ...band, data: counts[band.key] }))
 })
 const calcStatusLabel = computed(() => {
   const map = {
@@ -151,9 +180,25 @@ const lockHint = computed(() => (
     : '当前教学班评价单元尚未锁定。教师可继续核对成绩，确认完整后再执行计算并锁定。'
 ))
 
+function normalizeAchievement(value) {
+  if (value === undefined || value === null || value === '') return null
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : null
+}
+
 function formatDecimal(value) {
-  if (value === undefined || value === null || value === '') return '-'
-  return Number(value).toFixed(4)
+  const numberValue = normalizeAchievement(value)
+  if (numberValue === null) return '-'
+  return numberValue.toFixed(4)
+}
+
+function compareObjectiveAchievement(left, right, index) {
+  const leftValue = normalizeAchievement(left._objectiveAchievements?.[index])
+  const rightValue = normalizeAchievement(right._objectiveAchievements?.[index])
+  if (leftValue === null && rightValue === null) return 0
+  if (leftValue === null) return 1
+  if (rightValue === null) return -1
+  return leftValue - rightValue
 }
 
 function renderSummaryChart() {
@@ -161,7 +206,7 @@ function renderSummaryChart() {
   summaryChart ??= echarts.init(summaryChartRef.value)
   summaryChart.setOption({
     animation: false,
-    grid: { left: 56, right: 24, top: 32, bottom: 56 },
+    grid: { left: 56, right: 24, top: 36, bottom: 56 },
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
@@ -197,78 +242,62 @@ function renderSummaryChart() {
         },
       },
     ],
-  })
+  }, true)
 }
 
-function renderHeatmapChart() {
-  if (!heatmapChartRef.value || !props.dashboard?.resultReady) return
-  heatmapChart ??= echarts.init(heatmapChartRef.value)
-  heatmapChart.setOption({
+function renderBandChart() {
+  if (!bandChartRef.value || !props.dashboard?.resultReady) return
+  bandChart ??= echarts.init(bandChartRef.value)
+  bandChart.setOption({
     animation: false,
-    grid: {
-      left: 140,
-      right: 60,
-      top: 24,
-      bottom: 36,
+    grid: { left: 48, right: 24, top: 58, bottom: 56 },
+    legend: {
+      top: 0,
+      type: 'scroll',
     },
     tooltip: {
-      position: 'top',
-      formatter: (params) => {
-        const [objectiveIndex, studentIndex, value] = params.data
-        return `${studentLabels.value[studentIndex]}<br/>${objectiveLabels.value[objectiveIndex]}：${formatDecimal(value === '-' ? null : value)}`
-      },
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
     },
     xAxis: {
       type: 'category',
       data: objectiveLabels.value,
-      splitArea: { show: true },
       axisLabel: { interval: 0 },
     },
     yAxis: {
-      type: 'category',
-      data: studentLabels.value,
-      splitArea: { show: true },
+      type: 'value',
+      minInterval: 1,
+      name: '人数',
     },
-    visualMap: {
-      min: 0,
-      max: 1,
-      calculable: false,
-      orient: 'vertical',
-      right: 8,
-      top: 'middle',
-      inRange: {
-        color: ['#fef3c7', '#f59e0b', '#2563eb'],
+    series: achievementBands.value.map((band) => ({
+      name: band.name,
+      type: 'bar',
+      stack: 'achievement',
+      data: band.data,
+      itemStyle: { color: band.color },
+      label: {
+        show: true,
+        formatter: ({ value }) => (value > 0 ? value : ''),
       },
-      formatter: (value) => Number(value).toFixed(4),
-    },
-    series: [
-      {
-        type: 'heatmap',
-        data: heatmapData.value,
-        label: {
-          show: true,
-          formatter: ({ data }) => formatDecimal(data[2] === '-' ? null : data[2]),
-          color: '#111827',
-          fontSize: 11,
-        },
-      },
-    ],
-  })
+    })),
+  }, true)
+}
+
+async function renderAllCharts() {
+  await nextTick()
+  renderSummaryChart()
+  renderBandChart()
+  resizeCharts()
 }
 
 function resizeCharts() {
   summaryChart?.resize()
-  heatmapChart?.resize()
+  bandChart?.resize()
 }
 
 watch(
   () => props.dashboard,
-  async () => {
-    await nextTick()
-    renderSummaryChart()
-    renderHeatmapChart()
-    resizeCharts()
-  },
+  renderAllCharts,
   { deep: true, immediate: true },
 )
 
@@ -277,7 +306,7 @@ window.addEventListener('resize', resizeCharts)
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeCharts)
   summaryChart?.dispose()
-  heatmapChart?.dispose()
+  bandChart?.dispose()
 })
 </script>
 
@@ -328,12 +357,31 @@ onBeforeUnmount(() => {
   color: #111827;
 }
 
+.math-symbol {
+  margin-left: 6px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.math-symbol sub {
+  font-size: 0.7em;
+}
+
+.text-math-symbol {
+  font-family: inherit;
+  font-size: inherit;
+  font-style: normal;
+  font-weight: inherit;
+}
+
+.math-overline {
+  text-decoration: overline;
+}
+
 .chart-box {
   width: 100%;
   height: 320px;
-}
-
-.chart-box--tall {
-  height: 420px;
 }
 </style>

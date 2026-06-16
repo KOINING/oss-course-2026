@@ -21,6 +21,12 @@ public interface StudentService {
     List<StudentResponse> listStudentsForSelect();
 
     /**
+     * 查询学生入学年份下拉选项
+     * @return 数据库中已有学生入学年份列表
+     */
+    List<Integer> listEnrollmentYears();
+
+    /**
      * 批量导入学生基础信息
      * @param file 导入文件
      * @return 导入结果

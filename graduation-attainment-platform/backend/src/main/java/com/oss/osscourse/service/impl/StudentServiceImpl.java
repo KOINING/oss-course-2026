@@ -70,6 +70,11 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    public List<Integer> listEnrollmentYears() {
+        return studentMapper.selectEnrollmentYears();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public StudentImportResult importStudents(MultipartFile file) {
         List<StudentImportResult.FailedItem> failedItems = new ArrayList<>();

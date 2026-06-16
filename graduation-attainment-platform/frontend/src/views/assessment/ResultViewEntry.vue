@@ -53,7 +53,7 @@
           </div>
           <div class="entry-card__body">
             <h3>专业级结果</h3>
-            <p>{{ majorResult.message || '当前筛选条件下暂无专业级汇总结果。' }}</p>
+            <p>{{ majorResultDisplayMessage }}</p>
           </div>
           <div class="entry-card__status">
             <el-tag :type="majorResult.resultReady ? 'success' : 'info'" effect="light">
@@ -103,7 +103,7 @@
         </template>
         <EmptyState
           v-if="!majorResult.resultReady"
-          :description="majorResult.message || '当前筛选条件下暂无专业级汇总结果。'"
+          :description="majorResultDisplayMessage"
         />
         <template v-else>
           <div class="term-info">
@@ -179,6 +179,11 @@ const hasFilters = computed(() => !!(filters.majorId && filters.gradeYear))
 const selectedMajor = computed(() => filterOptions.majors.find((item) => item.majorId === filters.majorId) || null)
 const currentGradeYears = computed(() => (selectedMajor.value?.gradeYearScopes || []).map((item) => item.gradeYear))
 const lockedCount = computed(() => dashboard.courses.filter((item) => item.calcStatus === 'locked').length)
+const majorResultDisplayMessage = computed(() => (
+  majorResult.resultReady
+    ? (majorResult.message || '当前年级已生成专业级汇总结果。')
+    : '当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。'
+))
 
 function buildPayload() {
   return {

@@ -9,12 +9,14 @@ import com.oss.osscourse.dto.trace.MajorToCourseTraceRequest;
 import com.oss.osscourse.dto.trace.MajorToCourseTraceResponse;
 import com.oss.osscourse.dto.trace.ObjectiveToScoreTraceRequest;
 import com.oss.osscourse.dto.trace.ObjectiveToScoreTraceResponse;
+import com.oss.osscourse.dto.supportmatrix.MatrixRelationResponse;
 import com.oss.osscourse.entity.AssessmentPoint;
 import com.oss.osscourse.entity.Course;
 import com.oss.osscourse.entity.CourseIndicatorAchievement;
 import com.oss.osscourse.entity.CourseObjective;
 import com.oss.osscourse.entity.CourseObjectiveAchievement;
 import com.oss.osscourse.entity.IndicatorPoint;
+import com.oss.osscourse.entity.MajorIndicatorAchievement;
 import com.oss.osscourse.entity.ObjectiveIndicatorContribution;
 import com.oss.osscourse.entity.Student;
 import com.oss.osscourse.entity.StudentAssessmentScore;
@@ -22,10 +24,12 @@ import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.AchievementTraceMapper;
 import com.oss.osscourse.mapper.AssessmentPointMapper;
 import com.oss.osscourse.mapper.CourseIndicatorAchievementMapper;
+import com.oss.osscourse.mapper.CourseIndicatorSupportMapper;
 import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.CourseObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.CourseObjectiveMapper;
 import com.oss.osscourse.mapper.IndicatorPointMapper;
+import com.oss.osscourse.mapper.MajorIndicatorAchievementMapper;
 import com.oss.osscourse.mapper.ObjectiveIndicatorContributionMapper;
 import com.oss.osscourse.mapper.StudentAssessmentScoreMapper;
 import com.oss.osscourse.mapper.StudentMapper;
@@ -76,9 +80,12 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     private final AssessmentPointMapper assessmentPointMapper;
     private final StudentAssessmentScoreMapper sasMapper;
     private final StudentMapper studentMapper;
+    private final MajorIndicatorAchievementMapper miaMapper;
+    private final CourseIndicatorSupportMapper cisMapper;
 
     @Override
     public List<MajorToCourseTraceResponse> getMajorToCourseTrace(MajorToCourseTraceRequest request) {
+        assertMajorResultReady(request);
         List<AchievementLedgerRow> rows = listLedgerRows(request);
         Map<Long, List<AchievementLedgerRow>> rowsByIp = rows.stream()
                 .filter(row -> row.getIpId() != null)
@@ -242,6 +249,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
 
     @Override
     public byte[] exportAchievementLedger(MajorToCourseTraceRequest request) {
+        assertMajorResultReady(request);
         List<AchievementLedgerRow> rows = listLedgerRows(request);
         if (rows != null) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -287,6 +295,53 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
             throw new BusinessException(404, "未查询到可追溯数据，请检查专业、年级、学期或指标点配置");
         }
         return rows;
+    }
+
+    private void assertMajorResultReady(MajorToCourseTraceRequest request) {
+        assertAllSupportClassesLocked(request.getMajorId(), request.getGradeYear());
+
+        LambdaQueryWrapper<MajorIndicatorAchievement> wrapper = new LambdaQueryWrapper<MajorIndicatorAchievement>()
+                .eq(MajorIndicatorAchievement::getMajorId, request.getMajorId())
+                .eq(MajorIndicatorAchievement::getGradeYear, request.getGradeYear())
+                .isNotNull(MajorIndicatorAchievement::getFinalAchievement);
+        if (request.getIpId() != null) {
+            wrapper.eq(MajorIndicatorAchievement::getIpId, request.getIpId());
+        }
+        if (request.getTermId() == null) {
+            List<MajorIndicatorAchievement> latestResults = miaMapper.selectList(wrapper
+                    .orderByDesc(MajorIndicatorAchievement::getTermId)
+                    .last("LIMIT 1"));
+            if (latestResults.isEmpty()) {
+                throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+            }
+            request.setTermId(latestResults.get(0).getTermId());
+            return;
+        }
+        wrapper.eq(MajorIndicatorAchievement::getTermId, request.getTermId());
+        Long count = miaMapper.selectCount(wrapper);
+        if (count == null || count == 0) {
+            throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+        }
+    }
+
+    private void assertAllSupportClassesLocked(Long majorId, Integer gradeYear) {
+        List<Long> supportCourseIds = cisMapper.selectMatrixRelationsByMajor(majorId, gradeYear).stream()
+                .map(MatrixRelationResponse::getCourseId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (supportCourseIds.isEmpty()) {
+            throw new BusinessException(400, "当前专业年级尚未配置支撑课程，不能查询专业级穿透台账");
+        }
+        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                .in(TeachingClass::getCourseId, supportCourseIds)
+                .eq(TeachingClass::getMajorId, majorId)
+                .eq(TeachingClass::getGradeYear, gradeYear));
+        boolean aggregationAllowed = !teachingClasses.isEmpty()
+                && teachingClasses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
+        if (!aggregationAllowed) {
+            throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+        }
     }
 
     private ObjectiveToScoreTraceResponse.AssessmentPointTrace buildAssessmentPointTrace(Long classId, AssessmentPoint ap) {
