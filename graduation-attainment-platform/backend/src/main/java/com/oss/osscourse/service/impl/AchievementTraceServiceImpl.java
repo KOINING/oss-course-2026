@@ -9,12 +9,14 @@ import com.oss.osscourse.dto.trace.MajorToCourseTraceRequest;
 import com.oss.osscourse.dto.trace.MajorToCourseTraceResponse;
 import com.oss.osscourse.dto.trace.ObjectiveToScoreTraceRequest;
 import com.oss.osscourse.dto.trace.ObjectiveToScoreTraceResponse;
+import com.oss.osscourse.dto.supportmatrix.MatrixRelationResponse;
 import com.oss.osscourse.entity.AssessmentPoint;
 import com.oss.osscourse.entity.Course;
 import com.oss.osscourse.entity.CourseIndicatorAchievement;
 import com.oss.osscourse.entity.CourseObjective;
 import com.oss.osscourse.entity.CourseObjectiveAchievement;
 import com.oss.osscourse.entity.IndicatorPoint;
+import com.oss.osscourse.entity.MajorIndicatorAchievement;
 import com.oss.osscourse.entity.ObjectiveIndicatorContribution;
 import com.oss.osscourse.entity.Student;
 import com.oss.osscourse.entity.StudentAssessmentScore;
@@ -22,10 +24,12 @@ import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.AchievementTraceMapper;
 import com.oss.osscourse.mapper.AssessmentPointMapper;
 import com.oss.osscourse.mapper.CourseIndicatorAchievementMapper;
+import com.oss.osscourse.mapper.CourseIndicatorSupportMapper;
 import com.oss.osscourse.mapper.CourseMapper;
 import com.oss.osscourse.mapper.CourseObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.CourseObjectiveMapper;
 import com.oss.osscourse.mapper.IndicatorPointMapper;
+import com.oss.osscourse.mapper.MajorIndicatorAchievementMapper;
 import com.oss.osscourse.mapper.ObjectiveIndicatorContributionMapper;
 import com.oss.osscourse.mapper.StudentAssessmentScoreMapper;
 import com.oss.osscourse.mapper.StudentMapper;
@@ -76,9 +80,12 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     private final AssessmentPointMapper assessmentPointMapper;
     private final StudentAssessmentScoreMapper sasMapper;
     private final StudentMapper studentMapper;
+    private final MajorIndicatorAchievementMapper miaMapper;
+    private final CourseIndicatorSupportMapper cisMapper;
 
     @Override
     public List<MajorToCourseTraceResponse> getMajorToCourseTrace(MajorToCourseTraceRequest request) {
+        assertMajorResultReady(request);
         List<AchievementLedgerRow> rows = listLedgerRows(request);
         Map<Long, List<AchievementLedgerRow>> rowsByIp = rows.stream()
                 .filter(row -> row.getIpId() != null)
@@ -137,8 +144,22 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                 .eq(CourseIndicatorAchievement::getIpId, request.getIpId())
                 .last("LIMIT 1"));
 
-        List<ObjectiveIndicatorContribution> contributions = oicMapper.selectList(
-                new LambdaQueryWrapper<ObjectiveIndicatorContribution>().eq(ObjectiveIndicatorContribution::getIpId, request.getIpId()));
+        List<CourseObjective> courseObjectives = courseObjectiveMapper.selectList(new LambdaQueryWrapper<CourseObjective>()
+                .eq(CourseObjective::getCourseId, course.getCourseId())
+                .orderByAsc(CourseObjective::getObjectiveCode));
+        List<Long> courseCoIds = courseObjectives.stream()
+                .map(CourseObjective::getCoId)
+                .filter(Objects::nonNull)
+                .toList();
+        List<ObjectiveIndicatorContribution> contributions = courseCoIds.isEmpty()
+                ? List.of()
+                : oicMapper.selectByObjectiveIdsAndContext(
+                                courseCoIds,
+                                teachingClass.getMajorId(),
+                                teachingClass.getGradeYear())
+                        .stream()
+                        .filter(item -> Objects.equals(item.getIpId(), request.getIpId()))
+                        .toList();
         List<Long> coIds = contributions.stream().map(ObjectiveIndicatorContribution::getCoId).filter(Objects::nonNull).toList();
         Map<Long, Float> weightMap = contributions.stream()
                 .collect(Collectors.toMap(ObjectiveIndicatorContribution::getCoId, ObjectiveIndicatorContribution::getInternalWeight,
@@ -146,10 +167,9 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
 
         List<CourseObjective> objectives = coIds.isEmpty()
                 ? List.of()
-                : courseObjectiveMapper.selectList(new LambdaQueryWrapper<CourseObjective>()
-                .eq(CourseObjective::getCourseId, course.getCourseId())
-                .in(CourseObjective::getCoId, coIds)
-                .orderByAsc(CourseObjective::getObjectiveCode));
+                : courseObjectives.stream()
+                        .filter(item -> coIds.contains(item.getCoId()))
+                        .toList();
         Map<Long, CourseObjectiveAchievement> achievementMap = coaMapper.selectList(
                         new LambdaQueryWrapper<CourseObjectiveAchievement>().eq(CourseObjectiveAchievement::getClassId, request.getClassId()))
                 .stream()
@@ -229,6 +249,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
 
     @Override
     public byte[] exportAchievementLedger(MajorToCourseTraceRequest request) {
+        assertMajorResultReady(request);
         List<AchievementLedgerRow> rows = listLedgerRows(request);
         if (rows != null) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -274,6 +295,53 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
             throw new BusinessException(404, "未查询到可追溯数据，请检查专业、年级、学期或指标点配置");
         }
         return rows;
+    }
+
+    private void assertMajorResultReady(MajorToCourseTraceRequest request) {
+        assertAllSupportClassesLocked(request.getMajorId(), request.getGradeYear());
+
+        LambdaQueryWrapper<MajorIndicatorAchievement> wrapper = new LambdaQueryWrapper<MajorIndicatorAchievement>()
+                .eq(MajorIndicatorAchievement::getMajorId, request.getMajorId())
+                .eq(MajorIndicatorAchievement::getGradeYear, request.getGradeYear())
+                .isNotNull(MajorIndicatorAchievement::getFinalAchievement);
+        if (request.getIpId() != null) {
+            wrapper.eq(MajorIndicatorAchievement::getIpId, request.getIpId());
+        }
+        if (request.getTermId() == null) {
+            List<MajorIndicatorAchievement> latestResults = miaMapper.selectList(wrapper
+                    .orderByDesc(MajorIndicatorAchievement::getTermId)
+                    .last("LIMIT 1"));
+            if (latestResults.isEmpty()) {
+                throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+            }
+            request.setTermId(latestResults.get(0).getTermId());
+            return;
+        }
+        wrapper.eq(MajorIndicatorAchievement::getTermId, request.getTermId());
+        Long count = miaMapper.selectCount(wrapper);
+        if (count == null || count == 0) {
+            throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+        }
+    }
+
+    private void assertAllSupportClassesLocked(Long majorId, Integer gradeYear) {
+        List<Long> supportCourseIds = cisMapper.selectMatrixRelationsByMajor(majorId, gradeYear).stream()
+                .map(MatrixRelationResponse::getCourseId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (supportCourseIds.isEmpty()) {
+            throw new BusinessException(400, "当前专业年级尚未配置支撑课程，不能查询专业级穿透台账");
+        }
+        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                .in(TeachingClass::getCourseId, supportCourseIds)
+                .eq(TeachingClass::getMajorId, majorId)
+                .eq(TeachingClass::getGradeYear, gradeYear));
+        boolean aggregationAllowed = !teachingClasses.isEmpty()
+                && teachingClasses.stream().allMatch(item -> "locked".equals(item.getCalcStatus()));
+        if (!aggregationAllowed) {
+            throw new BusinessException(400, "当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。");
+        }
     }
 
     private ObjectiveToScoreTraceResponse.AssessmentPointTrace buildAssessmentPointTrace(Long classId, AssessmentPoint ap) {
@@ -342,7 +410,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     }
 
     private void buildMergedLedgerWorkbook(XSSFWorkbook workbook, List<AchievementLedgerRow> rows) {
-        XSSFSheet sheet = workbook.createSheet("\u7a7f\u900f\u5f0f\u53f0\u8d26");
+        XSSFSheet sheet = workbook.createSheet("穿透式台账");
         CellStyle titleStyle = createTitleStyle(workbook);
         CellStyle infoStyle = createInfoStyle(workbook);
         CellStyle majorSectionStyle = createSectionStyle(workbook, IndexedColors.DARK_BLUE, true);
@@ -366,7 +434,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
         rowIndex = writeMergedTextRow(
                 sheet,
                 rowIndex,
-                "\u7a7f\u900f\u5f0f\u53f0\u8d26 - " + majorName + " " + first.getGradeYear() + "\u7ea7",
+                "穿透式台账 - " + majorName + " " + first.getGradeYear() + "级",
                 titleStyle,
                 5,
                 30
@@ -374,17 +442,17 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
         rowIndex = writeMergedTextRow(
                 sheet,
                 rowIndex,
-                "\u7edf\u8ba1\u5b66\u671f\uff1a" + termCode + " | \u5bfc\u51fa\u65f6\u95f4\uff1a" + LocalDateTime.now().format(EXPORT_TIME_FORMATTER),
+                "统计学期：" + termCode + " | 导出时间：" + LocalDateTime.now().format(EXPORT_TIME_FORMATTER),
                 infoStyle,
                 5,
                 22
         );
         rowIndex++;
 
-        rowIndex = writeMergedTextRow(sheet, rowIndex, "\u4e00\u3001\u4e13\u4e1a\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6", majorSectionStyle, 4, 24);
+        rowIndex = writeMergedTextRow(sheet, rowIndex, "一、专业级指标点达成度", majorSectionStyle, 4, 24);
         Row majorHeaderRow = sheet.createRow(rowIndex++);
         String[] majorHeaders = {
-                "\u6307\u6807\u70b9\u7f16\u53f7", "\u6307\u6807\u70b9\u63cf\u8ff0", "\u6bd5\u4e1a\u8981\u6c42", "\u4e13\u4e1a\u7ea7\u8fbe\u6210\u5ea6 Gk", "\u652f\u6491\u8bfe\u7a0b\u6570"
+                "指标点编号", "指标点描述", "毕业要求", "专业级达成度 Gk", "支撑课程数"
         };
         for (int i = 0; i < majorHeaders.length; i++) {
             writeCell(majorHeaderRow.createCell(i), majorHeaders[i], headerStyle);
@@ -413,7 +481,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
             rowIndex = writeMergedTextRow(
                     sheet,
                     rowIndex,
-                    "\u4e8c\u3001\u6307\u6807\u70b9 " + valueOrEmpty(ipFirst.getIpCode()) + " \u652f\u6491\u8bfe\u7a0b\u6982\u89c8",
+                    "二、指标点 " + valueOrEmpty(ipFirst.getIpCode()) + " 支撑课程概览",
                     indicatorSectionStyle,
                     5,
                     24
@@ -421,7 +489,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
 
             Row courseHeaderRow = sheet.createRow(rowIndex++);
             String[] courseHeaders = {
-                    "\u8bfe\u7a0b\u4ee3\u7801", "\u8bfe\u7a0b\u540d\u79f0", "\u6559\u5b66\u73ed", "\u8bfe\u7a0b\u7ea7\u8fbe\u6210\u5ea6 Ek", "\u5b8f\u89c2\u6743\u91cd W", "\u52a0\u6743\u8d21\u732e"
+                    "课程代码", "课程名称", "教学班", "课程级达成度 Ek", "宏观权重 W", "加权贡献"
             };
             for (int i = 0; i < courseHeaders.length; i++) {
                 writeCell(courseHeaderRow.createCell(i), courseHeaders[i], headerStyle);
@@ -463,8 +531,8 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                 rowIndex = writeMergedTextRow(
                         sheet,
                         rowIndex,
-                        "\u4e09\u3001\u8bfe\u7a0b " + valueOrEmpty(courseFirst.getCourseName())
-                                + " | \u6559\u5b66\u73ed " + valueOrEmpty(courseFirst.getClassName()),
+                        "三、课程 " + valueOrEmpty(courseFirst.getCourseName())
+                                + " | 教学班 " + valueOrEmpty(courseFirst.getClassName()),
                         courseSectionStyle,
                         5,
                         24
@@ -482,7 +550,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                 rowIndex = writeMergedTextRow(
                         sheet,
                         rowIndex,
-                        "3.1 \u8bfe\u7a0b\u76ee\u6807\u660e\u7ec6",
+                        "3.1 课程目标明细",
                         infoStyle,
                         4,
                         20
@@ -491,8 +559,8 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                         sheet,
                         rowIndex,
                         new String[]{
-                                "\u76ee\u6807\u7f16\u7801", "\u76ee\u6807\u63cf\u8ff0", "\u73ed\u7ea7\u5e73\u5747\u8fbe\u6210\u5ea6",
-                                "\u5185\u90e8\u6743\u91cd", "\u52a0\u6743\u8d21\u732e"
+                                "目标编码", "目标描述", "班级平均达成度",
+                                "内部权重", "加权贡献"
                         },
                         headerStyle
                 );
@@ -509,7 +577,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                     rowIndex = writeMergedTextRow(
                             sheet,
                             rowIndex,
-                            "\u56db\u3001\u76ee\u6807 " + valueOrEmpty(objectiveFirst.getObjectiveCode()) + " \u5f97\u5206\u660e\u7ec6",
+                            "四、目标 " + valueOrEmpty(objectiveFirst.getObjectiveCode()) + " 得分明细",
                             detailSectionStyle,
                             4,
                             22
@@ -518,7 +586,7 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                             sheet,
                             rowIndex,
                             new String[]{
-                                    "\u8003\u6838\u70b9", "\u6ee1\u5206", "\u5b66\u53f7", "\u59d3\u540d", "\u539f\u59cb\u6210\u7ee9"
+                                    "考核点", "满分", "学号", "姓名", "原始成绩"
                             },
                             detailHeaderStyle
                     );

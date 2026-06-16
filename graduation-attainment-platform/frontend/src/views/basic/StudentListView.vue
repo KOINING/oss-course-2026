@@ -6,6 +6,7 @@ import { listMajorsForSelectApi } from '@/api/basic'
 import {
   addStudentApi,
   deleteStudentApi,
+  listStudentEnrollmentYearsApi,
   listStudentsApi,
   updateStudentApi,
   updateStudentStatusApi,
@@ -22,6 +23,7 @@ const dialogMode = ref('create')
 const rows = ref([])
 const formRef = ref(null)
 const majorOptions = ref([])
+const enrollmentYearOptions = ref([])
 
 const statusOptions = [
   { value: 1, label: '在读' },
@@ -29,6 +31,7 @@ const statusOptions = [
   { value: 3, label: '休学' },
   { value: 0, label: '退学' },
 ]
+const currentYear = new Date().getFullYear()
 
 const filters = reactive({
   studentNo: '',
@@ -43,7 +46,7 @@ const form = reactive({
   studentNo: '',
   studentName: '',
   majorId: null,
-  enrollmentYear: new Date().getFullYear(),
+  enrollmentYear: currentYear,
   status: 1,
 })
 
@@ -70,7 +73,7 @@ function resetForm() {
   form.studentNo = ''
   form.studentName = ''
   form.majorId = null
-  form.enrollmentYear = new Date().getFullYear()
+  form.enrollmentYear = currentYear
   form.status = 1
 }
 
@@ -85,7 +88,12 @@ function normalizeFilters() {
 }
 
 async function loadOptions() {
-  majorOptions.value = (await listMajorsForSelectApi()) || []
+  const [majors, enrollmentYears] = await Promise.all([
+    listMajorsForSelectApi(),
+    listStudentEnrollmentYearsApi(),
+  ])
+  majorOptions.value = majors || []
+  enrollmentYearOptions.value = enrollmentYears || []
 }
 
 async function loadRows() {
@@ -148,6 +156,7 @@ async function handleSubmit() {
 
     dialogVisible.value = false
     await loadRows()
+    await loadOptions()
   } finally {
     submitLoading.value = false
   }
@@ -157,6 +166,7 @@ async function handleDelete(row) {
   await deleteStudentApi({ studentId: row.studentId })
   ElMessage.success('学生删除成功')
   await loadRows()
+  await loadOptions()
 }
 
 async function handleUpdateStatus(row, status) {
@@ -215,7 +225,14 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item label="入学年份">
-          <el-input-number v-model="filters.enrollmentYear" :min="2000" :max="2100" controls-position="right" />
+          <el-select v-model="filters.enrollmentYear" placeholder="全部年份" clearable filterable style="width: 160px">
+            <el-option
+              v-for="year in enrollmentYearOptions"
+              :key="year"
+              :label="`${year}年`"
+              :value="year"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="学籍状态">
           <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 160px">

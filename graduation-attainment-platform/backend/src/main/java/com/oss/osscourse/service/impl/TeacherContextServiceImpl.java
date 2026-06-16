@@ -10,7 +10,6 @@ import com.oss.osscourse.dto.teachercontext.TeacherTeachingClassResponse;
 import com.oss.osscourse.entity.AssessmentPoint;
 import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.CourseObjective;
-import com.oss.osscourse.entity.ObjectiveIndicatorContribution;
 import com.oss.osscourse.entity.Teacher;
 import com.oss.osscourse.entity.TeachingClass;
 import com.oss.osscourse.mapper.AssessmentPointMapper;
@@ -92,7 +91,7 @@ public class TeacherContextServiceImpl implements TeacherContextService {
                 new LambdaQueryWrapper<CourseObjective>()
                         .eq(CourseObjective::getCourseId, teachingClass.getCourseId()));
         Long assessmentPointCount = countAssessmentPoints(teachingClass.getCourseId());
-        Long internalWeightCount = countInternalWeights(teachingClass.getCourseId());
+        Long internalWeightCount = countInternalWeights(teachingClass);
 
         if (studentCount == null || studentCount == 0) {
             blockReasons.add("当前教学班暂无学生名单，不能生成成绩模板或导入成绩");
@@ -216,16 +215,21 @@ public class TeacherContextServiceImpl implements TeacherContextService {
                 .in(AssessmentPoint::getCoId, coIds));
     }
 
-    private Long countInternalWeights(Long courseId) {
+    private Long countInternalWeights(TeachingClass teachingClass) {
         List<CourseObjective> objectives = courseObjectiveMapper.selectList(
                 new LambdaQueryWrapper<CourseObjective>()
-                        .eq(CourseObjective::getCourseId, courseId));
+                        .eq(CourseObjective::getCourseId, teachingClass.getCourseId()));
         if (objectives.isEmpty()) {
             return 0L;
         }
+        if (teachingClass.getMajorId() == null || teachingClass.getGradeYear() == null) {
+            return 0L;
+        }
         List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
-        return oicMapper.selectCount(new LambdaQueryWrapper<ObjectiveIndicatorContribution>()
-                .in(ObjectiveIndicatorContribution::getCoId, coIds));
+        return (long) oicMapper.selectByObjectiveIdsAndContext(
+                coIds,
+                teachingClass.getMajorId(),
+                teachingClass.getGradeYear()).size();
     }
 
     private boolean hasInstructorRole(List<String> roles) {

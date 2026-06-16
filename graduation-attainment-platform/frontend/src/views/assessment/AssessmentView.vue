@@ -13,6 +13,20 @@
       <NoPermission v-if="!hasAnyAccess" required-role="课程主讲教师、专业负责人或教务管理员" />
 
       <template v-else>
+        <div v-if="isInstructor" class="score-flow-guide">
+          <div
+            v-for="(step, index) in scoreFlowSteps"
+            :key="step.title"
+            class="score-flow-step"
+          >
+            <div class="score-flow-step__head">
+              <span class="score-flow-step__index">{{ index + 1 }}</span>
+              <span class="score-flow-step__title">{{ step.title }}</span>
+            </div>
+            <p class="score-flow-step__desc">{{ step.description }}</p>
+          </div>
+        </div>
+
         <el-tabs v-if="isInstructor" v-model="instructorTab" class="assessment-tabs">
           <el-tab-pane label="成绩预览" name="template" lazy>
             <TemplatePreview />
@@ -50,6 +64,13 @@ const userStore = useUserStore()
 
 const instructorTab = ref('template')
 const directorTab = ref('dashboard')
+const scoreFlowSteps = [
+  { title: '下载模板', description: '在成绩预览页下载系统模板' },
+  { title: '导入预览', description: '上传成绩文件并完成预校验' },
+  { title: '保存成绩', description: '校验通过后保存原始成绩' },
+  { title: '执行计算', description: '成绩补齐后执行课程级计算' },
+  { title: '查看报表', description: '到课程级评价报表查看结果' },
+]
 
 const isInstructor = computed(() => userStore.roleCodes.includes('instructor'))
 const isDirectorOrAcademic = computed(() =>
@@ -114,5 +135,85 @@ const pageSummary = computed(() => {
 
 .assessment-tabs :deep(.el-tabs__header) {
   margin-bottom: 20px;
+}
+
+.score-flow-guide {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.score-flow-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 82px;
+  padding: 12px 14px;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.score-flow-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -14px;
+  width: 16px;
+  height: 1px;
+  background: #93c5fd;
+  z-index: 1;
+}
+
+.score-flow-step__head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.score-flow-step__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.score-flow-step__title {
+  font-size: 15px;
+}
+
+.score-flow-step__desc {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@media (max-width: 960px) {
+  .score-flow-guide {
+    overflow-x: auto;
+    grid-template-columns: repeat(5, 170px);
+  }
 }
 </style>

@@ -58,12 +58,22 @@
 
         <ErrorState v-if="loadError" :message="loadError" @retry="loadMajorReport" />
 
+        <section v-else-if="loading" class="loading-section">
+          <el-skeleton :rows="8" animated />
+        </section>
+
         <EmptyState
           v-else-if="!hasQueried"
           description="请选择专业和年级后查询穿透式台账，按指标点逐层下钻查看课程级、课程目标、考核点及原始成绩数据。"
         />
 
         <template v-else>
+          <EmptyState
+            v-if="!majorReport.resultReady"
+            :description="majorReportDisplayMessage"
+          />
+
+          <template v-else>
           <!-- 追溯上下文 -->
           <section class="context-section">
             <h2>追溯上下文</h2>
@@ -349,11 +359,9 @@
           <div v-if="!majorReport.indicatorAchievements?.length && !loading" class="no-result">
             <el-empty description="当前筛选条件下无专业级指标点数据，请先确认已执行专业级计算" :image-size="120" />
           </div>
+          </template>
         </template>
 
-        <div v-if="loading" class="loading-mask">
-          <el-skeleton :rows="6" animated />
-        </div>
       </div>
     </el-card>
   </div>
@@ -420,7 +428,7 @@ const selectedAssessmentPoint = ref(null)
 const selectedApIndex = ref(-1)
 
 // Data
-const majorReport = reactive({ indicatorAchievements: [], termId: null, termCode: '' })
+const majorReport = reactive({ resultReady: false, message: '', indicatorAchievements: [], termId: null, termCode: '' })
 const courseReportData = ref(null)
 const courseLoading = ref(false)
 const rawScores = reactive({ rows: [], headers: [] })
@@ -440,6 +448,11 @@ const exportLabel = computed(() => {
   const map = { idle: '导出穿透式台账 Excel', exporting: '导出中...', success: '导出成功', failure: '导出失败' }
   return map[exportStatus] || '导出穿透式台账 Excel'
 })
+const majorReportDisplayMessage = computed(() => (
+  majorReport.resultReady
+    ? (majorReport.message || '当前专业年级已生成专业级计算结果。')
+    : '当前专业年级尚未生成专业级计算结果，请先完成课程级锁定并执行专业级计算。'
+))
 
 // Format helpers
 function formatAchievement(val) {
@@ -499,6 +512,8 @@ function resetAll() {
   selectedObjective.value = null
   selectedAssessmentPoint.value = null
   selectedApIndex.value = -1
+  majorReport.resultReady = false
+  majorReport.message = ''
   majorReport.indicatorAchievements = []
   majorReport.termId = null
   majorReport.termCode = ''
@@ -532,7 +547,9 @@ async function loadMajorReport() {
       majorId: filters.majorId,
       gradeYear: filters.gradeYear,
     })
-    majorReport.indicatorAchievements = data?.indicatorAchievements || []
+    majorReport.resultReady = data?.resultReady ?? false
+    majorReport.message = data?.message || ''
+    majorReport.indicatorAchievements = majorReport.resultReady ? (data?.indicatorAchievements || []) : []
     majorReport.termId = data?.termId
     majorReport.termCode = data?.termCode || ''
 
@@ -540,7 +557,9 @@ async function loadMajorReport() {
     context.gradeYear = data?.gradeYear || filters.gradeYear
     context.termCode = data?.termCode || ''
 
-    if (!majorReport.indicatorAchievements.length) {
+    if (!majorReport.resultReady) {
+      ElMessage.warning(majorReportDisplayMessage.value)
+    } else if (!majorReport.indicatorAchievements.length) {
       ElMessage.info('当前筛选条件下暂无指标点数据')
     }
   } catch (error) {
@@ -738,6 +757,10 @@ async function exportLedger() {
     ElMessage.info('请先选择专业和年级')
     return
   }
+  if (!majorReport.resultReady) {
+    ElMessage.warning(majorReportDisplayMessage.value)
+    return
+  }
   exportStatus.value = 'exporting'
   exportMessage.value = ''
 
@@ -748,6 +771,7 @@ async function exportLedger() {
     const blob = await exportAchievementLedgerApi({
       majorId: filters.majorId,
       gradeYear: filters.gradeYear,
+      termId: majorReport.termId,
     })
     triggerLedgerDownload(blob, `穿透式台账_${majorName}_${gradeYear}级.xlsx`)
     exportStatus.value = 'success'
@@ -1034,8 +1058,11 @@ onMounted(async () => {
   color: #64748b;
 }
 
-.loading-mask {
-  padding: 16px 0;
+.loading-section {
+  padding: 28px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
 }
 
 .no-result {

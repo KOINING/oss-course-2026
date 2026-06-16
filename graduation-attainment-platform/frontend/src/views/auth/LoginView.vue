@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { APP_TITLE, DEFAULT_HOME_PATH } from '@/utils/constants'
+import { DEFAULT_HOME_PATH } from '@/utils/constants'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,8 +48,10 @@ async function handleLogin() {
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="login-title">{{ APP_TITLE }}</h1>
-      <p class="login-subtitle">请输入账号密码进入系统</p>
+      <h1 class="login-title">
+        <span>面向专业认证的毕业要求达成度</span>
+        <span>统一计算平台</span>
+      </h1>
 
       <el-form
         ref="formRef"
@@ -111,19 +113,15 @@ async function handleLogin() {
 }
 
 .login-title {
-  margin: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0 28px;
   font-size: 22px;
   font-weight: 600;
   color: #303133;
   text-align: center;
   line-height: 1.5;
-}
-
-.login-subtitle {
-  margin: 0 0 28px;
-  font-size: 14px;
-  color: #909399;
-  text-align: center;
 }
 
 .login-btn {

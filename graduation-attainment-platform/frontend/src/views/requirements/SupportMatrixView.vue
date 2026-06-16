@@ -31,6 +31,8 @@ const indicators = ref([])
 const matrixMap = ref({})
 const matrixTableRef = ref(null)
 const summaryScrollRef = ref(null)
+const hoveredCourseId = ref(null)
+const hoveredIndicatorId = ref(null)
 let matrixSnapshot = {}
 let tableBodyScrollEl = null
 let syncingScroll = false
@@ -261,6 +263,36 @@ function isColumnValid(ipId) {
   return Math.abs(getColumnSum(ipId) - 1) < 0.0001
 }
 
+function setMatrixHover(courseId, ipId = null) {
+  hoveredCourseId.value = courseId
+  hoveredIndicatorId.value = ipId
+}
+
+function clearMatrixHover() {
+  hoveredCourseId.value = null
+  hoveredIndicatorId.value = null
+}
+
+function getMatrixRowClass({ row }) {
+  return row?.courseId === hoveredCourseId.value ? 'matrix-row-hover' : ''
+}
+
+function getIndicatorColumnClass(ipId) {
+  return ipId === hoveredIndicatorId.value ? 'matrix-column-hover' : ''
+}
+
+function getMatrixCellClass(courseId, ipId) {
+  return courseId === hoveredCourseId.value && ipId === hoveredIndicatorId.value
+    ? 'matrix-edit-cell matrix-edit-cell--active'
+    : 'matrix-edit-cell'
+}
+
+function getSummaryCellClass(ipId) {
+  return ipId === hoveredIndicatorId.value
+    ? 'matrix-summary-cell matrix-summary-cell--hover'
+    : 'matrix-summary-cell'
+}
+
 function renderGroupHeader(group) {
   return h('div', { class: 'matrix-group-header' }, [
     h('div', { class: 'matrix-group-header__code' }, group.grCode),
@@ -397,7 +429,7 @@ onBeforeUnmount(() => {
       <div v-loading="tableLoading" class="matrix-wrap">
         <el-empty v-if="!tableLoading && indicators.length === 0" description="请选择专业和年级后查询支撑矩阵。" />
 
-        <div v-else class="matrix-table-shell">
+        <div v-else class="matrix-table-shell" @mouseleave="clearMatrixHover">
           <div class="matrix-table-meta">
             <span>固定列：课程</span>
             <span>毕业要求：{{ graduationRequirementCount }}</span>
@@ -410,11 +442,12 @@ onBeforeUnmount(() => {
             :data="visibleCourses"
             border
             max-height="620"
+            :row-class-name="getMatrixRowClass"
             class="matrix-el-table"
           >
-            <el-table-column prop="courseName" label="课程 / 毕业要求" width="220" fixed="left">
+            <el-table-column prop="courseName" label="课程 / 毕业要求" width="220" fixed="left" class-name="matrix-course-column">
               <template #default="{ row }">
-                <div class="course-name-cell">{{ row.courseName }}</div>
+                <div class="course-name-cell" @mouseenter="setMatrixHover(row.courseId)">{{ row.courseName }}</div>
               </template>
             </el-table-column>
 
@@ -432,9 +465,13 @@ onBeforeUnmount(() => {
                 :render-header="() => renderIndicatorHeader(indicator)"
                 min-width="178"
                 align="center"
+                :class-name="getIndicatorColumnClass(indicator.ipId)"
               >
                 <template #default="{ row }">
-                  <div class="matrix-edit-cell">
+                  <div
+                    :class="getMatrixCellClass(row.courseId, indicator.ipId)"
+                    @mouseenter="setMatrixHover(row.courseId, indicator.ipId)"
+                  >
                     <el-checkbox
                       :model-value="isChecked(row.courseId, indicator.ipId)"
                       @change="(value) => onCheckChange(row.courseId, indicator.ipId, value)"
@@ -469,7 +506,7 @@ onBeforeUnmount(() => {
               <div
                 v-for="indicator in indicators"
                 :key="indicator.ipId"
-                class="matrix-summary-cell"
+                :class="getSummaryCellClass(indicator.ipId)"
               >
                 <span :class="isColumnValid(indicator.ipId) ? 'summary-valid' : 'summary-invalid'">
                   <span class="summary-value">{{ getColumnSum(indicator.ipId).toFixed(2) }}</span>
@@ -568,6 +605,27 @@ onBeforeUnmount(() => {
   background: #fff;
 }
 
+.matrix-el-table :deep(.el-table__body tr.matrix-row-hover > td) {
+  background: #f8fbff !important;
+}
+
+.matrix-el-table :deep(.el-table__body td.matrix-column-hover) {
+  background: #eef6ff !important;
+}
+
+.matrix-el-table :deep(.el-table__body tr.matrix-row-hover > td.matrix-column-hover) {
+  background: #dbeafe !important;
+}
+
+.matrix-el-table :deep(.el-table__body td.matrix-course-column) {
+  transition: background-color 0.12s ease;
+}
+
+.matrix-el-table :deep(.el-table__body td.matrix-column-hover),
+.matrix-el-table :deep(.el-table__body tr.matrix-row-hover > td) {
+  transition: background-color 0.12s ease;
+}
+
 .course-name-cell {
   color: #1f2937;
   font-weight: 500;
@@ -629,6 +687,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border-radius: 8px;
+  transition: background-color 0.12s ease;
+}
+
+.matrix-edit-cell--active {
+  background: #dbeafe;
 }
 
 .weight-input {
@@ -662,6 +726,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border-right: 1px solid #e5e7eb;
+  transition: background-color 0.12s ease;
 }
 
 .matrix-summary-label {
@@ -671,6 +736,10 @@ onBeforeUnmount(() => {
   color: #334155;
   font-weight: 800;
   background: #f8fafc;
+}
+
+.matrix-summary-cell--hover {
+  background: #eef6ff;
 }
 
 .summary-valid,
