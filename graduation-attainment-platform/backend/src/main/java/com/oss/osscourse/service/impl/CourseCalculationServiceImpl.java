@@ -147,9 +147,13 @@ public class CourseCalculationServiceImpl implements CourseCalculationService {
         assertManagePermission(roles, permissions);
 
         Long courseId = request.getCourseId();
+        Long majorId = request.getMajorId();
         Integer gradeYear = request.getGradeYear();
         if (courseId == null) {
             throw new BusinessException(400, "课程ID不能为空");
+        }
+        if (majorId == null) {
+            throw new BusinessException(400, "专业ID不能为空");
         }
         if (gradeYear == null) {
             throw new BusinessException(400, "培养方案年级不能为空");
@@ -159,14 +163,19 @@ public class CourseCalculationServiceImpl implements CourseCalculationService {
             throw new BusinessException(404, "课程不存在");
         }
 
-        // 获取该课程 + 年级版本的 course_major
+        // 获取该课程 + 专业 + 年级版本的 course_major
         CourseMajor courseMajor = courseMajorMapper.selectOne(
                 new LambdaQueryWrapper<CourseMajor>()
                         .eq(CourseMajor::getCourseId, courseId)
-                        .eq(CourseMajor::getGradeYear, gradeYear));
-        Long majorId = courseMajor != null ? courseMajor.getMajorId() : null;
+                        .eq(CourseMajor::getMajorId, majorId)
+                        .eq(CourseMajor::getGradeYear, gradeYear)
+                        .last("LIMIT 1"));
 
         List<String> crossErrors = new ArrayList<>();
+        if (courseMajor == null) {
+            crossErrors.add("课程(ID=" + courseId + ") 未绑定专业(ID=" + majorId + ") "
+                    + gradeYear + " 年级培养方案，无法校验课程目标到指标点映射");
+        }
 
         // 合法 coId 集合（该课程下的所有目标）
         Set<Long> validCoIds = new HashSet<>();
@@ -180,11 +189,11 @@ public class CourseCalculationServiceImpl implements CourseCalculationService {
         }
 
         // 合法 ipId 集合（该课程 + 年级版本下可关联的指标点）
-        Set<Long> validIpIds = new HashSet<>(oicMapper.selectValidIpIds(courseId, gradeYear));
+        Set<Long> validIpIds = new HashSet<>(oicMapper.selectValidIpIds(courseId, majorId, gradeYear));
 
         // 查询现有内部权重配置
         List<ObjectiveIndicatorContributionResponse>
-                allMappings = oicMapper.selectByCourseAndGradeYear(courseId, gradeYear);
+                allMappings = oicMapper.selectByCourseAndProgram(courseId, majorId, gradeYear);
 
         // 跨引用校验
         for (ObjectiveIndicatorContributionResponse mapping : allMappings) {

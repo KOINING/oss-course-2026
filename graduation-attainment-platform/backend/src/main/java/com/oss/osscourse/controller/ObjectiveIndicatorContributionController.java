@@ -27,9 +27,9 @@ public class ObjectiveIndicatorContributionController {
     private final ObjectiveIndicatorContributionService oicService;
 
     @PostMapping("/query")
-    @Operation(summary = "查询内部权重配置", description = "按课程ID和培养方案年级查询该课程下所有课程目标到指标点的内部权重配置")
+    @Operation(summary = "查询内部权重配置", description = "按课程ID、专业ID和培养方案年级查询该课程下所有课程目标到指标点的内部权重配置")
     public Result<List<ObjectiveIndicatorContributionResponse>> query(
-            @Parameter(description = "查询请求（courseId + gradeYear）", required = true)
+            @Parameter(description = "查询请求（courseId + majorId + gradeYear）", required = true)
             @Valid @RequestBody ObjectiveIndicatorContributionQueryRequest request,
             @RequestAttribute("roles") List<String> roles,
             @RequestAttribute("permissions") List<String> permissions) {

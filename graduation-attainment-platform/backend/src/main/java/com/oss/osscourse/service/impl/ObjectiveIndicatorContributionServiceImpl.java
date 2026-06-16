@@ -43,9 +43,13 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         assertManagePermission(roles, permissions);
 
         Long courseId = request.getCourseId();
+        Long majorId = request.getMajorId();
         Integer gradeYear = request.getGradeYear();
         if (courseId == null) {
             throw new BusinessException(400, "课程ID不能为空");
+        }
+        if (majorId == null) {
+            throw new BusinessException(400, "专业ID不能为空");
         }
         if (gradeYear == null) {
             throw new BusinessException(400, "培养方案年级不能为空");
@@ -55,8 +59,9 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         if (courseMapper.selectById(courseId) == null) {
             throw new BusinessException(404, "课程不存在");
         }
+        requireCourseProgramBinding(courseId, majorId, gradeYear);
 
-        return oicMapper.selectByCourseAndGradeYear(courseId, gradeYear);
+        return oicMapper.selectByCourseAndProgram(courseId, majorId, gradeYear);
     }
 
     @Override
@@ -67,6 +72,7 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         assertManagePermission(roles, permissions);
 
         Long courseId = request.getCourseId();
+        Long majorId = request.getMajorId();
         Integer gradeYear = request.getGradeYear();
         List<ObjectiveIndicatorContributionBatchSaveRequest.ContributionItem> contributions =
                 request.getContributions();
@@ -74,6 +80,9 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         // 1. 基础校验
         if (courseId == null) {
             throw new BusinessException(400, "课程ID不能为空");
+        }
+        if (majorId == null) {
+            throw new BusinessException(400, "专业ID不能为空");
         }
         validateGradeYear(gradeYear);
         if (courseMapper.selectById(courseId) == null) {
@@ -83,15 +92,8 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
             throw new BusinessException(400, "权重配置列表不能为空");
         }
 
-        // 2. 校验该课程在指定年级下是否存在 course_major 关联，并获取 majorId
-        CourseMajor courseMajor = courseMajorMapper.selectOne(
-                new LambdaQueryWrapper<CourseMajor>()
-                        .eq(CourseMajor::getCourseId, courseId)
-                        .eq(CourseMajor::getGradeYear, gradeYear));
-        if (courseMajor == null) {
-            throw new BusinessException(400, "该课程未配置 " + gradeYear + " 年级的培养方案关联，请先完成课程-专业-年级绑定");
-        }
-        Long majorId = courseMajor.getMajorId();
+        // 2. 校验该课程在指定专业年级下是否存在 course_major 关联
+        requireCourseProgramBinding(courseId, majorId, gradeYear);
 
         // 3. 批量加载该课程下的所有课程目标（用于校验 coId 归属）
         List<CourseObjective> allObjectives = courseObjectiveMapper.selectList(
@@ -105,7 +107,7 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         }
 
         // 4. 批量加载合法 ipId 集合（本专业 + 本年级版本下的全部指标点）
-        Set<Long> validIpIds = new HashSet<>(oicMapper.selectValidIpIds(courseId, gradeYear));
+        Set<Long> validIpIds = new HashSet<>(oicMapper.selectValidIpIds(courseId, majorId, gradeYear));
         if (validIpIds.isEmpty()) {
             throw new BusinessException(400, "该课程在 " + gradeYear + " 年级版本下未找到可关联的指标点，请先配置毕业要求与指标点");
         }
@@ -169,7 +171,7 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         }
 
         // 7. 先删后插（事务内，仅删除当前年级版本下的记录）
-        oicMapper.deleteByCourseIdAndGradeYear(courseId, gradeYear);
+        oicMapper.deleteByCourseIdAndProgram(courseId, majorId, gradeYear);
 
         for (ObjectiveIndicatorContributionBatchSaveRequest.ContributionItem item : contributions) {
             ObjectiveIndicatorContribution entity = new ObjectiveIndicatorContribution();
@@ -198,6 +200,17 @@ public class ObjectiveIndicatorContributionServiceImpl implements ObjectiveIndic
         }
         if (gradeYear < 2000 || gradeYear > 2100) {
             throw new BusinessException(400, "年级必须在2000到2100之间");
+        }
+    }
+
+    private void requireCourseProgramBinding(Long courseId, Long majorId, Integer gradeYear) {
+        Long count = courseMajorMapper.selectCount(new LambdaQueryWrapper<CourseMajor>()
+                .eq(CourseMajor::getCourseId, courseId)
+                .eq(CourseMajor::getMajorId, majorId)
+                .eq(CourseMajor::getGradeYear, gradeYear));
+        if (count == null || count == 0) {
+            throw new BusinessException(400, "该课程未配置当前专业 " + majorId + "、" + gradeYear
+                    + " 年级的培养方案关联，请先完成课程-专业-年级绑定");
         }
     }
 

@@ -294,9 +294,10 @@ async function loadObjectives() {
     const [objectiveRows, assessmentPoints, weightRows] = await Promise.all([
       listCourseObjectivesApi({ courseId: filters.courseId }),
       listAssessmentPointsApi({ courseId: filters.courseId }).catch(() => []),
-      context.value?.gradeYear
+      context.value?.majorId && context.value?.gradeYear
         ? getCourseWeightApi({
             courseId: filters.courseId,
+            majorId: Number(context.value.majorId),
             gradeYear: Number(context.value.gradeYear),
           }).catch(() => [])
         : Promise.resolve([]),

@@ -140,7 +140,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(400, "当前课程未配置考核点，请先配置考核点");
         }
 
-        ensureInternalWeightsConfigured(objectives);
+        ensureInternalWeightsConfigured(objectives, teachingClass);
 
         Map<Long, CourseObjective> objectiveMap = objectives.stream()
                 .collect(Collectors.toMap(CourseObjective::getCoId, objective -> objective));
@@ -303,7 +303,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(400, "当前课程未配置考核点，无法导入成绩");
         }
 
-        ensureInternalWeightsConfigured(objectives);
+        ensureInternalWeightsConfigured(objectives, teachingClass);
 
         Map<Long, CourseObjective> objectiveMap = objectives.stream()
                 .collect(Collectors.toMap(CourseObjective::getCoId, objective -> objective));
@@ -482,7 +482,10 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
         List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
         List<AssessmentPoint> assessmentPoints = listAssessmentPointsByObjectives(objectives);
-        List<ObjectiveIndicatorContribution> internalWeights = listInternalWeights(coIds);
+        List<ObjectiveIndicatorContribution> internalWeights = listInternalWeights(
+                coIds,
+                teachingClass.getMajorId(),
+                teachingClass.getGradeYear());
         if (internalWeights.isEmpty()) {
             throw new BusinessException(400, "当前课程未配置内部权重 w，不能执行课程级计算");
         }
@@ -588,7 +591,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             }
         }
 
-        List<CourseCalcResponse.IndicatorAchievement> indicatorAchievements = new ArrayList<>();
+        Map<String, CourseCalcResponse.IndicatorAchievement> indicatorAchievementMap = new LinkedHashMap<>();
         Map<Long, List<ObjectiveIndicatorContribution>> ipOicMap = internalWeights.stream()
                 .collect(Collectors.groupingBy(ObjectiveIndicatorContribution::getIpId));
         for (Map.Entry<Long, List<ObjectiveIndicatorContribution>> entry : ipOicMap.entrySet()) {
@@ -603,12 +606,13 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             ek = Math.min(ek, 1.0f);
 
             IndicatorPoint indicatorPoint = indicatorPointMapper.selectById(ipId);
-            indicatorAchievements.add(CourseCalcResponse.IndicatorAchievement.builder()
+            CourseCalcResponse.IndicatorAchievement indicatorAchievement = CourseCalcResponse.IndicatorAchievement.builder()
                     .ipId(ipId)
                     .ipCode(indicatorPoint == null ? "" : indicatorPoint.getIpCode())
                     .ipDescription(indicatorPoint == null ? "" : indicatorPoint.getIpDescription())
                     .achievement(ek)
-                    .build());
+                    .build();
+            indicatorAchievementMap.putIfAbsent(indicatorDisplayKey(indicatorPoint), indicatorAchievement);
 
             CourseIndicatorAchievement existing = ciaMapper.selectOne(
                     new LambdaQueryWrapper<CourseIndicatorAchievement>()
@@ -627,6 +631,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 ciaMapper.insert(entity);
             }
         }
+        List<CourseCalcResponse.IndicatorAchievement> indicatorAchievements = indicatorAchievementMap.values().stream()
+                .sorted((left, right) -> compareIndicatorCode(left.getIpCode(), right.getIpCode()))
+                .toList();
 
         teachingClass.setCalcStatus("locked");
         teachingClassMapper.updateById(teachingClass);
@@ -681,8 +688,19 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 : indicatorPointMapper.selectBatchIds(indicatorIds).stream()
                 .collect(Collectors.toMap(IndicatorPoint::getIpId, item -> item));
 
-        List<CourseObjectiveDashboardResponse.IndicatorAchievement> indicatorAchievements = courseIndicatorAchievements
+        Map<String, CourseIndicatorAchievement> latestIndicatorAchievementMap = courseIndicatorAchievements.stream()
+                .filter(item -> item.getIpId() != null)
+                .collect(Collectors.toMap(
+                        item -> indicatorDisplayKey(indicatorPointMap.get(item.getIpId())),
+                        item -> item,
+                        (left, right) -> compareNullableLong(left.getCiaId(), right.getCiaId()) >= 0 ? left : right,
+                        LinkedHashMap::new));
+
+        List<CourseObjectiveDashboardResponse.IndicatorAchievement> indicatorAchievements = latestIndicatorAchievementMap.values()
                 .stream()
+                .sorted((left, right) -> compareIndicatorCode(
+                        indicatorPointMap.get(left.getIpId()),
+                        indicatorPointMap.get(right.getIpId())))
                 .map(item -> {
                     IndicatorPoint indicatorPoint = indicatorPointMap.get(item.getIpId());
                     return CourseObjectiveDashboardResponse.IndicatorAchievement.builder()
@@ -1002,12 +1020,14 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         .orderByAsc(AssessmentPoint::getApId));
     }
 
-    private List<ObjectiveIndicatorContribution> listInternalWeights(List<Long> coIds) {
+    private List<ObjectiveIndicatorContribution> listInternalWeights(List<Long> coIds, Long majorId, Integer gradeYear) {
         if (coIds.isEmpty()) {
             return List.of();
         }
-        return oicMapper.selectList(new LambdaQueryWrapper<ObjectiveIndicatorContribution>()
-                .in(ObjectiveIndicatorContribution::getCoId, coIds));
+        if (majorId == null || gradeYear == null) {
+            throw new BusinessException(400, "当前教学班缺少专业或年级信息，不能执行课程级计算");
+        }
+        return oicMapper.selectByObjectiveIdsAndContext(coIds, majorId, gradeYear);
     }
 
     private Map<Long, Map<Long, Float>> loadSavedScoreMap(Long classId) {
@@ -1146,9 +1166,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         }
     }
 
-    private void ensureInternalWeightsConfigured(List<CourseObjective> objectives) {
+    private void ensureInternalWeightsConfigured(List<CourseObjective> objectives, TeachingClass teachingClass) {
         List<Long> coIds = objectives.stream().map(CourseObjective::getCoId).toList();
-        if (listInternalWeights(coIds).isEmpty()) {
+        if (listInternalWeights(coIds, teachingClass.getMajorId(), teachingClass.getGradeYear()).isEmpty()) {
             throw new BusinessException(400, "当前课程未配置内部权重 w，请先完成内部权重配置");
         }
     }
@@ -1336,6 +1356,55 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
     private String normalize(String value) {
         return safeString(value).trim().toLowerCase(Locale.ROOT);
+    }
+
+    private int compareNullableLong(Long left, Long right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return -1;
+        }
+        if (right == null) {
+            return 1;
+        }
+        return Long.compare(left, right);
+    }
+
+    private int compareIndicatorCode(IndicatorPoint left, IndicatorPoint right) {
+        String leftCode = left == null ? "" : left.getIpCode();
+        String rightCode = right == null ? "" : right.getIpCode();
+        return compareIndicatorCode(leftCode, rightCode);
+    }
+
+    private int compareIndicatorCode(String leftCode, String rightCode) {
+        List<Integer> leftNumbers = extractNumbers(leftCode);
+        List<Integer> rightNumbers = extractNumbers(rightCode);
+        int maxSize = Math.max(leftNumbers.size(), rightNumbers.size());
+        for (int i = 0; i < maxSize; i++) {
+            int leftNumber = i < leftNumbers.size() ? leftNumbers.get(i) : -1;
+            int rightNumber = i < rightNumbers.size() ? rightNumbers.get(i) : -1;
+            if (leftNumber != rightNumber) {
+                return Integer.compare(leftNumber, rightNumber);
+            }
+        }
+        return safeString(leftCode).compareTo(safeString(rightCode));
+    }
+
+    private String indicatorDisplayKey(IndicatorPoint indicatorPoint) {
+        if (indicatorPoint == null) {
+            return "";
+        }
+        return normalize(indicatorPoint.getIpCode()) + "|" + normalize(indicatorPoint.getIpDescription());
+    }
+
+    private List<Integer> extractNumbers(String value) {
+        List<Integer> numbers = new ArrayList<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\d+").matcher(safeString(value));
+        while (matcher.find()) {
+            numbers.add(Integer.parseInt(matcher.group()));
+        }
+        return numbers;
     }
 }
 

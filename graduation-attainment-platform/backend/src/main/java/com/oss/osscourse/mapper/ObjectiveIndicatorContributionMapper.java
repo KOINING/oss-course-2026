@@ -14,8 +14,8 @@ import java.util.List;
 public interface ObjectiveIndicatorContributionMapper extends BaseMapper<ObjectiveIndicatorContribution> {
 
     /**
-     * 按课程 + 年级查询当前已配置的内部权重，JOIN 获取课程目标、指标点、毕业要求信息。
-     * 仅返回其 ipId 对应的毕业要求匹配目标年级的记录。
+     * 按课程 + 专业 + 年级查询当前已配置的内部权重，JOIN 获取课程目标、指标点、毕业要求信息。
+     * 仅返回其 ipId 对应的毕业要求匹配目标专业年级的记录。
      */
     @Select({
             "<script>",
@@ -49,6 +49,7 @@ public interface ObjectiveIndicatorContributionMapper extends BaseMapper<Objecti
             "   AND cm.major_id = gr.major_id",
             "   AND cm.grade_year = gr.grade_year",
             "  WHERE cis.course_id = #{courseId}",
+            "    AND gr.major_id = #{majorId}",
             "    AND gr.grade_year = #{gradeYear}",
             ") supported ON 1 = 1",
             "LEFT JOIN objective_indicator_contribution oic",
@@ -58,12 +59,13 @@ public interface ObjectiveIndicatorContributionMapper extends BaseMapper<Objecti
             "ORDER BY supported.grCode ASC, supported.ipCode ASC, co.objective_code ASC",
             "</script>"
     })
-    List<ObjectiveIndicatorContributionResponse> selectByCourseAndGradeYear(@Param("courseId") Long courseId,
-                                                                            @Param("gradeYear") Integer gradeYear);
+    List<ObjectiveIndicatorContributionResponse> selectByCourseAndProgram(@Param("courseId") Long courseId,
+                                                                          @Param("majorId") Long majorId,
+                                                                          @Param("gradeYear") Integer gradeYear);
 
     /**
-     * 删除属于指定课程 + 年级版本的所有内部权重记录。
-     * 仅删除 ipId 对应毕业要求年级匹配的记录，避免误删其他年级版本的配置。
+     * 删除属于指定课程 + 专业 + 年级版本的所有内部权重记录。
+     * 仅删除 ipId 对应毕业要求专业年级匹配的记录，避免误删其他专业或年级版本的配置。
      * 用于批量保存前的"先删后插"策略。
      */
     @Delete({
@@ -72,15 +74,17 @@ public interface ObjectiveIndicatorContributionMapper extends BaseMapper<Objecti
             "AND ip_id IN (",
             "  SELECT ip.ip_id FROM indicator_point ip",
             "  JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
-            "  WHERE gr.grade_year = #{gradeYear}",
+            "  WHERE gr.major_id = #{majorId}",
+            "    AND gr.grade_year = #{gradeYear}",
             ")"
     })
-    int deleteByCourseIdAndGradeYear(@Param("courseId") Long courseId,
-                                     @Param("gradeYear") Integer gradeYear);
+    int deleteByCourseIdAndProgram(@Param("courseId") Long courseId,
+                                   @Param("majorId") Long majorId,
+                                   @Param("gradeYear") Integer gradeYear);
 
     /**
-     * 查询该课程在指定年级版本下所有合法的指标点ID。
-     * 合法性：ip → gr → major_id（课程所属专业）且 grade_year = 目标年级。
+     * 查询该课程在指定专业年级版本下所有合法的指标点ID。
+     * 合法性：ip → gr → major_id + grade_year，且课程绑定该专业年级。
      */
     @Select({
             "SELECT ip.ip_id",
@@ -88,8 +92,29 @@ public interface ObjectiveIndicatorContributionMapper extends BaseMapper<Objecti
             "JOIN graduation_requirement gr ON ip.gr_id = gr.gr_id",
             "JOIN course_major cm ON cm.major_id = gr.major_id",
             "WHERE cm.course_id = #{courseId}",
+            "AND cm.grade_year = gr.grade_year",
+            "AND gr.major_id = #{majorId}",
             "AND gr.grade_year = #{gradeYear}"
     })
     List<Long> selectValidIpIds(@Param("courseId") Long courseId,
+                                @Param("majorId") Long majorId,
                                 @Param("gradeYear") Integer gradeYear);
+
+    @Select({
+            "<script>",
+            "SELECT oic.*",
+            "FROM objective_indicator_contribution oic",
+            "JOIN indicator_point ip ON ip.ip_id = oic.ip_id",
+            "JOIN graduation_requirement gr ON gr.gr_id = ip.gr_id",
+            "WHERE oic.co_id IN",
+            "<foreach collection='coIds' item='coId' open='(' separator=',' close=')'>",
+            "  #{coId}",
+            "</foreach>",
+            "AND gr.major_id = #{majorId}",
+            "AND gr.grade_year = #{gradeYear}",
+            "</script>"
+    })
+    List<ObjectiveIndicatorContribution> selectByObjectiveIdsAndContext(@Param("coIds") List<Long> coIds,
+                                                                        @Param("majorId") Long majorId,
+                                                                        @Param("gradeYear") Integer gradeYear);
 }

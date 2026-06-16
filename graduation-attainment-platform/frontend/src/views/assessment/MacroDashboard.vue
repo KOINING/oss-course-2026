@@ -39,6 +39,13 @@
     />
 
     <template v-else>
+      <div class="context-summary">
+        <span class="context-summary__label">当前筛选口径</span>
+        <span class="context-summary__item">{{ selectedMajor?.majorName || '-' }}</span>
+        <span class="context-summary__separator">/</span>
+        <span class="context-summary__item">{{ filters.gradeYear ? `${filters.gradeYear}级` : '-' }}</span>
+      </div>
+
       <div class="status-summary" v-if="!loading">
         <div class="summary-cards">
           <div class="summary-card summary-card--total">
@@ -373,6 +380,34 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.context-summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 10px 14px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.context-summary__label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.context-summary__item {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.context-summary__separator {
+  color: #cbd5e1;
 }
 
 .summary-cards {

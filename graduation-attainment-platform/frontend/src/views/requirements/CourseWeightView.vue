@@ -4,7 +4,7 @@
       <template #header>
         <div class="page-header">
           <div>
-            <h1>课程目标对指标点的内部权重</h1>
+            <h1>当前专业年级内部权重 w</h1>
             <p class="page-summary">
               根据《软件需求规格说明书》B-2，教师端只展示当前课程在当前专业、年级版本下负责支撑的指标点，
               并配置课程目标对这些指标点的内部贡献权重。
@@ -214,7 +214,12 @@ const supportSet = ref(new Set())
 const matrixData = ref({})
 let matrixSnapshot = {}
 
-const canQuery = computed(() => Boolean(filters.courseId && filters.teachingClassId && context.value?.gradeYear))
+const canQuery = computed(() => Boolean(
+  filters.courseId
+  && filters.teachingClassId
+  && context.value?.majorId
+  && context.value?.gradeYear,
+))
 const hasSnapshot = computed(() => Object.keys(matrixSnapshot).length > 0)
 const canSave = computed(() => canQuery.value && courseObjectives.value.length > 0 && indicators.value.length > 0)
 
@@ -370,6 +375,7 @@ async function loadMatrix() {
       listCourseObjectivesApi({ courseId: filters.courseId }),
       getCourseWeightApi({
         courseId: filters.courseId,
+        majorId: Number(context.value.majorId),
         gradeYear: Number(context.value.gradeYear),
       }),
     ])
@@ -435,6 +441,7 @@ async function handleSave() {
   try {
     await saveCourseWeightApi({
       courseId: filters.courseId,
+      majorId: Number(context.value.majorId),
       gradeYear: Number(context.value.gradeYear),
       contributions,
     })

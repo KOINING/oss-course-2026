@@ -272,7 +272,7 @@ public class CourseReportServiceImpl implements CourseReportService {
         CourseReportResponse report = getCourseReport(request);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("\u8bfe\u7a0b\u7ea7\u8bc4\u4ef7\u62a5\u8868");
+            Sheet sheet = workbook.createSheet("课程级评价报表");
             int lastColumn = 5;
 
             CellStyle titleStyle = createTitleStyle(workbook);
@@ -286,22 +286,22 @@ public class CourseReportServiceImpl implements CourseReportService {
             CellStyle emphasisStyle = createEmphasisStyle(workbook);
 
             int rowIndex = 0;
-            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u8bfe\u7a0b\u7ea7\u8bc4\u4ef7\u62a5\u8868", titleStyle, lastColumn);
-            rowIndex = writeInfoRow(sheet, rowIndex, "\u8bfe\u7a0b\u4ee3\u7801", report.getCourseCode(), "\u8bfe\u7a0b\u540d\u79f0", report.getCourseName(), infoLabelStyle, infoValueStyle, lastColumn);
-            rowIndex = writeInfoRow(sheet, rowIndex, "\u5e74\u7ea7", report.getGradeYear(), "\u5b66\u5206", report.getCredit(), infoLabelStyle, infoValueStyle, lastColumn);
-            rowIndex = writeInfoRow(sheet, rowIndex, "\u4e13\u4e1a", report.getMajorName(), "\u6d89\u53ca\u6559\u5b66\u73ed", safeSize(report.getTeachingClasses()), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "课程级评价报表", titleStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "课程代码", report.getCourseCode(), "课程名称", report.getCourseName(), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "年级", report.getGradeYear(), "学分", report.getCredit(), infoLabelStyle, infoValueStyle, lastColumn);
+            rowIndex = writeInfoRow(sheet, rowIndex, "专业", report.getMajorName(), "涉及教学班", safeSize(report.getTeachingClasses()), infoLabelStyle, infoValueStyle, lastColumn);
             rowIndex++;
 
-            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u4e00\u3001\u5404\u6559\u5b66\u73ed\u660e\u7ec6", sectionStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "一、各教学班明细", sectionStyle, lastColumn);
             for (TeachingClassReport teachingClass : safeList(report.getTeachingClasses())) {
-                rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u6559\u5b66\u73ed\uff1a" + nvl(teachingClass.getClassName()) + "    \u5b66\u751f\u6570\uff1a" + nvl(teachingClass.getStudentCount()), subSectionStyle, lastColumn);
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "教学班：" + nvl(teachingClass.getClassName()) + "    学生数：" + nvl(teachingClass.getStudentCount()), subSectionStyle, lastColumn);
 
-                rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. \u8003\u6838\u70b9\u5e73\u5747\u5206", subSectionStyle, lastColumn);
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. 考核点平均分", subSectionStyle, lastColumn);
                 Row apHeaderRow = sheet.createRow(rowIndex++);
-                writeCell(apHeaderRow.createCell(0), "\u8003\u6838\u70b9", headerStyle);
-                writeCell(apHeaderRow.createCell(1), "\u6ee1\u5206", headerStyle);
-                writeCell(apHeaderRow.createCell(2), "\u5e73\u5747\u5206", headerStyle);
-                writeCell(apHeaderRow.createCell(3), "\u5f97\u5206\u7387", headerStyle);
+                writeCell(apHeaderRow.createCell(0), "考核点", headerStyle);
+                writeCell(apHeaderRow.createCell(1), "满分", headerStyle);
+                writeCell(apHeaderRow.createCell(2), "平均分", headerStyle);
+                writeCell(apHeaderRow.createCell(3), "得分率", headerStyle);
                 mergeCells(sheet, apHeaderRow.getRowNum(), apHeaderRow.getRowNum(), 3, 5, headerStyle);
                 for (AssessmentPointAverage ap : safeList(teachingClass.getAssessmentPointAverages())) {
                     Row apRow = sheet.createRow(rowIndex++);
@@ -312,15 +312,15 @@ public class CourseReportServiceImpl implements CourseReportService {
                     mergeCells(sheet, apRow.getRowNum(), apRow.getRowNum(), 3, 5, centeredDataStyle);
                 }
                 if (safeList(teachingClass.getAssessmentPointAverages()).isEmpty()) {
-                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8003\u6838\u70b9\u5e73\u5747\u5206\u6570\u636e", dataStyle, lastColumn);
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "暂无考核点平均分数据", dataStyle, lastColumn);
                 }
                 rowIndex++;
 
-                rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. \u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6", subSectionStyle, lastColumn);
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. 课程目标达成度", subSectionStyle, lastColumn);
                 Row objectiveHeaderRow = sheet.createRow(rowIndex++);
-                writeCell(objectiveHeaderRow.createCell(0), "\u76ee\u6807\u7f16\u53f7", headerStyle);
-                writeCell(objectiveHeaderRow.createCell(1), "\u76ee\u6807\u540d\u79f0", headerStyle);
-                writeCell(objectiveHeaderRow.createCell(2), "\u8fbe\u6210\u5ea6", headerStyle);
+                writeCell(objectiveHeaderRow.createCell(0), "目标编号", headerStyle);
+                writeCell(objectiveHeaderRow.createCell(1), "目标名称", headerStyle);
+                writeCell(objectiveHeaderRow.createCell(2), "达成度", headerStyle);
                 mergeCells(sheet, objectiveHeaderRow.getRowNum(), objectiveHeaderRow.getRowNum(), 2, 5, headerStyle);
                 for (ObjectiveAchievementDetail objective : safeList(teachingClass.getObjectiveAchievementDetails())) {
                     Row objectiveRow = sheet.createRow(rowIndex++);
@@ -330,15 +330,15 @@ public class CourseReportServiceImpl implements CourseReportService {
                     mergeCells(sheet, objectiveRow.getRowNum(), objectiveRow.getRowNum(), 2, 5, centeredDataStyle);
                 }
                 if (safeList(teachingClass.getObjectiveAchievementDetails()).isEmpty()) {
-                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6\u6570\u636e", dataStyle, lastColumn);
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "暂无课程目标达成度数据", dataStyle, lastColumn);
                 }
                 rowIndex++;
 
-                rowIndex = writeMergedTitleRow(sheet, rowIndex, "3. \u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6", subSectionStyle, lastColumn);
+                rowIndex = writeMergedTitleRow(sheet, rowIndex, "3. 课程级指标点达成度", subSectionStyle, lastColumn);
                 Row indicatorHeaderRow = sheet.createRow(rowIndex++);
-                writeCell(indicatorHeaderRow.createCell(0), "\u6307\u6807\u70b9\u7f16\u53f7", headerStyle);
-                writeCell(indicatorHeaderRow.createCell(1), "\u6307\u6807\u70b9\u63cf\u8ff0", headerStyle);
-                writeCell(indicatorHeaderRow.createCell(2), "\u8fbe\u6210\u5ea6", headerStyle);
+                writeCell(indicatorHeaderRow.createCell(0), "指标点编号", headerStyle);
+                writeCell(indicatorHeaderRow.createCell(1), "指标点描述", headerStyle);
+                writeCell(indicatorHeaderRow.createCell(2), "达成度", headerStyle);
                 mergeCells(sheet, indicatorHeaderRow.getRowNum(), indicatorHeaderRow.getRowNum(), 2, 5, headerStyle);
                 for (IndicatorAchievementDetail indicator : safeList(teachingClass.getIndicatorAchievementDetails())) {
                     Row indicatorRow = sheet.createRow(rowIndex++);
@@ -348,17 +348,17 @@ public class CourseReportServiceImpl implements CourseReportService {
                     mergeCells(sheet, indicatorRow.getRowNum(), indicatorRow.getRowNum(), 2, 5, centeredDataStyle);
                 }
                 if (safeList(teachingClass.getIndicatorAchievementDetails()).isEmpty()) {
-                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6\u6570\u636e", dataStyle, lastColumn);
+                    rowIndex = writeEmptyHintRow(sheet, rowIndex, "暂无课程级指标点达成度数据", dataStyle, lastColumn);
                 }
                 rowIndex++;
             }
 
-            rowIndex = writeMergedTitleRow(sheet, rowIndex, "\u4e8c\u3001\u6c47\u603b\u7ed3\u679c", sectionStyle, lastColumn);
-            rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. \u8bfe\u7a0b\u76ee\u6807\u8fbe\u6210\u5ea6\u6c47\u603b", subSectionStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "二、汇总结果", sectionStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "1. 课程目标达成度汇总", subSectionStyle, lastColumn);
             Row objectiveSummaryHeaderRow = sheet.createRow(rowIndex++);
-            writeCell(objectiveSummaryHeaderRow.createCell(0), "\u76ee\u6807\u7f16\u53f7", headerStyle);
-            writeCell(objectiveSummaryHeaderRow.createCell(1), "\u76ee\u6807\u540d\u79f0", headerStyle);
-            writeCell(objectiveSummaryHeaderRow.createCell(2), "\u5e73\u5747\u8fbe\u6210\u5ea6", headerStyle);
+            writeCell(objectiveSummaryHeaderRow.createCell(0), "目标编号", headerStyle);
+            writeCell(objectiveSummaryHeaderRow.createCell(1), "目标名称", headerStyle);
+            writeCell(objectiveSummaryHeaderRow.createCell(2), "平均达成度", headerStyle);
             mergeCells(sheet, objectiveSummaryHeaderRow.getRowNum(), objectiveSummaryHeaderRow.getRowNum(), 2, 5, headerStyle);
             for (ObjectiveAchievementSummary objective : safeList(report.getObjectiveAchievements())) {
                 Row objectiveRow = sheet.createRow(rowIndex++);
@@ -368,15 +368,15 @@ public class CourseReportServiceImpl implements CourseReportService {
                 mergeCells(sheet, objectiveRow.getRowNum(), objectiveRow.getRowNum(), 2, 5, emphasisStyle);
             }
             if (safeList(report.getObjectiveAchievements()).isEmpty()) {
-                rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u76ee\u6807\u6c47\u603b\u6570\u636e", dataStyle, lastColumn);
+                rowIndex = writeEmptyHintRow(sheet, rowIndex, "暂无课程目标汇总数据", dataStyle, lastColumn);
             }
             rowIndex++;
 
-            rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. \u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u8fbe\u6210\u5ea6\u6c47\u603b", subSectionStyle, lastColumn);
+            rowIndex = writeMergedTitleRow(sheet, rowIndex, "2. 课程级指标点达成度汇总", subSectionStyle, lastColumn);
             Row indicatorSummaryHeaderRow = sheet.createRow(rowIndex++);
-            writeCell(indicatorSummaryHeaderRow.createCell(0), "\u6307\u6807\u70b9\u7f16\u53f7", headerStyle);
-            writeCell(indicatorSummaryHeaderRow.createCell(1), "\u6307\u6807\u70b9\u63cf\u8ff0", headerStyle);
-            writeCell(indicatorSummaryHeaderRow.createCell(2), "\u5e73\u5747\u8fbe\u6210\u5ea6", headerStyle);
+            writeCell(indicatorSummaryHeaderRow.createCell(0), "指标点编号", headerStyle);
+            writeCell(indicatorSummaryHeaderRow.createCell(1), "指标点描述", headerStyle);
+            writeCell(indicatorSummaryHeaderRow.createCell(2), "平均达成度", headerStyle);
             mergeCells(sheet, indicatorSummaryHeaderRow.getRowNum(), indicatorSummaryHeaderRow.getRowNum(), 2, 5, headerStyle);
             for (IndicatorAchievementSummary indicator : safeList(report.getIndicatorAchievements())) {
                 Row indicatorRow = sheet.createRow(rowIndex++);
@@ -386,14 +386,14 @@ public class CourseReportServiceImpl implements CourseReportService {
                 mergeCells(sheet, indicatorRow.getRowNum(), indicatorRow.getRowNum(), 2, 5, emphasisStyle);
             }
             if (safeList(report.getIndicatorAchievements()).isEmpty()) {
-                rowIndex = writeEmptyHintRow(sheet, rowIndex, "\u6682\u65e0\u8bfe\u7a0b\u7ea7\u6307\u6807\u70b9\u6c47\u603b\u6570\u636e", dataStyle, lastColumn);
+                rowIndex = writeEmptyHintRow(sheet, rowIndex, "暂无课程级指标点汇总数据", dataStyle, lastColumn);
             }
 
             applySheetLayout(sheet);
             workbook.write(outputStream);
             return outputStream.toByteArray();
         } catch (IOException e) {
-            throw new BusinessException(500, "\u751f\u6210Excel\u62a5\u8868\u5931\u8d25\uff1a" + e.getMessage());
+            throw new BusinessException(500, "生成Excel报表失败：" + e.getMessage());
         }
     }
 
@@ -402,20 +402,16 @@ public class CourseReportServiceImpl implements CourseReportService {
         CourseReportResponse report = getCourseReport(request);
 
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
-            // 加载中文字体（使用TTF格式的Noto Sans SC字体）
             java.io.InputStream fontStream = getClass().getClassLoader().getResourceAsStream("fonts/NotoSansSC-Regular.ttf");
             if (fontStream == null) {
                 throw new BusinessException(500, "未找到中文字体文件");
             }
 
-            // 使用PDType0Font.load加载TTF字体
             org.apache.pdfbox.pdmodel.font.PDFont font = org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, fontStream, false);
             fontStream.close();
 
-            // 粗体使用同一字体（Noto Sans SC是可变字体，这里简化处理）
             org.apache.pdfbox.pdmodel.font.PDFont boldFont = font;
 
-            // 创建第一页
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(
                     org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
             document.addPage(page);

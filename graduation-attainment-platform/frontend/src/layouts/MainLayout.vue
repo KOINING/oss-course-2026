@@ -3,42 +3,44 @@
     <el-aside width="240px" class="layout-aside">
       <div class="logo">{{ APP_TITLE }}</div>
 
-      <el-menu
-        :default-active="activeMenu"
-        router
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
-      >
-        <template v-for="section in visibleSections" :key="section.key">
-          <el-menu-item
-            v-if="isFlatSection(section)"
-            :index="section.children[0].path"
-          >
-            <el-icon>
-              <component :is="resolveIcon(section.icon)" />
-            </el-icon>
-            <span>{{ section.children[0].label }}</span>
-          </el-menu-item>
-
-          <el-sub-menu v-else :index="section.key">
-            <template #title>
+      <el-scrollbar class="layout-menu-scrollbar">
+        <el-menu
+          :default-active="activeMenu"
+          router
+          background-color="#304156"
+          text-color="#bfcbd9"
+          active-text-color="#409EFF"
+        >
+          <template v-for="section in visibleSections" :key="section.key">
+            <el-menu-item
+              v-if="isFlatSection(section)"
+              :index="section.children[0].path"
+            >
               <el-icon>
                 <component :is="resolveIcon(section.icon)" />
               </el-icon>
-              <span>{{ section.label }}</span>
-            </template>
-
-            <el-menu-item
-              v-for="item in section.children"
-              :key="item.key"
-              :index="item.path"
-            >
-              {{ item.label }}
+              <span>{{ section.children[0].label }}</span>
             </el-menu-item>
-          </el-sub-menu>
-        </template>
-      </el-menu>
+
+            <el-sub-menu v-else :index="section.key">
+              <template #title>
+                <el-icon>
+                  <component :is="resolveIcon(section.icon)" />
+                </el-icon>
+                <span>{{ section.label }}</span>
+              </template>
+
+              <el-menu-item
+                v-for="item in section.children"
+                :key="item.key"
+                :index="item.path"
+              >
+                {{ item.label }}
+              </el-menu-item>
+            </el-sub-menu>
+          </template>
+        </el-menu>
+      </el-scrollbar>
     </el-aside>
 
     <el-container>
@@ -60,6 +62,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import {
   DataAnalysis,
   Document,
@@ -102,7 +105,12 @@ function isFlatSection(section) {
   return section.key === 'home' || section.children.length === 1
 }
 
-function handleLogout() {
+async function handleLogout() {
+  await ElMessageBox.confirm('确定要退出当前账号吗？', '退出登录确认', {
+    confirmButtonText: '退出登录',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
   userStore.logout()
   router.push({ name: ROUTE_NAMES.LOGIN })
 }
@@ -115,6 +123,36 @@ function handleLogout() {
 
 .layout-aside {
   background-color: #304156;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.layout-aside :deep(.el-menu) {
+  width: 100%;
+  border-right: 0;
+}
+
+.layout-menu-scrollbar {
+  flex: 1;
+  min-height: 0;
+}
+
+.layout-menu-scrollbar :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+
+.layout-menu-scrollbar :deep(.el-scrollbar__bar.is-vertical) {
+  right: 3px;
+  width: 6px;
+}
+
+.layout-menu-scrollbar :deep(.el-scrollbar__thumb) {
+  background-color: rgba(144, 147, 153, 0.34);
+}
+
+.layout-menu-scrollbar :deep(.el-scrollbar__thumb:hover) {
+  background-color: rgba(144, 147, 153, 0.58);
 }
 
 .logo {
