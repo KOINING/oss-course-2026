@@ -4,6 +4,10 @@ export function listCollegesApi(params = {}) {
   return request.get('/colleges', { params })
 }
 
+export function listCollegesByPageApi(data = {}) {
+  return request.post('/admin/listCollegesByPage', data)
+}
+
 export function addCollegeApi(data) {
   return request.post('/colleges', data)
 }
