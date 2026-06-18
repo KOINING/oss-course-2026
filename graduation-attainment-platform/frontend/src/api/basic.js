@@ -28,7 +28,7 @@ export function deleteMajorApi(majorId) {
 
 // ==================== Course ====================
 export function listCoursesApi(data = {}) {
-    return request.post('/admin/listCourses', data)
+    return request.post('/admin/listCoursesByPage', data)
 }
 
 export function saveCourseApi(data) {

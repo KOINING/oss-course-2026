@@ -40,12 +40,12 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadUsers">查询</el-button>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="tableLoading" :data="users" border>
+      <el-table v-loading="tableLoading" :data="users" border style="margin-bottom: 16px">
         <el-table-column prop="username" label="用户名" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="140" />
         <el-table-column label="状态" width="100">
@@ -102,6 +102,18 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.pageNum"
+          v-model:page-size="pagination.pageSize"
+          :page-sizes="[5, 10, 20, 50]"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </el-card>
 
     <el-dialog
@@ -178,7 +190,7 @@ import { useRouter } from 'vue-router'
 import {
   addUserApi,
   listAssignableRolesApi,
-  listUsersApi,
+  listUsersByPageApi,
   resetUserPasswordApi,
   updateUserApi,
   updateUserStatusApi,
@@ -198,6 +210,12 @@ const dialogMode = ref('create')
 const users = ref([])
 const roleOptions = ref([])
 const formRef = ref(null)
+
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0,
+})
 
 const filters = reactive({
   username: '',
@@ -272,16 +290,36 @@ async function loadRoleOptions() {
 async function loadUsers() {
   tableLoading.value = true
   try {
-    users.value = await listUsersApi(normalizeFilters())
+    const result = await listUsersByPageApi({
+      ...normalizeFilters(),
+      pageNum: pagination.pageNum,
+      pageSize: pagination.pageSize,
+    })
+    users.value = result.records
+    pagination.total = result.total
   } finally {
     tableLoading.value = false
   }
+}
+
+function handleSearch() {
+  pagination.pageNum = 1
+  loadUsers()
 }
 
 function resetFilters() {
   filters.username = ''
   filters.realName = ''
   filters.status = null
+  handleSearch()
+}
+
+function handleSizeChange() {
+  pagination.pageNum = 1
+  loadUsers()
+}
+
+function handleCurrentChange() {
   loadUsers()
 }
 
@@ -413,5 +451,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

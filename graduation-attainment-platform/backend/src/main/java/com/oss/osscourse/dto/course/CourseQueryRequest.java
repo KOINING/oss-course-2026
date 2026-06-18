@@ -21,4 +21,10 @@ public class CourseQueryRequest {
 
     @Schema(description = "状态：1=启用，0=停用")
     private Integer status;
+
+    @Schema(description = "当前页码", defaultValue = "1")
+    private Integer pageNum = 1;
+
+    @Schema(description = "每页条数，不传则不分页")
+    private Integer pageSize;
 }
