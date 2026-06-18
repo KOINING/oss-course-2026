@@ -2,6 +2,7 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.course.CourseCreateRequest;
 import com.oss.osscourse.dto.course.CourseImportResult;
 import com.oss.osscourse.dto.course.CourseMajorGradeYearBindingRequest;
@@ -56,7 +57,10 @@ public class CourseServiceImpl implements CourseService {
     private final StudentMapper studentMapper;
 
     @Override
-    public List<CourseResponse> listCourses(CourseQueryRequest request) {
+    public PageResult<CourseResponse> listCoursesByPage(CourseQueryRequest request) {
+        int pageNum = request != null && request.getPageNum() != null ? request.getPageNum() : 1;
+        Integer pageSize = request != null ? request.getPageSize() : null;
+
         LambdaQueryWrapper<Course> wrapper = new LambdaQueryWrapper<>();
 
         if (request != null) {
@@ -72,21 +76,31 @@ public class CourseServiceImpl implements CourseService {
             if (request.getMajorId() != null) {
                 List<Long> courseIds = selectCourseIdsByPlanFilters(request.getMajorId(), request.getGradeYear());
                 if (courseIds.isEmpty()) {
-                    return List.of();
+                    return PageResult.of(List.of(), 0, pageNum, pageSize != null ? pageSize : 0);
                 }
                 wrapper.in(Course::getCourseId, courseIds);
             } else if (request.getGradeYear() != null) {
                 List<Long> courseIds = selectCourseIdsByPlanFilters(null, request.getGradeYear());
                 if (courseIds.isEmpty()) {
-                    return List.of();
+                    return PageResult.of(List.of(), 0, pageNum, pageSize != null ? pageSize : 0);
                 }
                 wrapper.in(Course::getCourseId, courseIds);
             }
         }
 
         wrapper.orderByAsc(Course::getCourseCode);
+
+        long total = courseMapper.selectCount(wrapper);
+
+        if (pageSize != null) {
+            int offset = (pageNum - 1) * pageSize;
+            wrapper.last("LIMIT " + offset + "," + pageSize);
+        }
+
         List<Course> courses = courseMapper.selectList(wrapper);
-        return buildCourseResponses(courses);
+        List<CourseResponse> records = buildCourseResponses(courses);
+        int actualPageSize = pageSize != null ? pageSize : courses.size();
+        return PageResult.of(records, total, pageNum, actualPageSize);
     }
 
     @Override

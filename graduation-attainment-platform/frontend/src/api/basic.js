@@ -10,6 +10,10 @@ export function listMajorsApi(data = {}) {
     return request.post('/admin/listMajors', data)
 }
 
+export function listMajorsByPageApi(data = {}) {
+    return request.post('/admin/listMajorsByPage', data)
+}
+
 export function listMajorsForSelectApi() {
     return request.post('/admin/listMajorsForSelect')
 }
@@ -28,7 +32,7 @@ export function deleteMajorApi(majorId) {
 
 // ==================== Course ====================
 export function listCoursesApi(data = {}) {
-    return request.post('/admin/listCourses', data)
+    return request.post('/admin/listCoursesByPage', data)
 }
 
 export function saveCourseApi(data) {

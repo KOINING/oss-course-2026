@@ -1,7 +1,7 @@
 import request from './request'
 
-export function listUsersApi(data = {}) {
-  return request.post('/admin/listUsers', data)
+export function listUsersByPageApi(data = {}) {
+  return request.post('/admin/listUsersByPage', data)
 }
 
 export function listAssignableRolesApi() {

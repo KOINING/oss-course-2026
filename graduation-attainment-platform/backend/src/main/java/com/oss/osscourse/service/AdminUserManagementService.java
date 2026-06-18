@@ -1,13 +1,14 @@
 package com.oss.osscourse.service;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.admin.*;
 
 import java.util.List;
 
 public interface AdminUserManagementService {
-    List<AdminManagedUserResponse> listUsers(AdminUserQueryRequest request,
-                                            List<String> currentRoles,
-                                            List<String> currentPermissions);
+    PageResult<AdminManagedUserResponse> listUsersByPage(AdminUserQueryRequest request,
+                                                          List<String> currentRoles,
+                                                          List<String> currentPermissions);
 
     List<AdminAssignableRoleResponse> listAssignableRoles(List<String> currentRoles,
                                                           List<String> currentPermissions);
