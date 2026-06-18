@@ -1,7 +1,12 @@
 import request from './request'
 
-export function listCoursesApi(data = {}) {
-  return request.post('/admin/listCourses', data)
+export function listCoursesByPageApi(data = {}) {
+  return request.post('/admin/listCoursesByPage', data)
+}
+
+export async function listCoursesApi(data = {}) {
+  const pageResult = await request.post('/admin/listCoursesByPage', data)
+  return pageResult.records
 }
 
 export function listCourseGradeYearsApi() {
