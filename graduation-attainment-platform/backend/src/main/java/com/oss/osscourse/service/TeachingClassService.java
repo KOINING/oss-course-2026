@@ -1,5 +1,6 @@
 package com.oss.osscourse.service;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.teachingclass.*;
 
 import java.util.List;
@@ -37,6 +38,13 @@ public interface TeachingClassService {
      * @param request 状态更新请求
      */
     void updateTeachingClassStatus(TeachingClassStatusRequest request);
+
+    /**
+     * 分页查询教学班列表
+     * @param request 查询条件（含分页参数）
+     * @return 分页结果
+     */
+    PageResult<TeachingClassResponse> listTeachingClassesByPage(TeachingClassQueryRequest request);
 
     /**
      * 删除教学班

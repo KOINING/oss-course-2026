@@ -4,6 +4,10 @@ export function listTeachingClassesApi(data = {}) {
   return request.post('/admin/listTeachingClasses', data)
 }
 
+export function listTeachingClassesByPageApi(data = {}) {
+  return request.post('/admin/listTeachingClassesByPage', data)
+}
+
 export function listTeachingClassesForSelectApi() {
   return request.post('/admin/listTeachingClassesForSelect')
 }

@@ -1,5 +1,6 @@
 package com.oss.osscourse.service;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.student.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -51,6 +52,13 @@ public interface StudentService {
      * @param request 状态更新请求
      */
     void updateStudentStatus(StudentStatusRequest request);
+
+    /**
+     * 分页查询学生列表
+     * @param request 查询条件（含分页参数）
+     * @return 分页结果
+     */
+    PageResult<StudentResponse> listStudentsByPage(StudentQueryRequest request);
 
     /**
      * 删除学生
