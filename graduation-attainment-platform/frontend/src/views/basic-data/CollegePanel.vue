@@ -6,7 +6,7 @@ import FormDialog from '@/components/common/FormDialog.vue'
 import {
   addCollegeApi,
   deleteCollegeApi,
-  listCollegesApi,
+  listCollegesByPageApi,
   updateCollegeApi,
 } from '@/api/college'
 
@@ -16,6 +16,10 @@ const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const rows = ref([])
 const formRef = ref(null)
+
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 const defaultFilters = () => ({
   collegeCode: '',
@@ -50,15 +54,36 @@ async function loadRows() {
     const payload = {
       collegeCode: filters.collegeCode || undefined,
       collegeName: filters.collegeName || undefined,
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
     }
-    rows.value = (await listCollegesApi(payload)) || []
+    const res = await listCollegesByPageApi(payload)
+    rows.value = res.records || []
+    total.value = res.total || 0
   } finally {
     tableLoading.value = false
   }
 }
 
+function onSearch() {
+  pageNum.value = 1
+  loadRows()
+}
+
 function resetFilters() {
   Object.assign(filters, defaultFilters())
+  pageNum.value = 1
+  loadRows()
+}
+
+function onPageChange(page) {
+  pageNum.value = page
+  loadRows()
+}
+
+function onSizeChange(size) {
+  pageSize.value = size
+  pageNum.value = 1
   loadRows()
 }
 
@@ -100,6 +125,7 @@ async function handleSubmit() {
     if (dialogMode.value === 'create') {
       await addCollegeApi(payload)
       ElMessage.success('学院创建成功')
+      pageNum.value = 1
     } else {
       await updateCollegeApi(payload)
       ElMessage.success('学院更新成功')
@@ -114,6 +140,9 @@ async function handleSubmit() {
 async function handleDelete(row) {
   await deleteCollegeApi({ collegeId: row.collegeId })
   ElMessage.success('学院删除成功')
+  if (rows.value.length === 1 && pageNum.value > 1) {
+    pageNum.value -= 1
+  }
   await loadRows()
 }
 
@@ -127,7 +156,7 @@ onMounted(loadRows)
         v-model="filters"
         :fields="queryFields"
         :loading="tableLoading"
-        @search="loadRows"
+        @search="onSearch"
         @reset="resetFilters"
       >
         <template #actions>
@@ -155,6 +184,18 @@ onMounted(loadRows)
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pagination-bar">
+      <el-pagination
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
+        :page-sizes="[5, 10, 20, 50]"
+        :total="total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="onPageChange"
+        @size-change="onSizeChange"
+      />
+    </div>
 
     <FormDialog
       v-model="dialogVisible"
@@ -189,5 +230,11 @@ onMounted(loadRows)
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
 }
 </style>

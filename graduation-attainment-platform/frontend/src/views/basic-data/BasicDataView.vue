@@ -8,7 +8,7 @@ import CollegePanel from './CollegePanel.vue'
 import {
   deleteMajorApi,
   listCollegesApi,
-  listMajorsApi,
+  listMajorsByPageApi,
   saveMajorApi,
   updateMajorStatusApi,
 } from '@/api/basic'
@@ -23,6 +23,10 @@ const majorDialogMode = ref('create')
 const majorSubmitLoading = ref(false)
 const majorFormRef = ref(null)
 const majors = ref([])
+
+const majorPageNum = ref(1)
+const majorPageSize = ref(10)
+const majorTotal = ref(0)
 
 const majorFilters = reactive({
   majorCode: '',
@@ -46,12 +50,14 @@ const majorFormRules = {
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
-function normalizeMajorFilters() {
+function buildMajorQuery() {
   return {
     majorCode: majorFilters.majorCode || undefined,
     majorName: majorFilters.majorName || undefined,
     collegeId: majorFilters.collegeId || undefined,
     status: majorFilters.status === null ? undefined : majorFilters.status,
+    pageNum: majorPageNum.value,
+    pageSize: majorPageSize.value,
   }
 }
 
@@ -62,10 +68,17 @@ async function loadSharedOptions() {
 async function loadMajors() {
   majorLoading.value = true
   try {
-    majors.value = await listMajorsApi(normalizeMajorFilters())
+    const res = await listMajorsByPageApi(buildMajorQuery())
+    majors.value = res.records || []
+    majorTotal.value = res.total || 0
   } finally {
     majorLoading.value = false
   }
+}
+
+function onMajorQuery() {
+  majorPageNum.value = 1
+  loadMajors()
 }
 
 function resetMajorFilters() {
@@ -73,6 +86,18 @@ function resetMajorFilters() {
   majorFilters.majorName = ''
   majorFilters.collegeId = null
   majorFilters.status = null
+  majorPageNum.value = 1
+  loadMajors()
+}
+
+function onMajorPageChange(page) {
+  majorPageNum.value = page
+  loadMajors()
+}
+
+function onMajorSizeChange(size) {
+  majorPageSize.value = size
+  majorPageNum.value = 1
   loadMajors()
 }
 
@@ -107,6 +132,9 @@ async function handleMajorSubmit() {
     await saveMajorApi({ ...majorForm })
     ElMessage.success(majorDialogMode.value === 'create' ? '专业创建成功' : '专业更新成功')
     majorDialogVisible.value = false
+    if (majorDialogMode.value === 'create') {
+      majorPageNum.value = 1
+    }
     await Promise.all([loadMajors(), loadSharedOptions()])
   } finally {
     majorSubmitLoading.value = false
@@ -123,6 +151,9 @@ async function handleToggleMajorStatus(row) {
 async function handleDeleteMajor(row) {
   await deleteMajorApi(row.majorId)
   ElMessage.success('专业删除成功')
+  if (majors.value.length === 1 && majorPageNum.value > 1) {
+    majorPageNum.value -= 1
+  }
   await Promise.all([loadMajors(), loadSharedOptions()])
 }
 
@@ -179,7 +210,7 @@ onMounted(async () => {
                 </el-select>
               </el-form-item>
               <el-form-item>
-                <el-button type="primary" @click="loadMajors">查询</el-button>
+                <el-button type="primary" @click="onMajorQuery">查询</el-button>
                 <el-button @click="resetMajorFilters">重置</el-button>
               </el-form-item>
             </el-form>
@@ -218,6 +249,18 @@ onMounted(async () => {
                 </template>
               </el-table-column>
             </el-table>
+
+            <div class="pagination-bar">
+              <el-pagination
+                v-model:current-page="majorPageNum"
+                v-model:page-size="majorPageSize"
+                :page-sizes="[5, 10, 20, 50]"
+                :total="majorTotal"
+                layout="total, sizes, prev, pager, next, jumper"
+                @current-change="onMajorPageChange"
+                @size-change="onMajorSizeChange"
+              />
+            </div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -310,5 +353,11 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
 }
 </style>
