@@ -1,6 +1,7 @@
 package com.oss.osscourse.controller;
 
 import com.oss.osscourse.common.AcademicAffairsAccessGuard;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.course.CourseDeleteRequest;
 import com.oss.osscourse.dto.course.CourseGetRequest;
@@ -34,14 +35,14 @@ public class CourseController {
     private final CourseService courseService;
     private final AcademicAffairsAccessGuard accessGuard;
 
-    @PostMapping("/listCourses")
+    @PostMapping("/listCoursesByPage")
     @Operation(summary = "查询课程列表", description = "根据课程编码、课程名称、所属专业、状态查询课程列表")
-    public Result<List<CourseResponse>> listCourses(
+    public Result<PageResult<CourseResponse>> listCoursesByPage(
             @Parameter(description = "查询条件")
             @RequestBody(required = false) CourseQueryRequest request,
             @RequestAttribute(value = "roles", required = false) List<String> roles) {
         accessGuard.assertAcademicAffairs(roles);
-        return Result.ok(courseService.listCourses(request));
+        return Result.ok(courseService.listCoursesByPage(request));
     }
 
     @PostMapping("/listGradeYears")

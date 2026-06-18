@@ -1,5 +1,6 @@
 package com.oss.osscourse.controller;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.admin.*;
 import com.oss.osscourse.service.AdminUserManagementService;
@@ -18,12 +19,12 @@ public class AdminController {
         this.adminUserManagementService = adminUserManagementService;
     }
 
-    @PostMapping("/listUsers")
-    public Result<List<AdminManagedUserResponse>> listUsers(
+    @PostMapping("/listUsersByPage")
+    public Result<PageResult<AdminManagedUserResponse>> listUsersByPage(
             @RequestBody(required = false) AdminUserQueryRequest request,
             @RequestAttribute("roles") List<String> roles,
             @RequestAttribute("permissions") List<String> permissions) {
-        return Result.ok(adminUserManagementService.listUsers(request, roles, permissions));
+        return Result.ok(adminUserManagementService.listUsersByPage(request, roles, permissions));
     }
 
     @PostMapping("/listAssignableRoles")
