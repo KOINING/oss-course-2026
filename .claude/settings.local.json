@@ -23,7 +23,11 @@
       "Bash(D:\\\\mysql\\\\bin\\\\mysql *)",
       "Bash(./mvnw compile *)",
       "Bash(./mvnw clean *)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "WebSearch",
+      "WebFetch(domain:baomidou.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(mvn clean *)"
     ]
   }
 }
