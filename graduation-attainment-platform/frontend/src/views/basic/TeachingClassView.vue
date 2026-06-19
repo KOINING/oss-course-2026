@@ -97,6 +97,7 @@ function resetFilters() {
   filters.majorId = null
   filters.gradeYear = null
   filters.courseId = null
+  filters.termId = null
   filters.teacherId = null
   filters.calcStatus = ''
 }
@@ -119,6 +120,7 @@ function normalizeFilters() {
     majorId: filters.majorId || undefined,
     gradeYear: filters.gradeYear || undefined,
     courseId: filters.courseId || undefined,
+    termId: filters.termId || undefined,
     teacherId: filters.teacherId || undefined,
     calcStatus: filters.calcStatus || undefined,
     pageNum: pageNum.value,
@@ -411,6 +413,16 @@ onMounted(async () => {
               :key="course.courseId"
               :label="`${course.courseCode} - ${course.courseName}`"
               :value="course.courseId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学期">
+          <el-select v-model="filters.termId" placeholder="全部学期" clearable filterable style="width: 180px">
+            <el-option
+              v-for="term in termOptions"
+              :key="term.termId"
+              :label="term.termCode"
+              :value="term.termId"
             />
           </el-select>
         </el-form-item>
