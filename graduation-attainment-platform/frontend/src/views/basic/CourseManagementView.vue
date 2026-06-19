@@ -8,7 +8,7 @@ import {
   addCourseApi,
   deleteCourseApi,
   listCourseGradeYearsApi,
-  listCoursesApi,
+  listCoursesByPageApi,
   updateCourseApi,
   updateCourseStatusApi,
 } from '@/api/course'
@@ -26,6 +26,12 @@ const courseFormRef = ref(null)
 const courses = ref([])
 const majorOptions = ref([])
 const gradeYearOptions = ref([])
+
+const coursePagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0,
+})
 
 const courseFilters = reactive({
   courseCode: '',
@@ -76,10 +82,21 @@ async function loadGradeYears() {
 async function loadCourses() {
   courseLoading.value = true
   try {
-    courses.value = (await listCoursesApi(normalizeCourseFilters())) || []
+    const result = await listCoursesByPageApi({
+      ...normalizeCourseFilters(),
+      pageNum: coursePagination.pageNum,
+      pageSize: coursePagination.pageSize,
+    })
+    courses.value = result.records || []
+    coursePagination.total = result.total
   } finally {
     courseLoading.value = false
   }
+}
+
+function handleCourseSearch() {
+  coursePagination.pageNum = 1
+  loadCourses()
 }
 
 function resetCourseFilters() {
@@ -88,6 +105,15 @@ function resetCourseFilters() {
   courseFilters.majorId = null
   courseFilters.gradeYear = null
   courseFilters.status = null
+  handleCourseSearch()
+}
+
+function handleCourseSizeChange() {
+  coursePagination.pageNum = 1
+  loadCourses()
+}
+
+function handleCourseCurrentChange() {
   loadCourses()
 }
 
@@ -264,7 +290,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadCourses">查询</el-button>
+          <el-button type="primary" @click="handleCourseSearch">查询</el-button>
           <el-button @click="resetCourseFilters">重置</el-button>
         </el-form-item>
       </el-form>
@@ -308,6 +334,18 @@ onMounted(async () => {
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="coursePagination.pageNum"
+          v-model:page-size="coursePagination.pageSize"
+          :page-sizes="[5, 10, 20, 50]"
+          :total="coursePagination.total"
+          layout="total, sizes, prev, pager, next"
+          @size-change="handleCourseSizeChange"
+          @current-change="handleCourseCurrentChange"
+        />
+      </div>
     </el-card>
 
     <el-dialog
@@ -442,6 +480,11 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 900px) {
