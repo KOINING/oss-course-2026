@@ -8,6 +8,10 @@ export function listStudentsByPageApi(data = {}) {
   return request.post('/admin/listStudentsByPage', data)
 }
 
+export function getStudentApi(studentId) {
+  return request.post('/admin/getStudent', { studentId })
+}
+
 export function addStudentApi(data) {
   return request.post('/admin/saveStudent', data)
 }

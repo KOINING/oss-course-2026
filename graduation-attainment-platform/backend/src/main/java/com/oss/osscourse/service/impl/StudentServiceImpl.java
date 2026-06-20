@@ -3,6 +3,7 @@ package com.oss.osscourse.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageQueryUtils;
 import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.student.StudentImportResult;
 import com.oss.osscourse.dto.student.StudentQueryRequest;
@@ -50,8 +51,8 @@ public class StudentServiceImpl implements StudentService {
         LambdaQueryWrapper<Student> wrapper = buildQueryWrapper(request);
         wrapper.orderByAsc(Student::getStudentNo);
 
-        int pageNum = request != null && request.getPageNum() != null ? request.getPageNum() : 1;
-        int pageSize = request != null && request.getPageSize() != null ? request.getPageSize() : 10;
+        int pageNum = PageQueryUtils.normalizePageNum(request != null ? request.getPageNum() : null);
+        int pageSize = PageQueryUtils.normalizePageSize(request != null ? request.getPageSize() : null);
 
         Page<Student> page = studentMapper.selectPage(
                 new Page<>(pageNum, pageSize), wrapper);

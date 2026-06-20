@@ -45,7 +45,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="tableLoading" :data="users" border style="margin-bottom: 16px">
+      <el-table v-loading="tableLoading" :data="users" border>
         <el-table-column prop="username" label="用户名" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="140" />
         <el-table-column label="状态" width="100">
@@ -107,9 +107,9 @@
         <el-pagination
           v-model:current-page="pagination.pageNum"
           v-model:page-size="pagination.pageSize"
-          :page-sizes="[5, 10, 20, 50]"
+          :page-sizes="PAGE_SIZE_OPTIONS"
           :total="pagination.total"
-          layout="total, sizes, prev, pager, next"
+          :layout="PAGINATION_LAYOUT"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -196,6 +196,7 @@ import {
   updateUserStatusApi,
 } from '@/api/admin'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyReactivePageResult } from '@/utils/pagination'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -295,8 +296,11 @@ async function loadUsers() {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize,
     })
-    users.value = result.records
-    pagination.total = result.total
+    applyReactivePageResult(result, { rows: users, pagination })
+    if (users.value.length === 0 && pagination.pageNum > 1) {
+      pagination.pageNum -= 1
+      await loadUsers()
+    }
   } finally {
     tableLoading.value = false
   }
@@ -356,6 +360,7 @@ async function handleSubmit() {
         roleCodes: form.roleCodes,
       })
       ElMessage.success('账号创建成功')
+      pagination.pageNum = 1
     } else {
       await updateUserApi({
         id: form.id,
@@ -386,6 +391,7 @@ async function handleToggleStatus(row) {
 async function handleResetPassword(row) {
   await resetUserPasswordApi({ id: row.id })
   ElMessage.success(`账号“${row.username}”密码已重置为 123456`)
+  await loadUsers()
 }
 
 onMounted(async () => {
@@ -456,5 +462,6 @@ onMounted(async () => {
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

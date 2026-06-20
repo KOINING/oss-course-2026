@@ -12,4 +12,10 @@ public class CollegeQueryRequest {
 
     @Schema(description = "学院名称，模糊查询")
     private String collegeName;
+
+    @Schema(description = "当前页码", defaultValue = "1")
+    private Integer pageNum = 1;
+
+    @Schema(description = "每页条数", defaultValue = "10")
+    private Integer pageSize = 10;
 }

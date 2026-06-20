@@ -1,7 +1,10 @@
 package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageQueryUtils;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.major.*;
 import com.oss.osscourse.entity.College;
 import com.oss.osscourse.entity.Major;
@@ -26,31 +29,27 @@ public class MajorServiceImpl implements MajorService {
 
     @Override
     public List<MajorResponse> listMajors(MajorQueryRequest request) {
-        LambdaQueryWrapper<Major> wrapper = new LambdaQueryWrapper<>();
-
-        if (request != null) {
-            if (request.getMajorCode() != null && !request.getMajorCode().trim().isEmpty()) {
-                wrapper.like(Major::getMajorCode, request.getMajorCode().trim());
-            }
-            if (request.getMajorName() != null && !request.getMajorName().trim().isEmpty()) {
-                wrapper.like(Major::getMajorName, request.getMajorName().trim());
-            }
-            if (request.getCollegeId() != null) {
-                wrapper.eq(Major::getCollegeId, request.getCollegeId());
-            }
-            if (request.getStatus() != null) {
-                wrapper.eq(Major::getStatus, request.getStatus());
-            }
-        }
-
-        wrapper.orderByAsc(Major::getMajorCode);
-
+        LambdaQueryWrapper<Major> wrapper = buildQueryWrapper(request);
         List<Major> majors = majorMapper.selectList(wrapper);
         Map<Long, String> collegeNameMap = buildCollegeNameMap(majors);
 
         return majors.stream()
                 .map(m -> toResponse(m, collegeNameMap.get(m.getCollegeId())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResult<MajorResponse> listMajorsByPage(MajorQueryRequest request) {
+        int pageNum = PageQueryUtils.normalizePageNum(request != null ? request.getPageNum() : null);
+        int pageSize = PageQueryUtils.normalizePageSize(request != null ? request.getPageSize() : null);
+
+        Page<Major> page = majorMapper.selectPage(new Page<>(pageNum, pageSize), buildQueryWrapper(request));
+        List<Major> majors = page.getRecords();
+        Map<Long, String> collegeNameMap = buildCollegeNameMap(majors);
+        List<MajorResponse> records = majors.stream()
+                .map(m -> toResponse(m, collegeNameMap.get(m.getCollegeId())))
+                .collect(Collectors.toList());
+        return PageResult.of(records, page.getTotal(), pageNum, pageSize);
     }
 
     @Override
@@ -201,6 +200,28 @@ public class MajorServiceImpl implements MajorService {
         }
         return collegeMapper.selectBatchIds(collegeIds).stream()
                 .collect(Collectors.toMap(College::getCollegeId, College::getCollegeName));
+    }
+
+    private LambdaQueryWrapper<Major> buildQueryWrapper(MajorQueryRequest request) {
+        LambdaQueryWrapper<Major> wrapper = new LambdaQueryWrapper<>();
+
+        if (request != null) {
+            if (request.getMajorCode() != null && !request.getMajorCode().trim().isEmpty()) {
+                wrapper.like(Major::getMajorCode, request.getMajorCode().trim());
+            }
+            if (request.getMajorName() != null && !request.getMajorName().trim().isEmpty()) {
+                wrapper.like(Major::getMajorName, request.getMajorName().trim());
+            }
+            if (request.getCollegeId() != null) {
+                wrapper.eq(Major::getCollegeId, request.getCollegeId());
+            }
+            if (request.getStatus() != null) {
+                wrapper.eq(Major::getStatus, request.getStatus());
+            }
+        }
+
+        wrapper.orderByAsc(Major::getMajorCode);
+        return wrapper;
     }
 
     private MajorResponse toResponse(Major major, String collegeName) {

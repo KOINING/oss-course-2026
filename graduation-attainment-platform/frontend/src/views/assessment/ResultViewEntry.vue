@@ -71,7 +71,14 @@
           v-if="!dashboard.courses.length"
           description="当前筛选条件下没有课程级状态数据。"
         />
-        <el-table v-else :data="dashboard.courses" border size="small">
+        <el-table
+          v-else
+          class="course-status-table"
+          :data="dashboard.courses"
+          border
+          size="small"
+          :max-height="courseStatusTableMaxHeight"
+        >
           <el-table-column prop="courseCode" label="课程代码" width="120" />
           <el-table-column prop="courseName" label="课程名称" min-width="180" />
           <el-table-column prop="classCode" label="教学班代码" width="140" />
@@ -109,7 +116,13 @@
           <div class="term-info">
             归档口径：{{ selectedMajor?.majorName || '-' }} / {{ filters.gradeYear ? `${filters.gradeYear} 级` : '-' }}
           </div>
-          <el-table :data="majorResult.indicatorAchievements || []" border size="small">
+          <el-table
+            class="major-indicator-table"
+            :data="majorResult.indicatorAchievements || []"
+            border
+            size="small"
+            :max-height="majorIndicatorTableMaxHeight"
+          >
             <el-table-column prop="ipCode" label="指标点" width="120" />
             <el-table-column prop="ipDescription" label="指标点描述" min-width="260" />
             <el-table-column prop="finalAchievement" label="专业级达成度 Gk" width="180">
@@ -162,6 +175,8 @@ const radarChartRef = ref(null)
 
 const filterOptions = reactive({ majors: [] })
 const filters = reactive({ majorId: null, gradeYear: null })
+const courseStatusTableMaxHeight = 420
+const majorIndicatorTableMaxHeight = 560
 
 const dashboard = reactive({
   courses: [],
@@ -398,6 +413,26 @@ onMounted(() => {
   padding: 8px 0 16px;
   font-size: 13px;
   color: #64748b;
+}
+
+.course-status-table {
+  width: 100%;
+}
+
+.course-status-table :deep(.el-table__header-wrapper th) {
+  color: #334155;
+  background-color: #f8fafc;
+  font-weight: 700;
+}
+
+.major-indicator-table {
+  width: 100%;
+}
+
+.major-indicator-table :deep(.el-table__header-wrapper th) {
+  color: #334155;
+  background-color: #f8fafc;
+  font-weight: 700;
 }
 
 .radar-export-row {

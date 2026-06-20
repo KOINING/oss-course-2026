@@ -12,6 +12,7 @@ import {
   updateStudentStatusApi,
 } from '@/api/student'
 import { ROUTE_NAMES } from '@/utils/constants'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyPageResult } from '@/utils/pagination'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +29,7 @@ const enrollmentYearOptions = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const pageSizes = [5, 10, 20, 50]
+const pageSizes = PAGE_SIZE_OPTIONS
 
 const statusOptions = [
   { value: 1, label: '在读' },
@@ -108,10 +109,7 @@ async function loadRows() {
   try {
     const result = await listStudentsByPageApi(normalizeFilters())
     if (result) {
-      rows.value = result.records || []
-      total.value = result.total || 0
-      pageNum.value = result.pageNum || 1
-      pageSize.value = result.pageSize || 10
+      applyPageResult(result, { rows, total, pageNum, pageSize })
       if (rows.value.length === 0 && pageNum.value > 1) {
         pageNum.value -= 1
         await loadRows()
@@ -179,6 +177,7 @@ async function handleSubmit() {
     if (dialogMode.value === 'create') {
       await addStudentApi(payload)
       ElMessage.success('学生创建成功')
+      pageNum.value = 1
     } else {
       await updateStudentApi(payload)
       ElMessage.success('学生更新成功')
@@ -330,8 +329,7 @@ onMounted(async () => {
           v-model:page-size="pageSize"
           :page-sizes="pageSizes"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
+          :layout="PAGINATION_LAYOUT"
           @current-change="handlePageChange"
           @size-change="handlePageSizeChange"
         />

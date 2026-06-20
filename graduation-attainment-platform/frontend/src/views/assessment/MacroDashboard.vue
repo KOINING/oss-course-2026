@@ -101,11 +101,12 @@
 
       <el-table
         v-else
+        class="support-course-table"
         v-loading="loading"
         :data="courses"
         border
         stripe
-        max-height="520"
+        :max-height="supportCourseTableMaxHeight"
       >
         <el-table-column prop="courseCode" label="课程代码" width="120" />
         <el-table-column prop="courseName" label="课程名称" min-width="180" />
@@ -192,6 +193,7 @@ const loadError = ref('')
 
 const filterOptions = reactive({ majors: [] })
 const filters = reactive({ majorId: null, gradeYear: null })
+const supportCourseTableMaxHeight = 420
 
 const dashboardData = reactive({
   courses: [],
@@ -464,6 +466,16 @@ onMounted(() => {
 .aggregation-warning,
 .major-result-card {
   border-radius: 10px;
+}
+
+.support-course-table {
+  width: 100%;
+}
+
+.support-course-table :deep(.el-table__header-wrapper th) {
+  color: #334155;
+  background-color: #f8fafc;
+  font-weight: 700;
 }
 
 .major-result-header {

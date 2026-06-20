@@ -2,6 +2,7 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageQueryUtils;
 import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.course.CourseCreateRequest;
 import com.oss.osscourse.dto.course.CourseImportResult;
@@ -58,8 +59,10 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public PageResult<CourseResponse> listCoursesByPage(CourseQueryRequest request) {
-        int pageNum = request != null && request.getPageNum() != null ? request.getPageNum() : 1;
-        Integer pageSize = request != null ? request.getPageSize() : null;
+        int pageNum = PageQueryUtils.normalizePageNum(request != null ? request.getPageNum() : null);
+        Integer pageSize = request != null && request.getPageSize() != null
+                ? PageQueryUtils.normalizePageSize(request.getPageSize())
+                : null;
 
         LambdaQueryWrapper<Course> wrapper = new LambdaQueryWrapper<>();
 
@@ -93,7 +96,7 @@ public class CourseServiceImpl implements CourseService {
         long total = courseMapper.selectCount(wrapper);
 
         if (pageSize != null) {
-            int offset = (pageNum - 1) * pageSize;
+            int offset = PageQueryUtils.offset(pageNum, pageSize);
             wrapper.last("LIMIT " + offset + "," + pageSize);
         }
 

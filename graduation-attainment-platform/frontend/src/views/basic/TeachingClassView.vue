@@ -13,9 +13,10 @@ import { listCoursesApi, listCourseGradeYearsApi } from '@/api/course'
 import { listMajorsForSelectApi } from '@/api/basic'
 import { listAcademicTermsApi } from '@/api/academicTerm'
 import { listTeachersForSelectApi } from '@/api/teacher'
-import { listStudentsApi } from '@/api/student'
+import { getStudentApi } from '@/api/student'
 import { listStudentsByTeachingClassApi, removeStudentFromClassApi } from '@/api/import'
 import { ROUTE_NAMES } from '@/utils/constants'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyPageResult } from '@/utils/pagination'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,14 +36,14 @@ const autoOpenHandled = ref(false)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const pageSizes = [5, 10, 20, 50]
+const pageSizes = PAGE_SIZE_OPTIONS
 
 const courseOptions = ref([])
 const majorOptions = ref([])
 const gradeYearOptions = ref([])
 const termOptions = ref([])
 const teacherOptions = ref([])
-const studentDirectory = ref([])
+const studentDirectoryMap = ref({})
 
 const currentTeachingClass = ref(null)
 
@@ -152,7 +153,7 @@ function getCalcStatusTagClass(value) {
 }
 
 function getStudentById(studentId) {
-  return studentDirectory.value.find((student) => student.studentId === studentId)
+  return studentDirectoryMap.value[studentId]
 }
 
 function mapRelationRows(records = []) {
@@ -187,8 +188,16 @@ async function loadOptions() {
   teacherOptions.value = teachers || []
 }
 
-async function loadStudentDirectory() {
-  studentDirectory.value = (await listStudentsApi()) || []
+async function loadStudentsForRelation(records = []) {
+  const missingIds = [...new Set(records.map((record) => record.studentId).filter((studentId) => !studentDirectoryMap.value[studentId]))]
+  if (missingIds.length === 0) return
+
+  const students = await Promise.all(missingIds.map((studentId) => getStudentApi(studentId)))
+  students.forEach((student) => {
+    if (student?.studentId) {
+      studentDirectoryMap.value[student.studentId] = student
+    }
+  })
 }
 
 async function tryAutoOpenRelationDrawer() {
@@ -212,10 +221,7 @@ async function loadRows() {
   try {
     const result = await listTeachingClassesByPageApi(normalizeFilters())
     if (result) {
-      rows.value = result.records || []
-      total.value = result.total || 0
-      pageNum.value = result.pageNum || 1
-      pageSize.value = result.pageSize || 10
+      applyPageResult(result, { rows, total, pageNum, pageSize })
       if (rows.value.length === 0 && pageNum.value > 1) {
         pageNum.value -= 1
         await loadRows()
@@ -331,10 +337,8 @@ async function openRelationDrawer(row) {
   relationDrawerVisible.value = true
   relationLoading.value = true
   try {
-    if (!studentDirectory.value.length) {
-      await loadStudentDirectory()
-    }
     const records = await listStudentsByTeachingClassApi(row.classId)
+    await loadStudentsForRelation(records || [])
     relationRows.value = mapRelationRows(records || [])
   } finally {
     relationLoading.value = false
@@ -348,6 +352,7 @@ async function handleRemoveRelation(row) {
     ElMessage.success('学生与教学班的关联已移除')
     if (currentTeachingClass.value) {
       const records = await listStudentsByTeachingClassApi(currentTeachingClass.value.classId)
+      await loadStudentsForRelation(records || [])
       relationRows.value = mapRelationRows(records || [])
     }
   } finally {
@@ -356,7 +361,7 @@ async function handleRemoveRelation(row) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadOptions(), loadStudentDirectory()])
+  await loadOptions()
   await loadRows()
 })
 </script>
@@ -514,8 +519,7 @@ onMounted(async () => {
           v-model:page-size="pageSize"
           :page-sizes="pageSizes"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
+          :layout="PAGINATION_LAYOUT"
           @current-change="handlePageChange"
           @size-change="handlePageSizeChange"
         />
