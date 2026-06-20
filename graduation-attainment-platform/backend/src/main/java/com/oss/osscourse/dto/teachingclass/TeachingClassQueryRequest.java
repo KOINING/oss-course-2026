@@ -30,4 +30,10 @@ public class TeachingClassQueryRequest {
 
     @Schema(description = "计算状态：unsubmitted/score_imported/calculating/locked")
     private String calcStatus;
+
+    @Schema(description = "页码", example = "1")
+    private Integer pageNum;
+
+    @Schema(description = "每页条数", example = "10")
+    private Integer pageSize;
 }

@@ -4,6 +4,10 @@ export function listStudentsApi(data = {}) {
   return request.post('/admin/listStudents', data)
 }
 
+export function listStudentsByPageApi(data = {}) {
+  return request.post('/admin/listStudentsByPage', data)
+}
+
 export function addStudentApi(data) {
   return request.post('/admin/saveStudent', data)
 }

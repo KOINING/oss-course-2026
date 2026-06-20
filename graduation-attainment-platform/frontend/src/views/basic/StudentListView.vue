@@ -7,7 +7,7 @@ import {
   addStudentApi,
   deleteStudentApi,
   listStudentEnrollmentYearsApi,
-  listStudentsApi,
+  listStudentsByPageApi,
   updateStudentApi,
   updateStudentStatusApi,
 } from '@/api/student'
@@ -24,6 +24,11 @@ const rows = ref([])
 const formRef = ref(null)
 const majorOptions = ref([])
 const enrollmentYearOptions = ref([])
+
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const pageSizes = [5, 10, 20, 50]
 
 const statusOptions = [
   { value: 1, label: '在读' },
@@ -84,6 +89,8 @@ function normalizeFilters() {
     majorId: filters.majorId || undefined,
     enrollmentYear: filters.enrollmentYear || undefined,
     status: filters.status === null ? undefined : filters.status,
+    pageNum: pageNum.value,
+    pageSize: pageSize.value,
   }
 }
 
@@ -99,14 +106,37 @@ async function loadOptions() {
 async function loadRows() {
   tableLoading.value = true
   try {
-    rows.value = (await listStudentsApi(normalizeFilters())) || []
+    const result = await listStudentsByPageApi(normalizeFilters())
+    if (result) {
+      rows.value = result.records || []
+      total.value = result.total || 0
+      pageNum.value = result.pageNum || 1
+      pageSize.value = result.pageSize || 10
+      if (rows.value.length === 0 && pageNum.value > 1) {
+        pageNum.value -= 1
+        await loadRows()
+        return
+      }
+    }
   } finally {
     tableLoading.value = false
   }
 }
 
+function handlePageChange(newPage) {
+  pageNum.value = newPage
+  loadRows()
+}
+
+function handlePageSizeChange(newSize) {
+  pageSize.value = newSize
+  pageNum.value = 1
+  loadRows()
+}
+
 function handleResetFilters() {
   resetFilters()
+  pageNum.value = 1
   loadRows()
 }
 
@@ -245,7 +275,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadRows">查询</el-button>
+          <el-button type="primary" @click="pageNum = 1; loadRows()">查询</el-button>
           <el-button @click="handleResetFilters">重置</el-button>
         </el-form-item>
       </el-form>
@@ -293,6 +323,19 @@ onMounted(async () => {
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
 
       <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close>
         <el-form ref="formRef" :model="form" :rules="formRules" label-width="96px">
@@ -390,5 +433,11 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

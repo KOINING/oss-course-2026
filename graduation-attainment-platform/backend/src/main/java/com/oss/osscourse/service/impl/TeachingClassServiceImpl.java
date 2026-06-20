@@ -1,7 +1,9 @@
 package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.teachingclass.TeachingClassQueryRequest;
 import com.oss.osscourse.dto.teachingclass.TeachingClassResponse;
 import com.oss.osscourse.dto.teachingclass.TeachingClassSaveRequest;
@@ -46,38 +48,26 @@ public class TeachingClassServiceImpl implements TeachingClassService {
 
     @Override
     public List<TeachingClassResponse> listTeachingClasses(TeachingClassQueryRequest request) {
-        LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<>();
-
-        if (request != null) {
-            if (hasText(request.getClassCode())) {
-                wrapper.like(TeachingClass::getClassCode, request.getClassCode().trim());
-            }
-            if (hasText(request.getClassName())) {
-                wrapper.like(TeachingClass::getClassName, request.getClassName().trim());
-            }
-            if (request.getCourseId() != null) {
-                wrapper.eq(TeachingClass::getCourseId, request.getCourseId());
-            }
-            if (request.getMajorId() != null) {
-                wrapper.eq(TeachingClass::getMajorId, request.getMajorId());
-            }
-            if (request.getGradeYear() != null) {
-                wrapper.eq(TeachingClass::getGradeYear, request.getGradeYear());
-            }
-            if (request.getTermId() != null) {
-                wrapper.eq(TeachingClass::getTermId, request.getTermId());
-            }
-            if (request.getTeacherId() != null) {
-                wrapper.eq(TeachingClass::getTeacherId, request.getTeacherId());
-            }
-            if (hasText(request.getCalcStatus())) {
-                wrapper.eq(TeachingClass::getCalcStatus, request.getCalcStatus().trim());
-            }
-        }
-
+        LambdaQueryWrapper<TeachingClass> wrapper = buildQueryWrapper(request);
         wrapper.orderByAsc(TeachingClass::getClassCode)
                 .orderByDesc(TeachingClass::getCreatedAt);
         return toResponseList(teachingClassMapper.selectList(wrapper));
+    }
+
+    @Override
+    public PageResult<TeachingClassResponse> listTeachingClassesByPage(TeachingClassQueryRequest request) {
+        LambdaQueryWrapper<TeachingClass> wrapper = buildQueryWrapper(request);
+        wrapper.orderByAsc(TeachingClass::getClassCode)
+                .orderByDesc(TeachingClass::getCreatedAt);
+
+        int pageNum = request != null && request.getPageNum() != null ? request.getPageNum() : 1;
+        int pageSize = request != null && request.getPageSize() != null ? request.getPageSize() : 10;
+
+        Page<TeachingClass> page = teachingClassMapper.selectPage(
+                new Page<>(pageNum, pageSize), wrapper);
+
+        List<TeachingClassResponse> records = toResponseList(page.getRecords());
+        return PageResult.of(records, page.getTotal(), pageNum, pageSize);
     }
 
     @Override
@@ -297,5 +287,36 @@ public class TeachingClassServiceImpl implements TeachingClassService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private LambdaQueryWrapper<TeachingClass> buildQueryWrapper(TeachingClassQueryRequest request) {
+        LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<>();
+        if (request != null) {
+            if (hasText(request.getClassCode())) {
+                wrapper.like(TeachingClass::getClassCode, request.getClassCode().trim());
+            }
+            if (hasText(request.getClassName())) {
+                wrapper.like(TeachingClass::getClassName, request.getClassName().trim());
+            }
+            if (request.getCourseId() != null) {
+                wrapper.eq(TeachingClass::getCourseId, request.getCourseId());
+            }
+            if (request.getMajorId() != null) {
+                wrapper.eq(TeachingClass::getMajorId, request.getMajorId());
+            }
+            if (request.getGradeYear() != null) {
+                wrapper.eq(TeachingClass::getGradeYear, request.getGradeYear());
+            }
+            if (request.getTermId() != null) {
+                wrapper.eq(TeachingClass::getTermId, request.getTermId());
+            }
+            if (request.getTeacherId() != null) {
+                wrapper.eq(TeachingClass::getTeacherId, request.getTeacherId());
+            }
+            if (hasText(request.getCalcStatus())) {
+                wrapper.eq(TeachingClass::getCalcStatus, request.getCalcStatus().trim());
+            }
+        }
+        return wrapper;
     }
 }

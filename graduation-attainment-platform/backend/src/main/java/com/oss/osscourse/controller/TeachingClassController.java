@@ -1,6 +1,7 @@
 package com.oss.osscourse.controller;
 
 import com.oss.osscourse.common.AcademicAffairsAccessGuard;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.teachingclass.TeachingClassDeleteRequest;
 import com.oss.osscourse.dto.teachingclass.TeachingClassGetRequest;
@@ -39,6 +40,16 @@ public class TeachingClassController {
             @RequestAttribute(value = "roles", required = false) List<String> roles) {
         accessGuard.assertAcademicAffairs(roles);
         return Result.ok(teachingClassService.listTeachingClasses(request));
+    }
+
+    @PostMapping("/listTeachingClassesByPage")
+    @Operation(summary = "分页查询教学班列表", description = "根据筛选条件分页查询教学班列表，返回统一分页结构")
+    public Result<PageResult<TeachingClassResponse>> listTeachingClassesByPage(
+            @Parameter(description = "查询条件（含分页参数）")
+            @RequestBody(required = false) TeachingClassQueryRequest request,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(teachingClassService.listTeachingClassesByPage(request));
     }
 
     @PostMapping("/getTeachingClass")

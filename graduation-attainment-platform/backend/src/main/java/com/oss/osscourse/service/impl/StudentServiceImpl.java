@@ -1,7 +1,9 @@
 package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.student.StudentImportResult;
 import com.oss.osscourse.dto.student.StudentQueryRequest;
 import com.oss.osscourse.dto.student.StudentResponse;
@@ -38,28 +40,24 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public List<StudentResponse> listStudents(StudentQueryRequest request) {
-        LambdaQueryWrapper<Student> wrapper = new LambdaQueryWrapper<>();
-
-        if (request != null) {
-            if (hasText(request.getStudentNo())) {
-                wrapper.like(Student::getStudentNo, request.getStudentNo().trim());
-            }
-            if (hasText(request.getStudentName())) {
-                wrapper.like(Student::getStudentName, request.getStudentName().trim());
-            }
-            if (request.getMajorId() != null) {
-                wrapper.eq(Student::getMajorId, request.getMajorId());
-            }
-            if (request.getEnrollmentYear() != null) {
-                wrapper.eq(Student::getEnrollmentYear, request.getEnrollmentYear());
-            }
-            if (request.getStatus() != null) {
-                wrapper.eq(Student::getStatus, request.getStatus());
-            }
-        }
-
+        LambdaQueryWrapper<Student> wrapper = buildQueryWrapper(request);
         wrapper.orderByAsc(Student::getStudentNo);
         return toResponseList(studentMapper.selectList(wrapper));
+    }
+
+    @Override
+    public PageResult<StudentResponse> listStudentsByPage(StudentQueryRequest request) {
+        LambdaQueryWrapper<Student> wrapper = buildQueryWrapper(request);
+        wrapper.orderByAsc(Student::getStudentNo);
+
+        int pageNum = request != null && request.getPageNum() != null ? request.getPageNum() : 1;
+        int pageSize = request != null && request.getPageSize() != null ? request.getPageSize() : 10;
+
+        Page<Student> page = studentMapper.selectPage(
+                new Page<>(pageNum, pageSize), wrapper);
+
+        List<StudentResponse> records = toResponseList(page.getRecords());
+        return PageResult.of(records, page.getTotal(), pageNum, pageSize);
     }
 
     @Override
@@ -357,5 +355,27 @@ public class StudentServiceImpl implements StudentService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private LambdaQueryWrapper<Student> buildQueryWrapper(StudentQueryRequest request) {
+        LambdaQueryWrapper<Student> wrapper = new LambdaQueryWrapper<>();
+        if (request != null) {
+            if (hasText(request.getStudentNo())) {
+                wrapper.like(Student::getStudentNo, request.getStudentNo().trim());
+            }
+            if (hasText(request.getStudentName())) {
+                wrapper.like(Student::getStudentName, request.getStudentName().trim());
+            }
+            if (request.getMajorId() != null) {
+                wrapper.eq(Student::getMajorId, request.getMajorId());
+            }
+            if (request.getEnrollmentYear() != null) {
+                wrapper.eq(Student::getEnrollmentYear, request.getEnrollmentYear());
+            }
+            if (request.getStatus() != null) {
+                wrapper.eq(Student::getStatus, request.getStatus());
+            }
+        }
+        return wrapper;
     }
 }

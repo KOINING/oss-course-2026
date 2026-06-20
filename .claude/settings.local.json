@@ -22,7 +22,12 @@
       "Bash(taskkill //F //IM java.exe)",
       "Bash(D:\\\\mysql\\\\bin\\\\mysql *)",
       "Bash(./mvnw compile *)",
-      "Bash(./mvnw clean *)"
+      "Bash(./mvnw clean *)",
+      "Bash(git status *)",
+      "WebSearch",
+      "WebFetch(domain:baomidou.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(mvn clean *)"
     ]
   }
 }

@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import {
   addTeachingClassApi,
   deleteTeachingClassApi,
-  listTeachingClassesApi,
+  listTeachingClassesByPageApi,
   updateTeachingClassApi,
   updateTeachingClassStatusApi,
 } from '@/api/teachingClass'
@@ -31,6 +31,11 @@ const rows = ref([])
 const relationRows = ref([])
 const formRef = ref(null)
 const autoOpenHandled = ref(false)
+
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const pageSizes = [5, 10, 20, 50]
 
 const courseOptions = ref([])
 const majorOptions = ref([])
@@ -92,6 +97,7 @@ function resetFilters() {
   filters.majorId = null
   filters.gradeYear = null
   filters.courseId = null
+  filters.termId = null
   filters.teacherId = null
   filters.calcStatus = ''
 }
@@ -114,8 +120,11 @@ function normalizeFilters() {
     majorId: filters.majorId || undefined,
     gradeYear: filters.gradeYear || undefined,
     courseId: filters.courseId || undefined,
+    termId: filters.termId || undefined,
     teacherId: filters.teacherId || undefined,
     calcStatus: filters.calcStatus || undefined,
+    pageNum: pageNum.value,
+    pageSize: pageSize.value,
   }
 }
 
@@ -201,15 +210,38 @@ async function tryAutoOpenRelationDrawer() {
 async function loadRows() {
   tableLoading.value = true
   try {
-    rows.value = (await listTeachingClassesApi(normalizeFilters())) || []
+    const result = await listTeachingClassesByPageApi(normalizeFilters())
+    if (result) {
+      rows.value = result.records || []
+      total.value = result.total || 0
+      pageNum.value = result.pageNum || 1
+      pageSize.value = result.pageSize || 10
+      if (rows.value.length === 0 && pageNum.value > 1) {
+        pageNum.value -= 1
+        await loadRows()
+        return
+      }
+    }
     await tryAutoOpenRelationDrawer()
   } finally {
     tableLoading.value = false
   }
 }
 
+function handlePageChange(newPage) {
+  pageNum.value = newPage
+  loadRows()
+}
+
+function handlePageSizeChange(newSize) {
+  pageSize.value = newSize
+  pageNum.value = 1
+  loadRows()
+}
+
 function handleResetFilters() {
   resetFilters()
+  pageNum.value = 1
   loadRows()
 }
 
@@ -384,6 +416,16 @@ onMounted(async () => {
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="学期">
+          <el-select v-model="filters.termId" placeholder="全部学期" clearable filterable style="width: 180px">
+            <el-option
+              v-for="term in termOptions"
+              :key="term.termId"
+              :label="term.termCode"
+              :value="term.termId"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="教师">
           <el-select v-model="filters.teacherId" placeholder="全部教师" clearable filterable style="width: 180px">
             <el-option
@@ -405,7 +447,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadRows">查询</el-button>
+          <el-button type="primary" @click="pageNum = 1; loadRows()">查询</el-button>
           <el-button @click="handleResetFilters">重置</el-button>
         </el-form-item>
       </el-form>
@@ -465,6 +507,19 @@ onMounted(async () => {
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :page-sizes="pageSizes"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
 
       <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" destroy-on-close>
         <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
@@ -624,6 +679,12 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 :deep(.calc-status-tag) {
