@@ -1,5 +1,6 @@
 package com.oss.osscourse.controller;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.common.Result;
 import com.oss.osscourse.dto.college.CollegeQueryRequest;
 import com.oss.osscourse.dto.college.CollegeResponse;
@@ -31,6 +32,14 @@ public class MajorController {
             @RequestBody(required = false) MajorQueryRequest request) {
         List<MajorResponse> list = majorService.listMajors(request);
         return Result.ok(list);
+    }
+
+    @PostMapping("/listMajorsByPage")
+    @Operation(summary = "分页查询专业列表", description = "根据筛选条件分页查询专业列表，返回统一分页结构")
+    public Result<PageResult<MajorResponse>> listMajorsByPage(
+            @Parameter(description = "查询条件（含分页参数）")
+            @RequestBody(required = false) MajorQueryRequest request) {
+        return Result.ok(majorService.listMajorsByPage(request));
     }
 
     @PostMapping("/getMajor")
@@ -83,5 +92,13 @@ public class MajorController {
     public Result<List<CollegeResponse>> listColleges() {
         List<CollegeResponse> list = collegeService.listColleges(new CollegeQueryRequest());
         return Result.ok(list);
+    }
+
+    @PostMapping("/listCollegesByPage")
+    @Operation(summary = "分页查询学院列表", description = "根据筛选条件分页查询学院列表，返回统一分页结构")
+    public Result<PageResult<CollegeResponse>> listCollegesByPage(
+            @Parameter(description = "查询条件（含分页参数）")
+            @RequestBody(required = false) CollegeQueryRequest request) {
+        return Result.ok(collegeService.listCollegesByPage(request));
     }
 }

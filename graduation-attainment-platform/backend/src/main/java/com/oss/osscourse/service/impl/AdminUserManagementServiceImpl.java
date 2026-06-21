@@ -2,6 +2,7 @@ package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageQueryUtils;
 import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.admin.*;
 import com.oss.osscourse.entity.SysRole;
@@ -56,8 +57,8 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
         assertManagePermission(currentRoles, currentPermissions);
 
         AdminUserQueryRequest query = request == null ? new AdminUserQueryRequest() : request;
-        int pageNum = query.getPageNum() != null ? query.getPageNum() : 1;
-        Integer pageSize = query.getPageSize();
+        int pageNum = PageQueryUtils.normalizePageNum(query.getPageNum());
+        int pageSize = PageQueryUtils.normalizePageSize(query.getPageSize());
 
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.exists("SELECT 1 FROM sys_user_role ur INNER JOIN sys_role r ON r.id = ur.role_id"
@@ -81,13 +82,11 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
 
         long total = sysUserMapper.selectCount(wrapper);
 
-        if (pageSize != null) {
-            int offset = (pageNum - 1) * pageSize;
-            wrapper.last("LIMIT " + offset + "," + pageSize);
-        }
+        int offset = PageQueryUtils.offset(pageNum, pageSize);
+        wrapper.last("LIMIT " + offset + "," + pageSize);
 
         List<SysUser> users = sysUserMapper.selectList(wrapper);
-        int actualPageSize = pageSize != null ? pageSize : users.size();
+        int actualPageSize = pageSize;
         if (users.isEmpty()) {
             return PageResult.of(List.of(), total, pageNum, actualPageSize);
         }

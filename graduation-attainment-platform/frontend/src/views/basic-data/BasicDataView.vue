@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import AcademicTermPanel from './AcademicTermPanel.vue'
 import CollegePanel from './CollegePanel.vue'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyPageResult } from '@/utils/pagination'
 import {
   deleteMajorApi,
   listCollegesApi,
@@ -69,8 +70,12 @@ async function loadMajors() {
   majorLoading.value = true
   try {
     const res = await listMajorsByPageApi(buildMajorQuery())
-    majors.value = res.records || []
-    majorTotal.value = res.total || 0
+    applyPageResult(res, {
+      rows: majors,
+      total: majorTotal,
+      pageNum: majorPageNum,
+      pageSize: majorPageSize,
+    })
   } finally {
     majorLoading.value = false
   }
@@ -254,9 +259,9 @@ onMounted(async () => {
               <el-pagination
                 v-model:current-page="majorPageNum"
                 v-model:page-size="majorPageSize"
-                :page-sizes="[5, 10, 20, 50]"
+                :page-sizes="PAGE_SIZE_OPTIONS"
                 :total="majorTotal"
-                layout="total, sizes, prev, pager, next, jumper"
+                :layout="PAGINATION_LAYOUT"
                 @current-change="onMajorPageChange"
                 @size-change="onMajorSizeChange"
               />
@@ -358,6 +363,6 @@ onMounted(async () => {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
-  padding-top: 4px;
+  margin-top: 16px;
 }
 </style>

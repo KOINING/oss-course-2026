@@ -18,6 +18,8 @@ import {
 const grLoading = ref(false)
 const ipLoading = ref(false)
 const route = useRoute()
+const requirementTableMaxHeight = 460
+const indicatorTableMaxHeight = 520
 
 const grs = ref([])
 const ips = ref([])
@@ -411,8 +413,10 @@ onMounted(async () => {
 
         <el-table
           v-loading="grLoading"
+          class="requirement-table"
           :data="grs"
           :span-method="requirementGradeYearSpanMethod"
+          :max-height="requirementTableMaxHeight"
           border
           highlight-current-row
           @current-change="onGrRowChange"
@@ -476,7 +480,14 @@ onMounted(async () => {
           </el-form-item>
         </el-form>
 
-        <el-table v-loading="ipLoading" :data="ips" :span-method="indicatorSpanMethod" border>
+        <el-table
+          v-loading="ipLoading"
+          class="indicator-table"
+          :data="ips"
+          :span-method="indicatorSpanMethod"
+          :max-height="indicatorTableMaxHeight"
+          border
+        >
           <el-table-column label="毕业要求" min-width="340">
             <template #default="{ row }">
               <div class="multiline-cell">{{ formatRequirementLabel(row) }}</div>
@@ -633,5 +644,17 @@ onMounted(async () => {
   white-space: normal;
   word-break: break-word;
   line-height: 1.6;
+}
+
+.requirement-table,
+.indicator-table {
+  width: 100%;
+}
+
+.requirement-table :deep(.el-table__header-wrapper th),
+.indicator-table :deep(.el-table__header-wrapper th) {
+  color: #334155;
+  background-color: #f8fafc;
+  font-weight: 700;
 }
 </style>

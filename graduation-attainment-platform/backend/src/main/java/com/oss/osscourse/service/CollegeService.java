@@ -1,5 +1,6 @@
 package com.oss.osscourse.service;
 
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.college.*;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface CollegeService {
      * @return 学院列表
      */
     List<CollegeResponse> listColleges(CollegeQueryRequest request);
+
+    PageResult<CollegeResponse> listCollegesByPage(CollegeQueryRequest request);
 
     /**
      * 根据ID查询学院

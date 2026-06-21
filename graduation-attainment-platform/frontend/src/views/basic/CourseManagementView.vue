@@ -13,6 +13,7 @@ import {
   updateCourseStatusApi,
 } from '@/api/course'
 import { ROUTE_NAMES } from '@/utils/constants'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyReactivePageResult } from '@/utils/pagination'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,8 +88,11 @@ async function loadCourses() {
       pageNum: coursePagination.pageNum,
       pageSize: coursePagination.pageSize,
     })
-    courses.value = result.records || []
-    coursePagination.total = result.total
+    applyReactivePageResult(result, { rows: courses, pagination: coursePagination })
+    if (courses.value.length === 0 && coursePagination.pageNum > 1) {
+      coursePagination.pageNum -= 1
+      await loadCourses()
+    }
   } finally {
     courseLoading.value = false
   }
@@ -201,6 +205,7 @@ async function handleCourseSubmit() {
     if (courseDialogMode.value === 'create') {
       await addCourseApi(payload)
       ElMessage.success('课程新增成功。')
+      coursePagination.pageNum = 1
     } else {
       await updateCourseApi(payload)
       ElMessage.success('课程更新成功。')
@@ -339,9 +344,9 @@ onMounted(async () => {
         <el-pagination
           v-model:current-page="coursePagination.pageNum"
           v-model:page-size="coursePagination.pageSize"
-          :page-sizes="[5, 10, 20, 50]"
+          :page-sizes="PAGE_SIZE_OPTIONS"
           :total="coursePagination.total"
-          layout="total, sizes, prev, pager, next"
+          :layout="PAGINATION_LAYOUT"
           @size-change="handleCourseSizeChange"
           @current-change="handleCourseCurrentChange"
         />
@@ -485,6 +490,7 @@ onMounted(async () => {
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
+  margin-top: 16px;
 }
 
 @media (max-width: 900px) {

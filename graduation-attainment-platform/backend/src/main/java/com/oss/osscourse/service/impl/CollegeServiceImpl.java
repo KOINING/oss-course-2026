@@ -1,7 +1,10 @@
 package com.oss.osscourse.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oss.osscourse.common.BusinessException;
+import com.oss.osscourse.common.PageQueryUtils;
+import com.oss.osscourse.common.PageResult;
 import com.oss.osscourse.dto.college.CollegeCreateRequest;
 import com.oss.osscourse.dto.college.CollegeQueryRequest;
 import com.oss.osscourse.dto.college.CollegeResponse;
@@ -28,23 +31,23 @@ public class CollegeServiceImpl implements CollegeService {
 
     @Override
     public List<CollegeResponse> listColleges(CollegeQueryRequest request) {
-        LambdaQueryWrapper<College> wrapper = new LambdaQueryWrapper<>();
-
-        if (request != null) {
-            if (request.getCollegeCode() != null && !request.getCollegeCode().trim().isEmpty()) {
-                wrapper.like(College::getCollegeCode, request.getCollegeCode().trim());
-            }
-            if (request.getCollegeName() != null && !request.getCollegeName().trim().isEmpty()) {
-                wrapper.like(College::getCollegeName, request.getCollegeName().trim());
-            }
-        }
-
-        wrapper.orderByAsc(College::getCollegeCode);
-
+        LambdaQueryWrapper<College> wrapper = buildQueryWrapper(request);
         List<College> colleges = collegeMapper.selectList(wrapper);
         return colleges.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResult<CollegeResponse> listCollegesByPage(CollegeQueryRequest request) {
+        int pageNum = PageQueryUtils.normalizePageNum(request != null ? request.getPageNum() : null);
+        int pageSize = PageQueryUtils.normalizePageSize(request != null ? request.getPageSize() : null);
+
+        Page<College> page = collegeMapper.selectPage(new Page<>(pageNum, pageSize), buildQueryWrapper(request));
+        List<CollegeResponse> records = page.getRecords().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return PageResult.of(records, page.getTotal(), pageNum, pageSize);
     }
 
     @Override
@@ -138,5 +141,21 @@ public class CollegeServiceImpl implements CollegeService {
                 .createdAt(college.getCreatedAt())
                 .updatedAt(college.getUpdatedAt())
                 .build();
+    }
+
+    private LambdaQueryWrapper<College> buildQueryWrapper(CollegeQueryRequest request) {
+        LambdaQueryWrapper<College> wrapper = new LambdaQueryWrapper<>();
+
+        if (request != null) {
+            if (request.getCollegeCode() != null && !request.getCollegeCode().trim().isEmpty()) {
+                wrapper.like(College::getCollegeCode, request.getCollegeCode().trim());
+            }
+            if (request.getCollegeName() != null && !request.getCollegeName().trim().isEmpty()) {
+                wrapper.like(College::getCollegeName, request.getCollegeName().trim());
+            }
+        }
+
+        wrapper.orderByAsc(College::getCollegeCode);
+        return wrapper;
     }
 }

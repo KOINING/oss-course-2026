@@ -3,6 +3,7 @@ import { nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import QueryBar from '@/components/common/QueryBar.vue'
 import FormDialog from '@/components/common/FormDialog.vue'
+import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyPageResult } from '@/utils/pagination'
 import {
   addCollegeApi,
   deleteCollegeApi,
@@ -58,8 +59,7 @@ async function loadRows() {
       pageSize: pageSize.value,
     }
     const res = await listCollegesByPageApi(payload)
-    rows.value = res.records || []
-    total.value = res.total || 0
+    applyPageResult(res, { rows, total, pageNum, pageSize })
   } finally {
     tableLoading.value = false
   }
@@ -189,9 +189,9 @@ onMounted(loadRows)
       <el-pagination
         v-model:current-page="pageNum"
         v-model:page-size="pageSize"
-        :page-sizes="[5, 10, 20, 50]"
+        :page-sizes="PAGE_SIZE_OPTIONS"
         :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
+        :layout="PAGINATION_LAYOUT"
         @current-change="onPageChange"
         @size-change="onSizeChange"
       />
@@ -235,6 +235,6 @@ onMounted(loadRows)
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
-  padding-top: 12px;
+  margin-top: 16px;
 }
 </style>
