@@ -66,15 +66,15 @@
 
     <template v-else>
       <el-alert
-        v-if="scoreContext?.blockReasons?.length"
+        v-if="visibleBlockReasons.length"
         type="warning"
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班评价单元尚未满足模板与成绩预览前置条件</template>
+        <template #title>当前教学班评价单元尚未满足成绩预览与录入前置条件</template>
         <template #default>
           <ul class="block-reason-list">
-            <li v-for="reason in scoreContext.blockReasons" :key="reason">{{ reason }}</li>
+            <li v-for="reason in visibleBlockReasons" :key="reason">{{ reason }}</li>
           </ul>
         </template>
       </el-alert>
@@ -85,16 +85,39 @@
         :closable="false"
         show-icon
       >
-        <template #title>当前教学班评价单元已锁定</template>
+        <template #title>当前教学班评价单元已完成课程级计算并锁定</template>
         <template #default>
-          当前显示成绩与课程级结果仅允许查看。
+          当前成绩与课程级结果仅允许查看。
           <span v-if="objectiveDashboard?.unlockRequested">
             已提交解锁申请：{{ objectiveDashboard.unlockRequestReason || '等待专业负责人或教务管理员审批' }}
           </span>
-          <span v-else>如需更改成绩，请先提交解锁申请，审批通过后可在线修改或重新导入成绩，并重新计算。</span>
+          <span v-else>如需更改成绩，请先提交解锁申请，审批通过后可修改或重新导入成绩，并重新计算。</span>
         </template>
       </el-alert>
 
+      <el-alert
+        v-if="canCalculate"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #title>成绩已保存，待执行课程级计算</template>
+        <template #default>
+          当前成绩已保存且满足计算条件，可点击“计算并锁定”生成课程目标达成度和课程级指标点达成度。
+        </template>
+      </el-alert>
+
+      <el-alert
+        v-if="scoreContext?.calcStatus === 'unsubmitted' && scoreContext?.canGenerateTemplate && !visibleBlockReasons.length"
+        type="info"
+        :closable="false"
+        show-icon
+      >
+        <template #title>当前教学班评价单元可录入成绩</template>
+        <template #default>
+          当前可预览模板并录入成绩，成绩补齐并保存后可执行课程级计算。
+        </template>
+      </el-alert>
       <el-alert type="info" :closable="false" show-icon>
         <template #title>
           固定列：<strong>学号 / 姓名</strong>，动态列：<strong>{{ assessmentPoints.length }}</strong> 个考核点，
@@ -177,6 +200,10 @@ const scoreContext = ref(null)
 const objectiveDashboard = ref(null)
 
 const expectedScoreCount = computed(() => students.value.length * assessmentPoints.value.length)
+const visibleBlockReasons = computed(() => {
+  const reasons = scoreContext.value?.blockReasons || []
+  return reasons.filter((reason) => !String(reason).includes('locked'))
+})
 const filledScoreCount = computed(() =>
   students.value.reduce(
     (total, row) => total + (row.scores || []).filter((item) => item !== null && item !== undefined && item !== '').length,
@@ -184,7 +211,8 @@ const filledScoreCount = computed(() =>
   ),
 )
 const canCalculate = computed(() =>
-  !!selectedClassId.value
+  !calculating.value
+  && !!selectedClassId.value
   && scoreContext.value?.calcStatus === 'score_imported'
   && expectedScoreCount.value > 0
   && filledScoreCount.value === expectedScoreCount.value,
@@ -194,7 +222,7 @@ const canEditScores = computed(() =>
   && scoreContext.value?.canGenerateTemplate
   && scoreContext.value?.calcStatus !== 'locked',
 )
-const canSaveInlineScores = computed(() => canEditScores.value && collectScorePayload().length > 0)
+const canSaveInlineScores = computed(() => !savingInlineScores.value && canEditScores.value && collectScorePayload().length > 0)
 const calcStatusLabel = computed(() => {
   const map = {
     unsubmitted: '未提交',
@@ -362,6 +390,13 @@ function collectScorePayload() {
   return payload
 }
 
+function formatSaveScoreError(error) {
+  if (error?.code === 'ECONNABORTED' || String(error?.message || '').includes('timeout')) {
+    return '成绩保存耗时较长，请稍后刷新成绩预览确认保存结果'
+  }
+  return error?.response?.data?.message || error?.message || '成绩保存失败'
+}
+
 async function saveInlineScores() {
   if (!canSaveInlineScores.value) return
   savingInlineScores.value = true
@@ -373,10 +408,17 @@ async function saveInlineScores() {
     await loadPreview()
     ElMessage.success('成绩保存成功，可继续补录或执行课程级计算')
   } catch (error) {
-    ElMessage.error(error.message || '成绩保存失败')
+    ElMessage.error(formatSaveScoreError(error))
   } finally {
     savingInlineScores.value = false
   }
+}
+
+function formatCalculateCourseError(error) {
+  if (error?.code === 'ECONNABORTED' || String(error?.message || '').includes('timeout')) {
+    return '课程级计算耗时较长，请稍后刷新页面确认计算状态'
+  }
+  return error?.response?.data?.message || error?.message || '课程级计算失败'
 }
 
 async function calculateCourse() {
@@ -387,7 +429,7 @@ async function calculateCourse() {
     await loadPreview()
     ElMessage.success('课程级计算完成，当前教学班已锁定')
   } catch (error) {
-    ElMessage.error(error.message || '课程级计算失败')
+    ElMessage.error(formatCalculateCourseError(error))
   } finally {
     calculating.value = false
   }

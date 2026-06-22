@@ -243,7 +243,7 @@ const calcStatusType = computed(() => {
 })
 
 const canPreviewImport = computed(() => !!scoreFile.value && !!selectedClassId.value && !!scoreContext.value?.canImportScore)
-const canSaveScores = computed(() => previewPayload.value.length > 0 && importResult.summary.failureCount === 0)
+const canSaveScores = computed(() => !saving.value && previewPayload.value.length > 0 && importResult.summary.failureCount === 0)
 const expectedScoreCount = computed(() => scoreRows.value.length * assessmentPoints.value.length)
 const filledScoreCount = computed(() =>
   scoreRows.value.reduce(
@@ -393,6 +393,13 @@ async function previewImport() {
   }
 }
 
+function formatSaveScoreError(error) {
+  if (error?.code === 'ECONNABORTED' || String(error?.message || '').includes('timeout')) {
+    return '成绩保存耗时较长，请稍后刷新成绩预览确认保存结果'
+  }
+  return error?.response?.data?.message || error?.message || '成绩保存失败'
+}
+
 async function saveImportedScores() {
   if (!canSaveScores.value) return
   saving.value = true
@@ -405,7 +412,7 @@ async function saveImportedScores() {
     await loadScoreSheet()
     ElMessage.success('成绩保存成功，请在右侧确认成绩后执行课程级计算')
   } catch (error) {
-    ElMessage.error(error.message || '成绩保存失败')
+    ElMessage.error(formatSaveScoreError(error))
   } finally {
     saving.value = false
   }

@@ -10,6 +10,8 @@ public interface StudentClassService {
 
     StudentClassImportResult importStudentClasses(MultipartFile file);
 
+    StudentClassImportResult generateStudentClasses(Long teachingClassId);
+
     List<StudentClass> listByTeachingClassId(Long teachingClassId);
 
     List<StudentClass> listByStudentId(Long studentId);

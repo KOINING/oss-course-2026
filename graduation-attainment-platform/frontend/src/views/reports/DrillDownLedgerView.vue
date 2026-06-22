@@ -4,9 +4,9 @@
       <template #header>
         <div class="page-header">
           <div>
-            <h1>穿透式台账下钻查询</h1>
+            <h1>穿透式台账逐层追溯</h1>
             <p class="page-summary">
-              从专业级毕业要求指标点逐层下钻至课程级指标点、课程目标、考核点，最终追溯到原始成绩，支持穿透式 Excel 台账导出。
+              从专业级毕业要求指标点逐层追溯至课程级指标点、课程目标、考核点，最终追溯到原始成绩，支持穿透式 Excel 台账导出。
             </p>
           </div>
         </div>
@@ -16,12 +16,11 @@
         <!-- 查询区 -->
         <section class="filter-section">
           <h2>查询区</h2>
-          <el-form :inline="true" :model="filters" class="filter-form">
+          <el-form :model="filters" class="filter-form">
             <el-form-item label="专业">
               <el-select
                 v-model="filters.majorId"
                 placeholder="请选择专业"
-                style="width: 240px"
                 @change="onMajorChange"
               >
                 <el-option
@@ -36,7 +35,6 @@
               <el-select
                 v-model="filters.gradeYear"
                 placeholder="请选择年级"
-                style="width: 160px"
                 :disabled="!filters.majorId"
                 @change="onGradeYearChange"
               >
@@ -64,7 +62,7 @@
 
         <EmptyState
           v-else-if="!hasQueried"
-          description="请选择专业和年级后查询穿透式台账，按指标点逐层下钻查看课程级、课程目标、考核点及原始成绩数据。"
+          description="请选择专业和年级后查询穿透式台账，按指标点逐层追溯查看课程级、课程目标、考核点及原始成绩数据。"
         />
 
         <template v-else>
@@ -146,7 +144,6 @@
                 @click="exportLedger"
               >
                 <el-icon v-if="exportStatus === 'idle'"><Download /></el-icon>
-                <el-icon v-if="exportStatus === 'exporting'" class="is-loading"><Loading /></el-icon>
                 <el-icon v-if="exportStatus === 'success'"><CircleCheck /></el-icon>
                 <el-icon v-if="exportStatus === 'failure'"><CircleClose /></el-icon>
                 {{ exportLabel }}
@@ -159,7 +156,7 @@
               导出失败：{{ exportMessage }}
             </p>
             <p v-else class="export-hint">
-              将当前可追溯的全部层级数据（含指标点、课程、课程目标、考核点及原始成绩）导出为一份结构化 Excel 台账。
+              导出一个工作表，包含专业级汇总和各指标点的课程支撑概览，用于归档专业级达成度和课程支撑贡献。
             </p>
           </section>
 
@@ -170,7 +167,7 @@
                 <el-tag type="primary" effect="dark" size="small">L0</el-tag>
                 专业级指标点达成度
               </h3>
-              <span class="drill-hint">点击指标点行可下钻查看课程级明细</span>
+              <span class="drill-hint">点击指标点行可追溯查看课程级明细</span>
             </div>
             <el-table
               :data="majorReport.indicatorAchievements"
@@ -192,7 +189,7 @@
               <el-table-column prop="contributingCourseCount" label="支撑课程数" width="120" align="center" />
               <el-table-column label="操作" width="100" align="center" fixed="right">
                 <template #default>
-                  <el-button link type="primary" size="small">下钻 &gt;</el-button>
+                  <el-button link type="primary" size="small">追溯 &gt;</el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -209,7 +206,7 @@
                 课程级指标点达成度
                 <span class="drill-context">（指标点：{{ selectedIndicator.ipCode }} {{ selectedIndicator.ipDescription }}）</span>
               </h3>
-              <span class="drill-hint">点击课程行可下钻查看课程目标明细</span>
+              <span class="drill-hint">点击课程行可追溯查看课程目标明细</span>
             </div>
             <el-table
               :data="selectedIndicator.contributingCourses"
@@ -240,7 +237,7 @@
               </el-table-column>
               <el-table-column label="操作" width="100" align="center" fixed="right">
                 <template #default>
-                  <el-button link type="primary" size="small">下钻 &gt;</el-button>
+                  <el-button link type="primary" size="small">追溯 &gt;</el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -257,7 +254,7 @@
                 课程目标达成度
                 <span class="drill-context">（课程：{{ context.courseName }} | 教学班：{{ context.className }}）</span>
               </h3>
-              <span class="drill-hint">点击课程目标行可下钻查看考核点明细</span>
+              <span class="drill-hint">点击课程目标行可追溯查看考核点明细</span>
             </div>
             <el-table
               v-if="currentClassDetail"
@@ -278,7 +275,7 @@
               </el-table-column>
               <el-table-column label="操作" width="100" align="center" fixed="right">
                 <template #default>
-                  <el-button link type="primary" size="small">下钻 &gt;</el-button>
+                  <el-button link type="primary" size="small">追溯 &gt;</el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -296,7 +293,7 @@
                 考核点得分概况
                 <span class="drill-context">（课程目标：{{ selectedObjective.objectiveCode }} {{ selectedObjective.description }}）</span>
               </h3>
-              <span class="drill-hint">点击考核点行可下钻查看原始成绩</span>
+              <span class="drill-hint">点击考核点行可追溯查看原始成绩</span>
             </div>
             <el-table
               :data="currentClassDetail.assessmentPointAverages"
@@ -321,7 +318,7 @@
               </el-table-column>
               <el-table-column label="操作" width="100" align="center" fixed="right">
                 <template #default>
-                  <el-button link type="primary" size="small">下钻 &gt;</el-button>
+                  <el-button link type="primary" size="small">追溯 &gt;</el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -370,7 +367,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Back, CircleCheck, CircleClose, Download, Loading } from '@element-plus/icons-vue'
+import { Back, CircleCheck, CircleClose, Download } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME_PATH } from '@/utils/constants'
@@ -903,12 +900,25 @@ onMounted(async () => {
 
 <style scoped>
 .drill-down-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 20px;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .page-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.page-card :deep(.el-card__body),
+.page-card :deep(.el-card__header) {
+  min-width: 0;
 }
 
 .page-header h1 {
@@ -933,6 +943,9 @@ onMounted(async () => {
 
 .page-content {
   display: grid;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 24px;
 }
 
@@ -940,10 +953,18 @@ onMounted(async () => {
 .context-section,
 .export-section,
 .drill-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 20px;
+  box-sizing: border-box;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+}
+
+.drill-section {
+  overflow-x: auto;
 }
 
 .filter-section h2,
@@ -955,7 +976,28 @@ onMounted(async () => {
 }
 
 .filter-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 360px) minmax(140px, 240px) max-content;
+  align-items: end;
+  gap: 16px 28px;
+  max-width: 100%;
   margin-bottom: 0;
+}
+
+.filter-form :deep(.el-form-item) {
+  min-width: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+}
+
+.filter-form :deep(.el-form-item__content) {
+  min-width: 0;
+}
+
+.filter-form :deep(.el-select),
+.filter-form :deep(.el-input) {
+  width: 100% !important;
+  max-width: 100%;
 }
 
 .context-display {
@@ -1058,6 +1100,21 @@ onMounted(async () => {
   color: #64748b;
 }
 
+.drill-section :deep(.el-table) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.drill-section :deep(.el-table__header-wrapper),
+.drill-section :deep(.el-table__body-wrapper),
+.drill-section :deep(.el-scrollbar) {
+  min-width: 0;
+}
+
+.drill-context {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .loading-section {
   padding: 28px;
   background: #f8fafc;
@@ -1078,4 +1135,39 @@ onMounted(async () => {
   font-weight: 600;
   color: #dc2626;
 }
-</style>
+@media (max-width: 1100px) {
+  .filter-form {
+    grid-template-columns: minmax(180px, 1fr) minmax(140px, 220px) max-content;
+  }
+}
+
+@media (max-width: 760px) {
+  .drill-down-page {
+    padding: 12px;
+  }
+
+  .filter-section,
+  .context-section,
+  .export-section,
+  .drill-section {
+    padding: 14px;
+  }
+
+  .filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-form :deep(.el-button) {
+    width: 100%;
+  }
+
+  .context-display,
+  .section-header,
+  .drill-section-header {
+    align-items: stretch;
+  }
+
+  .drill-section-header h3 {
+    flex-wrap: wrap;
+  }
+}</style>

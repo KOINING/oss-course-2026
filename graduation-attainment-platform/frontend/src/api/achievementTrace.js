@@ -15,5 +15,7 @@ export function getObjectiveToScoreTraceApi(data) {
 export function exportAchievementLedgerApi(data) {
   return request.post('/achievementTrace/exportAchievementLedger', data, {
     responseType: 'blob',
+    timeout: 120000,
+    suppressGlobalError: true,
   })
 }

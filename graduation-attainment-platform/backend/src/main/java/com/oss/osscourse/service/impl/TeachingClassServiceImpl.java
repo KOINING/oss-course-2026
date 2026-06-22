@@ -9,26 +9,38 @@ import com.oss.osscourse.dto.teachingclass.TeachingClassQueryRequest;
 import com.oss.osscourse.dto.teachingclass.TeachingClassResponse;
 import com.oss.osscourse.dto.teachingclass.TeachingClassSaveRequest;
 import com.oss.osscourse.dto.teachingclass.TeachingClassStatusRequest;
+import com.oss.osscourse.dto.teachingclass.TeachingClassStudentCountResponse;
 import com.oss.osscourse.entity.AcademicTerm;
 import com.oss.osscourse.entity.Course;
+import com.oss.osscourse.entity.CourseIndicatorAchievement;
 import com.oss.osscourse.entity.CourseMajor;
+import com.oss.osscourse.entity.CourseObjectiveAchievement;
 import com.oss.osscourse.entity.Major;
+import com.oss.osscourse.entity.StudentAssessmentScore;
 import com.oss.osscourse.entity.StudentClass;
+import com.oss.osscourse.entity.StudentObjectiveAchievement;
 import com.oss.osscourse.entity.Teacher;
 import com.oss.osscourse.entity.TeachingClass;
+import com.oss.osscourse.entity.UnlockAuditLog;
 import com.oss.osscourse.mapper.AcademicTermMapper;
+import com.oss.osscourse.mapper.CourseIndicatorAchievementMapper;
 import com.oss.osscourse.mapper.CourseMajorMapper;
 import com.oss.osscourse.mapper.CourseMapper;
+import com.oss.osscourse.mapper.CourseObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.MajorMapper;
+import com.oss.osscourse.mapper.StudentAssessmentScoreMapper;
 import com.oss.osscourse.mapper.StudentClassMapper;
+import com.oss.osscourse.mapper.StudentObjectiveAchievementMapper;
 import com.oss.osscourse.mapper.TeacherMapper;
 import com.oss.osscourse.mapper.TeachingClassMapper;
+import com.oss.osscourse.mapper.UnlockAuditLogMapper;
 import com.oss.osscourse.service.TeachingClassService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +58,11 @@ public class TeachingClassServiceImpl implements TeachingClassService {
     private final AcademicTermMapper academicTermMapper;
     private final TeacherMapper teacherMapper;
     private final StudentClassMapper studentClassMapper;
+    private final StudentAssessmentScoreMapper studentAssessmentScoreMapper;
+    private final StudentObjectiveAchievementMapper studentObjectiveAchievementMapper;
+    private final CourseObjectiveAchievementMapper courseObjectiveAchievementMapper;
+    private final CourseIndicatorAchievementMapper courseIndicatorAchievementMapper;
+    private final UnlockAuditLogMapper unlockAuditLogMapper;
 
     @Override
     public List<TeachingClassResponse> listTeachingClasses(TeachingClassQueryRequest request) {
@@ -192,16 +209,37 @@ public class TeachingClassServiceImpl implements TeachingClassService {
             throw new BusinessException(404, "教学班不存在");
         }
 
-        Long studentCount = studentClassMapper.selectCount(
-                new LambdaQueryWrapper<StudentClass>().eq(StudentClass::getClassId, classId));
-        if (studentCount != null && studentCount > 0) {
-            throw new BusinessException(400, "该教学班下存在学生，无法删除");
+        List<String> blockingReasons = listDeleteBlockingReasons(classId);
+        if (!blockingReasons.isEmpty()) {
+            throw new BusinessException(400, "该教学班存在" + String.join("、", blockingReasons) + "，无法删除");
         }
 
         try {
+            studentClassMapper.delete(new LambdaQueryWrapper<StudentClass>().eq(StudentClass::getClassId, classId));
             teachingClassMapper.deleteById(classId);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(400, "该教学班存在关联数据，无法删除");
+        }
+    }
+
+    private List<String> listDeleteBlockingReasons(Long classId) {
+        List<String> reasons = new ArrayList<>();
+        addDeleteBlockingReason(reasons, "原始成绩", studentAssessmentScoreMapper.selectCount(
+                new LambdaQueryWrapper<StudentAssessmentScore>().eq(StudentAssessmentScore::getClassId, classId)));
+        addDeleteBlockingReason(reasons, "学生课程目标达成度", studentObjectiveAchievementMapper.selectCount(
+                new LambdaQueryWrapper<StudentObjectiveAchievement>().eq(StudentObjectiveAchievement::getClassId, classId)));
+        addDeleteBlockingReason(reasons, "课程目标达成度", courseObjectiveAchievementMapper.selectCount(
+                new LambdaQueryWrapper<CourseObjectiveAchievement>().eq(CourseObjectiveAchievement::getClassId, classId)));
+        addDeleteBlockingReason(reasons, "课程指标点达成度", courseIndicatorAchievementMapper.selectCount(
+                new LambdaQueryWrapper<CourseIndicatorAchievement>().eq(CourseIndicatorAchievement::getClassId, classId)));
+        addDeleteBlockingReason(reasons, "解锁审核记录", unlockAuditLogMapper.selectCount(
+                new LambdaQueryWrapper<UnlockAuditLog>().eq(UnlockAuditLog::getClassId, classId)));
+        return reasons;
+    }
+
+    private void addDeleteBlockingReason(List<String> reasons, String label, Long count) {
+        if (count != null && count > 0) {
+            reasons.add(label + count + "条");
         }
     }
 
@@ -248,6 +286,7 @@ public class TeachingClassServiceImpl implements TeachingClassService {
         Set<Long> majorIds = classes.stream().map(TeachingClass::getMajorId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> termIds = classes.stream().map(TeachingClass::getTermId).collect(Collectors.toSet());
         Set<Long> teacherIds = classes.stream().map(TeachingClass::getTeacherId).collect(Collectors.toSet());
+        Set<Long> classIds = classes.stream().map(TeachingClass::getClassId).filter(Objects::nonNull).collect(Collectors.toSet());
 
         Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
                 .collect(Collectors.toMap(Course::getCourseId, course -> course));
@@ -259,6 +298,12 @@ public class TeachingClassServiceImpl implements TeachingClassService {
                 .collect(Collectors.toMap(AcademicTerm::getTermId, term -> term));
         Map<Long, Teacher> teacherMap = teacherMapper.selectBatchIds(teacherIds).stream()
                 .collect(Collectors.toMap(Teacher::getId, teacher -> teacher));
+        Map<Long, Long> studentCountMap = classIds.isEmpty()
+                ? Map.of()
+                : studentClassMapper.countStudentsByClassIds(new ArrayList<>(classIds)).stream()
+                .collect(Collectors.toMap(
+                        TeachingClassStudentCountResponse::getClassId,
+                        item -> item.getStudentCount() == null ? 0L : item.getStudentCount()));
 
         return classes.stream()
                 .map(item -> TeachingClassResponse.builder()
@@ -275,6 +320,7 @@ public class TeachingClassServiceImpl implements TeachingClassService {
                         .termCode(termMap.get(item.getTermId()) != null ? termMap.get(item.getTermId()).getTermCode() : null)
                         .teacherId(item.getTeacherId())
                         .teacherName(teacherMap.get(item.getTeacherId()) != null ? teacherMap.get(item.getTeacherId()).getTeacherName() : null)
+                        .studentCount(studentCountMap.getOrDefault(item.getClassId(), 0L))
                         .calcStatus(item.getCalcStatus())
                         .createdAt(item.getCreatedAt())
                         .updatedAt(item.getUpdatedAt())

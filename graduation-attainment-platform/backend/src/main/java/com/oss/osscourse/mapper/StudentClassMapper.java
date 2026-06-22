@@ -2,6 +2,7 @@ package com.oss.osscourse.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.oss.osscourse.dto.teachercontext.TeacherClassStudentResponse;
+import com.oss.osscourse.dto.teachingclass.TeachingClassStudentCountResponse;
 import com.oss.osscourse.entity.StudentClass;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -22,4 +23,17 @@ public interface StudentClassMapper extends BaseMapper<StudentClass> {
             "ORDER BY s.student_no ASC"
     })
     List<TeacherClassStudentResponse> selectStudentsByClassId(@Param("classId") Long classId);
+
+    @Select({
+            "<script>",
+            "SELECT class_id AS classId, COUNT(*) AS studentCount",
+            "FROM student_class",
+            "WHERE class_id IN",
+            "<foreach collection='classIds' item='classId' open='(' separator=',' close=')'>",
+            "#{classId}",
+            "</foreach>",
+            "GROUP BY class_id",
+            "</script>"
+    })
+    List<TeachingClassStudentCountResponse> countStudentsByClassIds(@Param("classIds") List<Long> classIds);
 }

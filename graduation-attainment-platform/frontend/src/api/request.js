@@ -33,7 +33,9 @@ request.interceptors.response.use(
         return payload.data !== undefined ? payload.data : payload
       }
 
-      ElMessage.error(payload.message || '请求失败')
+      if (!response.config?.suppressGlobalError) {
+        ElMessage.error(payload.message || '请求失败')
+      }
       return Promise.reject(new Error(payload.message || '请求失败'))
     }
 
@@ -48,7 +50,7 @@ request.interceptors.response.use(
         router.push({ name: ROUTE_NAMES.LOGIN })
       }
       ElMessage.error('登录已过期，请重新登录')
-    } else {
+    } else if (!error.config?.suppressGlobalError) {
       ElMessage.error(error.response?.data?.message || error.message || '网络异常')
     }
 

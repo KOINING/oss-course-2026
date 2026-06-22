@@ -290,6 +290,14 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         teachingClass.setCalcStatus("score_imported");
         teachingClassMapper.updateById(teachingClass);
 
+        List<Long> affectedIpIds = ciaMapper.selectList(new LambdaQueryWrapper<CourseIndicatorAchievement>()
+                        .eq(CourseIndicatorAchievement::getClassId, request.getClassId()))
+                .stream()
+                .map(CourseIndicatorAchievement::getIpId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
         soaMapper.delete(new LambdaQueryWrapper<StudentObjectiveAchievement>()
                 .eq(StudentObjectiveAchievement::getClassId, request.getClassId()));
         coaMapper.delete(new LambdaQueryWrapper<CourseObjectiveAchievement>()
@@ -297,10 +305,15 @@ public class AssessmentQueryServiceImpl implements AssessmentQueryService {
         ciaMapper.delete(new LambdaQueryWrapper<CourseIndicatorAchievement>()
                 .eq(CourseIndicatorAchievement::getClassId, request.getClassId()));
 
-        if (teachingClass.getMajorId() != null) {
+        if (teachingClass.getMajorId() != null
+                && teachingClass.getGradeYear() != null
+                && teachingClass.getTermId() != null
+                && !affectedIpIds.isEmpty()) {
             miaMapper.delete(new LambdaQueryWrapper<MajorIndicatorAchievement>()
                     .eq(MajorIndicatorAchievement::getMajorId, teachingClass.getMajorId())
-                    .eq(MajorIndicatorAchievement::getGradeYear, teachingClass.getGradeYear()));
+                    .eq(MajorIndicatorAchievement::getGradeYear, teachingClass.getGradeYear())
+                    .eq(MajorIndicatorAchievement::getTermId, teachingClass.getTermId())
+                    .in(MajorIndicatorAchievement::getIpId, affectedIpIds));
         }
     }
 

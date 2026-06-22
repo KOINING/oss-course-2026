@@ -118,7 +118,14 @@ async function handleLogout() {
 
 <style scoped>
 .layout-container {
+  width: 100vw;
+  max-width: 100vw;
   height: 100vh;
+  overflow: hidden;
+}
+
+.layout-container :deep(.el-container) {
+  min-width: 0;
 }
 
 .layout-aside {
@@ -194,6 +201,13 @@ async function handleLogout() {
 }
 
 .layout-main {
+  min-width: 0;
+  max-width: 100%;
   background-color: #f0f2f5;
+  overflow-x: hidden;
+}
+
+.layout-main > :deep(*) {
+  min-width: 0;
 }
 </style>

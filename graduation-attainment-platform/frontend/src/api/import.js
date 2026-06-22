@@ -18,6 +18,10 @@ export function importStudentClassesApi(formData) {
   return postMultipart('/admin/importStudentClasses', formData)
 }
 
+export function generateStudentClassesApi(teachingClassId) {
+  return request.post('/admin/generateStudentClasses', { teachingClassId })
+}
+
 export function listStudentsByTeachingClassApi(teachingClassId) {
   return request.post('/admin/listStudentsByTeachingClass', { teachingClassId })
 }

@@ -13,11 +13,11 @@ import com.oss.osscourse.dto.score.ScoreImportPreviewResponse;
 import com.oss.osscourse.dto.score.ScoreImportRequest;
 import com.oss.osscourse.dto.score.ScoreSaveRequest;
 import com.oss.osscourse.dto.score.ScoreTemplatePreviewResponse;
+import com.oss.osscourse.dto.supportmatrix.MatrixRelationResponse;
 import com.oss.osscourse.entity.AcademicTerm;
 import com.oss.osscourse.entity.AssessmentPoint;
 import com.oss.osscourse.entity.Course;
 import com.oss.osscourse.entity.CourseIndicatorAchievement;
-import com.oss.osscourse.entity.CourseIndicatorSupport;
 import com.oss.osscourse.entity.CourseMajor;
 import com.oss.osscourse.entity.CourseObjective;
 import com.oss.osscourse.entity.CourseObjectiveAchievement;
@@ -73,6 +73,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -95,6 +100,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
     private static final int FULL_SCORE_ROW_INDEX = 1;
     private static final int OBJECTIVE_ROW_INDEX = 2;
     private static final int DATA_START_ROW_INDEX = 3;
+    private static final float WEIGHT_EPSILON = 0.001f;
     private static final DataFormatter DATA_FORMATTER = new DataFormatter();
 
     private final TeachingClassMapper teachingClassMapper;
@@ -421,47 +427,59 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             throw new BusinessException(400, "没有可保存的成绩数据");
         }
 
+        Set<Long> classStudentIds = listStudentsInClass(request.getClassId()).stream()
+                .map(StudentClass::getStudentId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (classStudentIds.isEmpty()) {
+            throw new BusinessException(400, "当前教学班暂无学生名单，不能保存成绩");
+        }
+
+        List<CourseObjective> objectives = listCourseObjectives(teachingClass.getCourseId());
+        Map<Long, AssessmentPoint> assessmentPointMap = listAssessmentPointsByObjectives(objectives).stream()
+                .collect(Collectors.toMap(AssessmentPoint::getApId, item -> item));
+        if (assessmentPointMap.isEmpty()) {
+            throw new BusinessException(400, "当前课程暂无考核点，不能保存成绩");
+        }
+
+        Map<String, StudentAssessmentScore> scoreMap = new LinkedHashMap<>();
         for (ScoreSaveRequest.ScoreItem item : request.getScores()) {
-            Long scCount = studentClassMapper.selectCount(
-                    new LambdaQueryWrapper<StudentClass>()
-                            .eq(StudentClass::getClassId, request.getClassId())
-                            .eq(StudentClass::getStudentId, item.getStudentId()));
-            if (scCount == null || scCount == 0) {
+            if (item.getStudentId() == null || item.getApId() == null) {
+                throw new BusinessException(400, "成绩数据缺少学生或考核点信息");
+            }
+            if (!classStudentIds.contains(item.getStudentId())) {
                 throw new BusinessException(400, "学生不属于当前教学班");
             }
 
-            AssessmentPoint assessmentPoint = assessmentPointMapper.selectById(item.getApId());
+            AssessmentPoint assessmentPoint = assessmentPointMap.get(item.getApId());
             if (assessmentPoint == null) {
-                throw new BusinessException(400, "考核点不存在");
+                throw new BusinessException(400, "考核点不属于当前课程");
             }
-
             if (item.getActualScore() == null
                     || item.getActualScore() < 0
                     || item.getActualScore() > assessmentPoint.getFullScore()) {
                 throw new BusinessException(400, "成绩超出满分范围");
             }
 
-            StudentAssessmentScore existing = sasMapper.selectOne(
-                    new LambdaQueryWrapper<StudentAssessmentScore>()
-                            .eq(StudentAssessmentScore::getStudentId, item.getStudentId())
-                            .eq(StudentAssessmentScore::getApId, item.getApId())
-                            .eq(StudentAssessmentScore::getClassId, request.getClassId()));
-
-            if (existing != null) {
-                existing.setActualScore(item.getActualScore());
-                sasMapper.updateById(existing);
-            } else {
-                StudentAssessmentScore score = new StudentAssessmentScore();
-                score.setStudentId(item.getStudentId());
-                score.setApId(item.getApId());
-                score.setClassId(request.getClassId());
-                score.setActualScore(item.getActualScore());
-                sasMapper.insert(score);
-            }
+            StudentAssessmentScore score = new StudentAssessmentScore();
+            score.setStudentId(item.getStudentId());
+            score.setApId(item.getApId());
+            score.setClassId(request.getClassId());
+            score.setActualScore(item.getActualScore());
+            scoreMap.put(buildScoreKey(item.getStudentId(), item.getApId()), score);
         }
+
+        if (scoreMap.isEmpty()) {
+            throw new BusinessException(400, "没有可保存的有效成绩数据");
+        }
+        sasMapper.upsertBatch(new ArrayList<>(scoreMap.values()));
 
         teachingClass.setCalcStatus("score_imported");
         teachingClassMapper.updateById(teachingClass);
+    }
+
+    private String buildScoreKey(Long studentId, Long apId) {
+        return studentId + "_" + apId;
     }
 
     @Override
@@ -497,20 +515,28 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<StudentAssessmentScore> allScores = sasMapper.selectList(
                 new LambdaQueryWrapper<StudentAssessmentScore>()
                         .eq(StudentAssessmentScore::getClassId, request.getClassId()));
-        ensureAllScoresCompleted(studentIds, assessmentPoints, allScores);
+        ensureAllScoresCompleted(studentClasses, assessmentPoints, allScores);
 
-        Map<Long, List<StudentAssessmentScore>> studentScoresMap = allScores.stream()
-                .collect(Collectors.groupingBy(StudentAssessmentScore::getStudentId));
+        Map<Long, Map<Long, Float>> studentScoresMap = allScores.stream()
+                .collect(Collectors.groupingBy(
+                        StudentAssessmentScore::getStudentId,
+                        Collectors.toMap(
+                                StudentAssessmentScore::getApId,
+                                StudentAssessmentScore::getActualScore,
+                                (left, right) -> right,
+                                LinkedHashMap::new)));
 
         Map<Long, Map<Long, Float>> studentObjectiveAchievement = new HashMap<>();
+        List<StudentObjectiveAchievement> studentObjectiveEntities = new ArrayList<>();
+        Map<Long, List<AssessmentPoint>> objectiveAssessmentPointMap = assessmentPoints.stream()
+                .collect(Collectors.groupingBy(AssessmentPoint::getCoId));
+
         for (Long studentId : studentIds) {
             Map<Long, Float> coAchievement = new HashMap<>();
-            List<StudentAssessmentScore> studentScores = studentScoresMap.getOrDefault(studentId, List.of());
+            Map<Long, Float> studentScores = studentScoresMap.getOrDefault(studentId, Map.of());
 
             for (CourseObjective objective : objectives) {
-                List<AssessmentPoint> objectiveAssessmentPoints = assessmentPoints.stream()
-                        .filter(ap -> ap.getCoId().equals(objective.getCoId()))
-                        .toList();
+                List<AssessmentPoint> objectiveAssessmentPoints = objectiveAssessmentPointMap.getOrDefault(objective.getCoId(), List.of());
                 if (objectiveAssessmentPoints.isEmpty()) {
                     coAchievement.put(objective.getCoId(), 0f);
                     continue;
@@ -520,11 +546,9 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 float totalFull = 0f;
                 for (AssessmentPoint assessmentPoint : objectiveAssessmentPoints) {
                     totalFull += assessmentPoint.getFullScore();
-                    Optional<StudentAssessmentScore> score = studentScores.stream()
-                            .filter(item -> item.getApId().equals(assessmentPoint.getApId()))
-                            .findFirst();
-                    if (score.isPresent()) {
-                        totalActual += score.get().getActualScore();
+                    Float actualScore = studentScores.get(assessmentPoint.getApId());
+                    if (actualScore != null) {
+                        totalActual += actualScore;
                     }
                 }
                 float achievement = totalFull > 0 ? totalActual / totalFull : 0f;
@@ -533,28 +557,20 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
 
             studentObjectiveAchievement.put(studentId, coAchievement);
             for (Map.Entry<Long, Float> entry : coAchievement.entrySet()) {
-                Long coId = entry.getKey();
-                Float achievement = entry.getValue();
-                StudentObjectiveAchievement existing = soaMapper.selectOne(
-                        new LambdaQueryWrapper<StudentObjectiveAchievement>()
-                                .eq(StudentObjectiveAchievement::getStudentId, studentId)
-                                .eq(StudentObjectiveAchievement::getClassId, request.getClassId())
-                                .eq(StudentObjectiveAchievement::getCoId, coId));
-                if (existing != null) {
-                    existing.setAchievement(achievement);
-                    soaMapper.updateById(existing);
-                } else {
-                    StudentObjectiveAchievement entity = new StudentObjectiveAchievement();
-                    entity.setStudentId(studentId);
-                    entity.setClassId(request.getClassId());
-                    entity.setCoId(coId);
-                    entity.setAchievement(achievement);
-                    soaMapper.insert(entity);
-                }
+                StudentObjectiveAchievement entity = new StudentObjectiveAchievement();
+                entity.setStudentId(studentId);
+                entity.setClassId(request.getClassId());
+                entity.setCoId(entry.getKey());
+                entity.setAchievement(entry.getValue());
+                studentObjectiveEntities.add(entity);
             }
+        }
+        if (!studentObjectiveEntities.isEmpty()) {
+            soaMapper.upsertBatch(studentObjectiveEntities);
         }
 
         List<CourseCalcResponse.ObjectiveAchievement> objectiveAchievements = new ArrayList<>();
+        List<CourseObjectiveAchievement> courseObjectiveEntities = new ArrayList<>();
         Map<Long, Float> classObjectiveAchievement = new HashMap<>();
         for (CourseObjective objective : objectives) {
             float sum = 0f;
@@ -575,25 +591,24 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                     .averageAchievement(average)
                     .build());
 
-            CourseObjectiveAchievement existing = coaMapper.selectOne(
-                    new LambdaQueryWrapper<CourseObjectiveAchievement>()
-                            .eq(CourseObjectiveAchievement::getClassId, request.getClassId())
-                            .eq(CourseObjectiveAchievement::getCoId, objective.getCoId()));
-            if (existing != null) {
-                existing.setAverageAchievement(average);
-                coaMapper.updateById(existing);
-            } else {
-                CourseObjectiveAchievement entity = new CourseObjectiveAchievement();
-                entity.setClassId(request.getClassId());
-                entity.setCoId(objective.getCoId());
-                entity.setAverageAchievement(average);
-                coaMapper.insert(entity);
-            }
+            CourseObjectiveAchievement entity = new CourseObjectiveAchievement();
+            entity.setClassId(request.getClassId());
+            entity.setCoId(objective.getCoId());
+            entity.setAverageAchievement(average);
+            courseObjectiveEntities.add(entity);
+        }
+        if (!courseObjectiveEntities.isEmpty()) {
+            coaMapper.upsertBatch(courseObjectiveEntities);
         }
 
         Map<String, CourseCalcResponse.IndicatorAchievement> indicatorAchievementMap = new LinkedHashMap<>();
         Map<Long, List<ObjectiveIndicatorContribution>> ipOicMap = internalWeights.stream()
                 .collect(Collectors.groupingBy(ObjectiveIndicatorContribution::getIpId));
+        Map<Long, IndicatorPoint> indicatorPointMap = ipOicMap.keySet().isEmpty()
+                ? Map.of()
+                : indicatorPointMapper.selectBatchIds(ipOicMap.keySet()).stream()
+                .collect(Collectors.toMap(IndicatorPoint::getIpId, item -> item));
+        List<CourseIndicatorAchievement> courseIndicatorEntities = new ArrayList<>();
         for (Map.Entry<Long, List<ObjectiveIndicatorContribution>> entry : ipOicMap.entrySet()) {
             Long ipId = entry.getKey();
             float ek = 0f;
@@ -605,7 +620,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
             }
             ek = Math.min(ek, 1.0f);
 
-            IndicatorPoint indicatorPoint = indicatorPointMapper.selectById(ipId);
+            IndicatorPoint indicatorPoint = indicatorPointMap.get(ipId);
             CourseCalcResponse.IndicatorAchievement indicatorAchievement = CourseCalcResponse.IndicatorAchievement.builder()
                     .ipId(ipId)
                     .ipCode(indicatorPoint == null ? "" : indicatorPoint.getIpCode())
@@ -614,22 +629,15 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                     .build();
             indicatorAchievementMap.putIfAbsent(indicatorDisplayKey(indicatorPoint), indicatorAchievement);
 
-            CourseIndicatorAchievement existing = ciaMapper.selectOne(
-                    new LambdaQueryWrapper<CourseIndicatorAchievement>()
-                            .eq(CourseIndicatorAchievement::getClassId, request.getClassId())
-                            .eq(CourseIndicatorAchievement::getIpId, ipId));
-            if (existing != null) {
-                existing.setAchievement(ek);
-                existing.setIsLocked(true);
-                ciaMapper.updateById(existing);
-            } else {
-                CourseIndicatorAchievement entity = new CourseIndicatorAchievement();
-                entity.setClassId(request.getClassId());
-                entity.setIpId(ipId);
-                entity.setAchievement(ek);
-                entity.setIsLocked(true);
-                ciaMapper.insert(entity);
-            }
+            CourseIndicatorAchievement entity = new CourseIndicatorAchievement();
+            entity.setClassId(request.getClassId());
+            entity.setIpId(ipId);
+            entity.setAchievement(ek);
+            entity.setIsLocked(true);
+            courseIndicatorEntities.add(entity);
+        }
+        if (!courseIndicatorEntities.isEmpty()) {
+            ciaMapper.upsertBatch(courseIndicatorEntities);
         }
         List<CourseCalcResponse.IndicatorAchievement> indicatorAchievements = indicatorAchievementMap.values().stream()
                 .sorted((left, right) -> compareIndicatorCode(left.getIpCode(), right.getIpCode()))
@@ -835,9 +843,8 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         List<CourseIndicatorAchievement> courseIndicatorAchievements = ciaMapper.selectList(
                 new LambdaQueryWrapper<CourseIndicatorAchievement>()
                         .in(CourseIndicatorAchievement::getClassId, classIds));
-        List<CourseIndicatorSupport> courseIndicatorSupports = cisMapper.selectList(
-                new LambdaQueryWrapper<CourseIndicatorSupport>()
-                        .in(CourseIndicatorSupport::getCourseId, courseIds));
+        List<MatrixRelationResponse> courseIndicatorSupports = cisMapper.selectMatrixRelationsByMajor(
+                request.getMajorId(), request.getGradeYear());
         List<Long> configuredIpIds = listConfiguredIndicators(request.getMajorId(), request.getGradeYear()).stream()
                 .map(IndicatorPoint::getIpId)
                 .filter(Objects::nonNull)
@@ -847,6 +854,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                     .filter(item -> configuredIpIds.contains(item.getIpId()))
                     .toList();
         }
+        validateMacroWeightSums(courseIndicatorSupports);
 
         Map<Long, Float> ipFinalAchievement = new HashMap<>();
         Map<Long, List<CourseIndicatorAchievement>> ipCiaMap = courseIndicatorAchievements.stream()
@@ -862,7 +870,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 if (teachingClass == null) {
                     continue;
                 }
-                Optional<CourseIndicatorSupport> support = courseIndicatorSupports.stream()
+                Optional<MatrixRelationResponse> support = courseIndicatorSupports.stream()
                         .filter(item -> item.getCourseId().equals(teachingClass.getCourseId()) && item.getIpId().equals(ipId))
                         .findFirst();
                 if (support.isPresent()) {
@@ -1145,9 +1153,38 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                         + String.join("、", invalidCodes));
     }
 
-    private void ensureAllScoresCompleted(List<Long> studentIds,
+    private void validateMacroWeightSums(List<MatrixRelationResponse> supports) {
+        Map<Long, Float> weightSums = new LinkedHashMap<>();
+        for (MatrixRelationResponse support : supports) {
+            if (support.getIpId() != null && support.getTotalWeight() != null) {
+                weightSums.merge(support.getIpId(), support.getTotalWeight(), Float::sum);
+            }
+        }
+
+        List<Long> invalidIpIds = weightSums.entrySet().stream()
+                .filter(entry -> Math.abs(entry.getValue() - 1.0f) > WEIGHT_EPSILON)
+                .map(Map.Entry::getKey)
+                .toList();
+        if (invalidIpIds.isEmpty()) {
+            return;
+        }
+
+        List<String> invalidCodes = indicatorPointMapper.selectBatchIds(invalidIpIds).stream()
+                .map(IndicatorPoint::getIpCode)
+                .filter(Objects::nonNull)
+                .toList();
+        throw new BusinessException(400,
+                "当前专业宏观支撑权重 W 未满足同一指标点权重和为 1.00，异常指标点："
+                        + String.join("、", invalidCodes));
+    }
+
+    private void ensureAllScoresCompleted(List<StudentClass> studentClasses,
                                           List<AssessmentPoint> assessmentPoints,
                                           List<StudentAssessmentScore> allScores) {
+        List<Long> studentIds = studentClasses.stream()
+                .map(StudentClass::getStudentId)
+                .filter(Objects::nonNull)
+                .toList();
         if (studentIds.isEmpty() || assessmentPoints.isEmpty()) {
             throw new BusinessException(400, "当前教学班缺少学生名单或考核点配置，不能执行课程级计算");
         }
@@ -1156,13 +1193,28 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
                 .map(score -> score.getStudentId() + "_" + score.getApId())
                 .collect(Collectors.toSet());
 
+        Map<Long, Student> studentMap = studentMapper.selectBatchIds(studentIds).stream()
+                .collect(Collectors.toMap(Student::getStudentId, item -> item, (left, right) -> left));
+        List<String> missingItems = new ArrayList<>();
         for (Long studentId : studentIds) {
             for (AssessmentPoint assessmentPoint : assessmentPoints) {
                 String key = studentId + "_" + assessmentPoint.getApId();
                 if (!savedKeys.contains(key)) {
-                    throw new BusinessException(400, "当前教学班仍有未录入的考核点成绩，必须补齐全部学生成绩后才能执行课程级计算");
+                    Student student = studentMap.get(studentId);
+                    String studentLabel = student == null
+                            ? String.valueOf(studentId)
+                            : student.getStudentNo() + "-" + student.getStudentName();
+                    missingItems.add(studentLabel + "/" + assessmentPoint.getApName());
                 }
             }
+        }
+        if (!missingItems.isEmpty()) {
+            String details = missingItems.stream().limit(10).collect(Collectors.joining("；"));
+            if (missingItems.size() > 10) {
+                details += "；等" + missingItems.size() + "项";
+            }
+            throw new BusinessException(400,
+                    "当前教学班仍有未录入的考核点成绩：" + details + "。必须补齐全部学生成绩后才能执行课程级计算");
         }
     }
 
@@ -1177,7 +1229,7 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         byte[] fileBytes = decodeFileBytes(request.getFileBase64());
         String lowerName = request.getFileName().toLowerCase(Locale.ROOT);
         if (lowerName.endsWith(".csv")) {
-            return parseCsvRows(new String(fileBytes, StandardCharsets.UTF_8));
+            return parseCsvRows(decodeCsvContent(fileBytes));
         }
         try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(fileBytes))) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -1187,6 +1239,28 @@ public class ScoreCalcServiceImpl implements ScoreCalcService {
         } catch (Exception e) {
             throw new BusinessException(400, "成绩文件格式不正确，请使用系统模板重新导入");
         }
+    }
+
+    private String decodeCsvContent(byte[] fileBytes) {
+        if (startsWithUtf8Bom(fileBytes)) {
+            return new String(fileBytes, StandardCharsets.UTF_8);
+        }
+
+        CharsetDecoder utf8Decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            return utf8Decoder.decode(ByteBuffer.wrap(fileBytes)).toString();
+        } catch (CharacterCodingException ignored) {
+            return Charset.forName("GBK").decode(ByteBuffer.wrap(fileBytes)).toString();
+        }
+    }
+
+    private boolean startsWithUtf8Bom(byte[] fileBytes) {
+        return fileBytes.length >= 3
+                && fileBytes[0] == (byte) 0xEF
+                && fileBytes[1] == (byte) 0xBB
+                && fileBytes[2] == (byte) 0xBF;
     }
 
     private byte[] decodeFileBytes(String fileBase64) {

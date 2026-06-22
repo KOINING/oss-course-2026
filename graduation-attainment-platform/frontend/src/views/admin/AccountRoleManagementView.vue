@@ -45,7 +45,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="tableLoading" :data="users" border>
+      <el-table v-loading="tableLoading" :data="users" border element-loading-background="rgba(255, 255, 255, 0.92)">
         <el-table-column prop="username" label="用户名" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="140" />
         <el-table-column label="状态" width="100">
@@ -55,7 +55,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="角色" min-width="220">
+        <el-table-column label="角色" min-width="220" align="left" header-align="left">
           <template #default="{ row }">
             <div class="role-tags">
               <el-tag
@@ -290,6 +290,7 @@ async function loadRoleOptions() {
 
 async function loadUsers() {
   tableLoading.value = true
+  users.value = []
   try {
     const result = await listUsersByPageApi({
       ...normalizeFilters(),
@@ -449,8 +450,15 @@ onMounted(async () => {
 
 .role-tags {
   display: flex;
+  min-height: 24px;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.role-tags :deep(.el-tag) {
+  margin: 0;
 }
 
 .table-actions {

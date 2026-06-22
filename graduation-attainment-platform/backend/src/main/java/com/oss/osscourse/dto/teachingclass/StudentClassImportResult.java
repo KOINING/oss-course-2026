@@ -21,6 +21,9 @@ public class StudentClassImportResult {
     @Schema(description = "成功条数")
     private int successCount;
 
+    @Schema(description = "已存在跳过条数")
+    private int skippedCount;
+
     @Schema(description = "失败条数")
     private int failureCount;
 

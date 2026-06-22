@@ -145,9 +145,9 @@ public class MajorReportServiceImpl implements MajorReportService {
         List<TeachingClass> teachingClasses = allTeachingClasses.stream()
                 .filter(item -> "locked".equals(item.getCalcStatus()))
                 .toList();
-        Map<Long, TeachingClass> classByCourseMap = new LinkedHashMap<>();
+        Map<Long, List<TeachingClass>> classesByCourseMap = new LinkedHashMap<>();
         for (TeachingClass tc : teachingClasses) {
-            classByCourseMap.putIfAbsent(tc.getCourseId(), tc);
+            classesByCourseMap.computeIfAbsent(tc.getCourseId(), key -> new ArrayList<>()).add(tc);
         }
 
         // 7. 获取课程级指标点达成度
@@ -179,27 +179,36 @@ public class MajorReportServiceImpl implements MajorReportService {
                 weightSum += relation.getTotalWeight();
 
                 Course course = courseMap.get(relation.getCourseId());
-                TeachingClass tc = classByCourseMap.get(relation.getCourseId());
-
-                Float ek = null;
-                if (tc != null) {
-                    String ciaKey = tc.getClassId() + "_" + ip.getIpId();
-                    CourseIndicatorAchievement cia = ciaMap.get(ciaKey);
-                    ek = cia != null ? cia.getAchievement() : null;
+                List<TeachingClass> relationClasses = classesByCourseMap.getOrDefault(relation.getCourseId(), List.of());
+                if (relationClasses.isEmpty()) {
+                    contributingCourses.add(ContributingCourse.builder()
+                            .courseId(relation.getCourseId())
+                            .courseCode(course != null ? course.getCourseCode() : null)
+                            .courseName(course != null ? course.getCourseName() : null)
+                            .courseAchievement(null)
+                            .totalWeight(relation.getTotalWeight())
+                            .weightedContribution(0f)
+                            .build());
+                    continue;
                 }
 
-                float weightedContribution = (ek != null) ? ek * relation.getTotalWeight() : 0f;
+                for (TeachingClass tc : relationClasses) {
+                    String ciaKey = tc.getClassId() + "_" + ip.getIpId();
+                    CourseIndicatorAchievement cia = ciaMap.get(ciaKey);
+                    Float ek = cia != null ? cia.getAchievement() : null;
+                    float weightedContribution = (ek != null) ? ek * relation.getTotalWeight() : 0f;
 
-                contributingCourses.add(ContributingCourse.builder()
-                        .courseId(relation.getCourseId())
-                        .courseCode(course != null ? course.getCourseCode() : null)
-                        .courseName(course != null ? course.getCourseName() : null)
-                        .classId(tc != null ? tc.getClassId() : null)
-                        .className(tc != null ? tc.getClassName() : null)
-                        .courseAchievement(ek)
-                        .totalWeight(relation.getTotalWeight())
-                        .weightedContribution(weightedContribution)
-                        .build());
+                    contributingCourses.add(ContributingCourse.builder()
+                            .courseId(relation.getCourseId())
+                            .courseCode(course != null ? course.getCourseCode() : null)
+                            .courseName(course != null ? course.getCourseName() : null)
+                            .classId(tc.getClassId())
+                            .className(tc.getClassName())
+                            .courseAchievement(ek)
+                            .totalWeight(relation.getTotalWeight())
+                            .weightedContribution(weightedContribution)
+                            .build());
+                }
             }
 
             rows.add(IndicatorReportRow.builder()

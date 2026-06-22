@@ -14,7 +14,11 @@ import { listMajorsForSelectApi } from '@/api/basic'
 import { listAcademicTermsApi } from '@/api/academicTerm'
 import { listTeachersForSelectApi } from '@/api/teacher'
 import { getStudentApi } from '@/api/student'
-import { listStudentsByTeachingClassApi, removeStudentFromClassApi } from '@/api/import'
+import {
+  generateStudentClassesApi,
+  listStudentsByTeachingClassApi,
+  removeStudentFromClassApi,
+} from '@/api/import'
 import { ROUTE_NAMES } from '@/utils/constants'
 import { PAGE_SIZE_OPTIONS, PAGINATION_LAYOUT, applyPageResult } from '@/utils/pagination'
 
@@ -25,6 +29,7 @@ const tableLoading = ref(false)
 const submitLoading = ref(false)
 const relationLoading = ref(false)
 const relationRemoving = ref(false)
+const relationGenerating = ref(false)
 const dialogVisible = ref(false)
 const relationDrawerVisible = ref(false)
 const dialogMode = ref('create')
@@ -171,6 +176,15 @@ function mapRelationRows(records = []) {
       statusText: student?.statusText || '-',
     }
   })
+}
+
+function syncCurrentTeachingClassStudentCount(count) {
+  if (!currentTeachingClass.value) return
+  currentTeachingClass.value.studentCount = count
+  const currentRow = rows.value.find((item) => item.classId === currentTeachingClass.value.classId)
+  if (currentRow) {
+    currentRow.studentCount = count
+  }
 }
 
 async function loadOptions() {
@@ -335,13 +349,37 @@ function goToStudentClassImportForRow(row) {
 async function openRelationDrawer(row) {
   currentTeachingClass.value = row
   relationDrawerVisible.value = true
+  await refreshRelationRows(row.classId)
+}
+
+async function refreshRelationRows(classId) {
   relationLoading.value = true
   try {
-    const records = await listStudentsByTeachingClassApi(row.classId)
+    const records = await listStudentsByTeachingClassApi(classId)
     await loadStudentsForRelation(records || [])
     relationRows.value = mapRelationRows(records || [])
+    syncCurrentTeachingClassStudentCount(relationRows.value.length)
   } finally {
     relationLoading.value = false
+  }
+}
+
+async function handleGenerateRelations() {
+  if (!currentTeachingClass.value) return
+
+  relationGenerating.value = true
+  try {
+    const result = await generateStudentClassesApi(currentTeachingClass.value.classId)
+    await refreshRelationRows(currentTeachingClass.value.classId)
+    if ((result?.totalCount ?? 0) === 0) {
+      ElMessage.warning('未找到当前教学班专业和年级下的在读学生')
+      return
+    }
+    ElMessage.success(
+      `名单生成完成：新增 ${result?.successCount ?? 0} 条，已存在跳过 ${result?.skippedCount ?? 0} 条`,
+    )
+  } finally {
+    relationGenerating.value = false
   }
 }
 
@@ -351,9 +389,7 @@ async function handleRemoveRelation(row) {
     await removeStudentFromClassApi(row.scId)
     ElMessage.success('学生与教学班的关联已移除')
     if (currentTeachingClass.value) {
-      const records = await listStudentsByTeachingClassApi(currentTeachingClass.value.classId)
-      await loadStudentsForRelation(records || [])
-      relationRows.value = mapRelationRows(records || [])
+      await refreshRelationRows(currentTeachingClass.value.classId)
     }
   } finally {
     relationRemoving.value = false
@@ -469,6 +505,9 @@ onMounted(async () => {
         <el-table-column prop="gradeYear" label="年级" width="100" align="center">
           <template #default="{ row }">{{ row.gradeYear ? `${row.gradeYear}级` : '-' }}</template>
         </el-table-column>
+        <el-table-column label="人数" width="90" align="center">
+          <template #default="{ row }">{{ row.studentCount ?? 0 }}</template>
+        </el-table-column>
         <el-table-column prop="courseCode" label="课程代码" min-width="120" />
         <el-table-column prop="courseName" label="课程名称" min-width="180" />
         <el-table-column prop="termCode" label="学期" min-width="140" />
@@ -503,7 +542,7 @@ onMounted(async () => {
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <el-popconfirm title="确认删除该教学班吗？" @confirm="handleDelete(row)">
+              <el-popconfirm title="确认删除该教学班吗？学生名单关联将同步清理。" @confirm="handleDelete(row)">
                 <template #reference>
                   <el-button link type="danger">删除</el-button>
                 </template>
@@ -594,20 +633,29 @@ onMounted(async () => {
     <el-drawer v-model="relationDrawerVisible" :title="relationTitle" size="720px" destroy-on-close>
       <div class="relation-drawer">
         <div class="relation-drawer__header">
-          <div>
-            <p class="relation-drawer__meta">
-              {{ currentTeachingClass?.courseName || '-' }} / {{ currentTeachingClass?.termCode || '-' }}
-            </p>
-            <h3>教学班学生关联</h3>
-            <p class="relation-drawer__hint">该名单应覆盖本专业本年级修读该必修课程的学生。</p>
+          <div class="relation-drawer__top">
+            <div class="relation-drawer__summary">
+              <p class="relation-drawer__meta">
+                {{ currentTeachingClass?.courseName || '-' }} / {{ currentTeachingClass?.termCode || '-' }}
+              </p>
+              <h3>教学班学生关联</h3>
+            </div>
+            <div class="relation-drawer__actions">
+              <el-popconfirm title="确认按该教学班专业和年级自动补齐学生名单吗？" @confirm="handleGenerateRelations">
+                <template #reference>
+                  <el-button type="success" plain :loading="relationGenerating">自动生成名单</el-button>
+                </template>
+              </el-popconfirm>
+              <el-button
+                type="primary"
+                plain
+                @click="currentTeachingClass && goToStudentClassImportForRow(currentTeachingClass)"
+              >
+                前往教学班学生关联导入
+              </el-button>
+            </div>
           </div>
-          <el-button
-            type="primary"
-            plain
-            @click="currentTeachingClass && goToStudentClassImportForRow(currentTeachingClass)"
-          >
-            前往教学班学生关联导入
-          </el-button>
+          <p class="relation-drawer__hint">该名单应覆盖本专业本年级修读该必修课程的学生。</p>
         </div>
 
         <el-table v-loading="relationLoading" :data="relationRows" border stripe>
@@ -727,9 +775,29 @@ onMounted(async () => {
 
 .relation-drawer__header {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.relation-drawer__top {
+  display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  width: 100%;
+}
+
+.relation-drawer__summary {
+  min-width: 0;
+  flex: 1;
+}
+
+.relation-drawer__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .relation-drawer__header h3 {
@@ -742,5 +810,14 @@ onMounted(async () => {
   margin: 0;
   color: #64748b;
   font-size: 13px;
+}
+
+.relation-drawer__hint {
+  width: 100%;
+  margin: -8px 0 0;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

@@ -31,6 +31,7 @@ const indicators = ref([])
 const matrixMap = ref({})
 const matrixTableRef = ref(null)
 const summaryScrollRef = ref(null)
+const summaryColumnWidths = ref([])
 const hoveredCourseId = ref(null)
 const hoveredIndicatorId = ref(null)
 let matrixSnapshot = {}
@@ -39,6 +40,13 @@ let syncingScroll = false
 
 function formatGradeYear(gradeYear) {
   return gradeYear ? `${gradeYear}级` : '-'
+}
+
+function formatCourseLabel(course) {
+  if (!course) return '-'
+  const code = course.courseCode || ''
+  const name = course.courseName || ''
+  return code && name ? `${code} - ${name}` : code || name || '-'
 }
 
 const indicatorGroups = computed(() => {
@@ -143,6 +151,39 @@ function handleSummaryScroll() {
   syncingScroll = false
 }
 
+function getMatrixLeafColumnWidths() {
+  const tableEl = matrixTableRef.value?.$el
+  const cols = tableEl?.querySelectorAll('.el-table__body-wrapper colgroup col') || []
+  const widths = Array.from(cols)
+    .map((col) => Number(col.getAttribute('width') || parseFloat(col.style.width) || 0))
+    .filter((width) => Number.isFinite(width) && width > 0)
+  const expectedCount = indicators.value.length + 1
+  return widths.length >= expectedCount ? widths.slice(0, expectedCount) : []
+}
+
+async function updateSummaryColumnWidths() {
+  await nextTick()
+  const widths = getMatrixLeafColumnWidths()
+  summaryColumnWidths.value = widths.length
+    ? widths
+    : [220, ...indicators.value.map(() => 178)]
+}
+
+function getSummaryGridStyle() {
+  const widths = summaryColumnWidths.value.length
+    ? summaryColumnWidths.value
+    : [220, ...indicators.value.map(() => 178)]
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0)
+  return {
+    minWidth: `${totalWidth}px`,
+    gridTemplateColumns: widths.map((width) => `${width}px`).join(' '),
+  }
+}
+
+function handleHeaderDragEnd() {
+  updateSummaryColumnWidths()
+}
+
 function detachMatrixScrollSync() {
   tableBodyScrollEl?.removeEventListener('scroll', handleTableBodyScroll)
   summaryScrollRef.value?.removeEventListener('scroll', handleSummaryScroll)
@@ -157,6 +198,7 @@ async function setupMatrixScrollSync() {
   tableBodyScrollEl.addEventListener('scroll', handleTableBodyScroll)
   summaryScrollRef.value.addEventListener('scroll', handleSummaryScroll)
   summaryScrollRef.value.scrollLeft = tableBodyScrollEl.scrollLeft
+  await updateSummaryColumnWidths()
 }
 
 async function loadMatrix() {
@@ -414,7 +456,7 @@ onBeforeUnmount(() => {
             <el-option
               v-for="course in courseOptions"
               :key="`${course.courseId}-${course.gradeYear}`"
-              :label="course.courseName"
+              :label="formatCourseLabel(course)"
               :value="course.courseId"
             />
           </el-select>
@@ -444,10 +486,11 @@ onBeforeUnmount(() => {
             max-height="620"
             :row-class-name="getMatrixRowClass"
             class="matrix-el-table"
+            @header-dragend="handleHeaderDragEnd"
           >
             <el-table-column prop="courseName" label="课程 / 毕业要求" width="220" fixed="left" class-name="matrix-course-column">
               <template #default="{ row }">
-                <div class="course-name-cell" @mouseenter="setMatrixHover(row.courseId)">{{ row.courseName }}</div>
+                <div class="course-name-cell" @mouseenter="setMatrixHover(row.courseId)">{{ formatCourseLabel(row) }}</div>
               </template>
             </el-table-column>
 
@@ -497,10 +540,7 @@ onBeforeUnmount(() => {
           <div ref="summaryScrollRef" class="matrix-summary-scroll">
             <div
               class="matrix-summary-grid"
-              :style="{
-                minWidth: `${220 + indicators.length * 178}px`,
-                gridTemplateColumns: `220px repeat(${indicators.length}, minmax(178px, 1fr))`,
-              }"
+              :style="getSummaryGridStyle()"
             >
               <div class="matrix-summary-label">列权重合计</div>
               <div
