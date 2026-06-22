@@ -251,36 +251,8 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     public byte[] exportAchievementLedger(MajorToCourseTraceRequest request) {
         assertMajorResultReady(request);
         List<AchievementLedgerRow> rows = listLedgerRows(request);
-        if (rows != null) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             buildMergedLedgerWorkbook(workbook, rows);
-            workbook.write(out);
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw new BusinessException(500, "导出追溯台账失败");
-        }
-        }
-
-        try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            XSSFSheet sheet = workbook.createSheet("达成度追溯台账");
-            String[] headers = {
-                    "专业", "年级", "学期", "毕业要求", "指标点", "Gk专业级达成度",
-                    "课程代码", "课程名称", "教学班", "Ek课程级达成度", "W宏观权重",
-                    "课程目标", "Cj课程目标达成度", "w内部权重",
-                    "考核点", "满分", "学号", "姓名", "原始成绩"
-            };
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                headerRow.createCell(i).setCellValue(headers[i]);
-            }
-            int rowIndex = 1;
-            for (AchievementLedgerRow item : rows) {
-                Row row = sheet.createRow(rowIndex++);
-                writeRow(row, item);
-            }
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
@@ -410,54 +382,60 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     }
 
     private void buildMergedLedgerWorkbook(XSSFWorkbook workbook, List<AchievementLedgerRow> rows) {
-        XSSFSheet sheet = workbook.createSheet("穿透式台账");
         CellStyle titleStyle = createTitleStyle(workbook);
         CellStyle infoStyle = createInfoStyle(workbook);
-        CellStyle majorSectionStyle = createSectionStyle(workbook, IndexedColors.DARK_BLUE, true);
-        CellStyle indicatorSectionStyle = createSectionStyle(workbook, IndexedColors.TEAL, true);
-        CellStyle courseSectionStyle = createSectionStyle(workbook, IndexedColors.SEA_GREEN, true);
-        CellStyle detailSectionStyle = createSectionStyle(workbook, IndexedColors.LIGHT_ORANGE, false);
         CellStyle headerStyle = createHeaderStyle(workbook);
-        CellStyle detailHeaderStyle = createDetailHeaderStyle(workbook);
         CellStyle bodyStyle = createBodyStyle(workbook, false);
         CellStyle centeredBodyStyle = createBodyStyle(workbook, true);
+        CellStyle achievementStyle = createNumberStyle(workbook, "0.0000");
+        CellStyle weightStyle = createNumberStyle(workbook, "0.00");
 
         AchievementLedgerRow first = rows.get(0);
         String majorName = first.getMajorName() == null ? "" : first.getMajorName();
         String termCode = first.getTermCode() == null ? "-" : first.getTermCode();
+        String exportInfo = "统计学期：" + termCode + " | 导出时间：" + LocalDateTime.now().format(EXPORT_TIME_FORMATTER);
 
         Map<Long, List<AchievementLedgerRow>> rowsByIp = rows.stream()
                 .filter(row -> row.getIpId() != null)
                 .collect(Collectors.groupingBy(AchievementLedgerRow::getIpId, LinkedHashMap::new, Collectors.toList()));
 
-        int rowIndex = 0;
-        rowIndex = writeMergedTextRow(
-                sheet,
-                rowIndex,
-                "穿透式台账 - " + majorName + " " + first.getGradeYear() + "级",
+        buildMajorSummarySheet(
+                workbook,
+                rowsByIp,
                 titleStyle,
-                5,
-                30
-        );
-        rowIndex = writeMergedTextRow(
-                sheet,
-                rowIndex,
-                "统计学期：" + termCode + " | 导出时间：" + LocalDateTime.now().format(EXPORT_TIME_FORMATTER),
                 infoStyle,
-                5,
-                22
+                headerStyle,
+                bodyStyle,
+                centeredBodyStyle,
+                achievementStyle,
+                weightStyle,
+                majorName,
+                first.getGradeYear(),
+                exportInfo
         );
-        rowIndex++;
+    }
 
-        rowIndex = writeMergedTextRow(sheet, rowIndex, "一、专业级指标点达成度", majorSectionStyle, 4, 24);
-        Row majorHeaderRow = sheet.createRow(rowIndex++);
-        String[] majorHeaders = {
-                "指标点编号", "指标点描述", "毕业要求", "专业级达成度 Gk", "支撑课程数"
-        };
-        for (int i = 0; i < majorHeaders.length; i++) {
-            writeCell(majorHeaderRow.createCell(i), majorHeaders[i], headerStyle);
-        }
+    private void buildMajorSummarySheet(XSSFWorkbook workbook,
+                                        Map<Long, List<AchievementLedgerRow>> rowsByIp,
+                                        CellStyle titleStyle,
+                                        CellStyle infoStyle,
+                                        CellStyle headerStyle,
+                                        CellStyle bodyStyle,
+                                        CellStyle centeredBodyStyle,
+                                        CellStyle achievementStyle,
+                                        CellStyle weightStyle,
+                                        String majorName,
+                                        Integer gradeYear,
+                                        String exportInfo) {
+        XSSFSheet sheet = workbook.createSheet("专业级汇总");
+        int rowIndex = 0;
+        rowIndex = writeMergedTextRow(sheet, rowIndex, "专业级汇总 - " + majorName + " " + gradeYear + "级", titleStyle, 5, 30);
+        rowIndex = writeMergedTextRow(sheet, rowIndex, exportInfo, infoStyle, 5, 22);
+        rowIndex = writeHeaderRow(sheet, rowIndex, new String[]{
+                "毕业要求", "毕业要求描述", "指标点编号", "指标点描述", "专业级达成度 Gk", "支撑课程数"
+        }, headerStyle);
 
+        int dataStartRow = rowIndex;
         for (List<AchievementLedgerRow> ipRows : rowsByIp.values()) {
             AchievementLedgerRow ipFirst = ipRows.get(0);
             int contributingCourseCount = (int) ipRows.stream()
@@ -467,33 +445,33 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                     .count();
 
             Row row = sheet.createRow(rowIndex++);
-            writeCell(row.createCell(0), ipFirst.getIpCode(), centeredBodyStyle);
-            writeCell(row.createCell(1), ipFirst.getIpDescription(), bodyStyle);
-            writeCell(row.createCell(2), ipFirst.getGrCode(), centeredBodyStyle);
-            writeCell(row.createCell(3), ipFirst.getFinalAchievement(), centeredBodyStyle);
-            writeCell(row.createCell(4), contributingCourseCount, centeredBodyStyle);
+            writeCell(row.createCell(0), ipFirst.getGrCode(), centeredBodyStyle);
+            writeCell(row.createCell(1), ipFirst.getGrDescription(), bodyStyle);
+            writeCell(row.createCell(2), ipFirst.getIpCode(), centeredBodyStyle);
+            writeCell(row.createCell(3), ipFirst.getIpDescription(), bodyStyle);
+            writeCell(row.createCell(4), ipFirst.getFinalAchievement(), achievementStyle);
+            writeCell(row.createCell(5), contributingCourseCount, centeredBodyStyle);
         }
 
-        rowIndex++;
+        mergeSameRequirementCells(sheet, rowsByIp, dataStartRow);
 
+        rowIndex++;
+        rowIndex = writeMergedTextRow(sheet, rowIndex, "指标点-课程支撑明细", titleStyle, 5, 30);
+        CellStyle indicatorSectionStyle = createSectionStyle(workbook, IndexedColors.TEAL, true);
         for (List<AchievementLedgerRow> ipRows : rowsByIp.values()) {
+            if (ipRows.isEmpty()) {
+                continue;
+            }
             AchievementLedgerRow ipFirst = ipRows.get(0);
             rowIndex = writeMergedTextRow(
                     sheet,
                     rowIndex,
-                    "二、指标点 " + valueOrEmpty(ipFirst.getIpCode()) + " 支撑课程概览",
+                    "指标点 " + valueOrEmpty(ipFirst.getIpCode()) + " 支撑课程概览",
                     indicatorSectionStyle,
                     5,
                     24
             );
-
-            Row courseHeaderRow = sheet.createRow(rowIndex++);
-            String[] courseHeaders = {
-                    "课程代码", "课程名称", "教学班", "课程级达成度 Ek", "宏观权重 W", "加权贡献"
-            };
-            for (int i = 0; i < courseHeaders.length; i++) {
-                writeCell(courseHeaderRow.createCell(i), courseHeaders[i], headerStyle);
-            }
+            rowIndex = writeCourseSupportHeaderRow(sheet, rowIndex, headerStyle);
 
             Map<String, AchievementLedgerRow> courseRows = ipRows.stream()
                     .filter(row -> row.getCourseId() != null && row.getClassId() != null)
@@ -508,109 +486,60 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
                 Row row = sheet.createRow(rowIndex++);
                 writeCell(row.createCell(0), courseRow.getCourseCode(), centeredBodyStyle);
                 writeCell(row.createCell(1), courseRow.getCourseName(), bodyStyle);
-                writeCell(row.createCell(2), courseRow.getClassName(), bodyStyle);
-                writeCell(row.createCell(3), courseRow.getCourseIndicatorAchievement(), centeredBodyStyle);
-                writeCell(row.createCell(4), courseRow.getMacroWeight(), centeredBodyStyle);
-                writeCell(row.createCell(5), multiply(courseRow.getCourseIndicatorAchievement(), courseRow.getMacroWeight()), centeredBodyStyle);
+                writeCell(row.createCell(2), "", bodyStyle);
+                sheet.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, 2));
+                writeCell(row.createCell(3), courseRow.getCourseIndicatorAchievement(), achievementStyle);
+                writeCell(row.createCell(4), courseRow.getMacroWeight(), weightStyle);
+                writeCell(row.createCell(5), multiply(courseRow.getCourseIndicatorAchievement(), courseRow.getMacroWeight()), achievementStyle);
             }
-
-            rowIndex++;
-            for (Map.Entry<String, AchievementLedgerRow> courseEntry : courseRows.entrySet()) {
-                AchievementLedgerRow courseFirst = courseEntry.getValue();
-                List<AchievementLedgerRow> currentCourseRows = ipRows.stream()
-                        .filter(row -> Objects.equals(row.getCourseId(), courseFirst.getCourseId())
-                                && Objects.equals(row.getClassId(), courseFirst.getClassId()))
-                        .toList();
-                Map<Long, List<AchievementLedgerRow>> rowsByObjective = currentCourseRows.stream()
-                        .filter(row -> row.getCoId() != null)
-                        .collect(Collectors.groupingBy(AchievementLedgerRow::getCoId, LinkedHashMap::new, Collectors.toList()));
-                if (rowsByObjective.isEmpty()) {
-                    continue;
-                }
-
-                rowIndex = writeMergedTextRow(
-                        sheet,
-                        rowIndex,
-                        "三、课程 " + valueOrEmpty(courseFirst.getCourseName())
-                                + " | 教学班 " + valueOrEmpty(courseFirst.getClassName()),
-                        courseSectionStyle,
-                        5,
-                        24
-                );
-
-                rowIndex = writeHeaderRow(sheet, rowIndex, courseHeaders, headerStyle);
-                Row singleCourseRow = sheet.createRow(rowIndex++);
-                writeCell(singleCourseRow.createCell(0), courseFirst.getCourseCode(), centeredBodyStyle);
-                writeCell(singleCourseRow.createCell(1), courseFirst.getCourseName(), bodyStyle);
-                writeCell(singleCourseRow.createCell(2), courseFirst.getClassName(), bodyStyle);
-                writeCell(singleCourseRow.createCell(3), courseFirst.getCourseIndicatorAchievement(), centeredBodyStyle);
-                writeCell(singleCourseRow.createCell(4), courseFirst.getMacroWeight(), centeredBodyStyle);
-                writeCell(singleCourseRow.createCell(5), multiply(courseFirst.getCourseIndicatorAchievement(), courseFirst.getMacroWeight()), centeredBodyStyle);
-
-                rowIndex = writeMergedTextRow(
-                        sheet,
-                        rowIndex,
-                        "3.1 课程目标明细",
-                        infoStyle,
-                        4,
-                        20
-                );
-                rowIndex = writeHeaderRow(
-                        sheet,
-                        rowIndex,
-                        new String[]{
-                                "目标编码", "目标描述", "班级平均达成度",
-                                "内部权重", "加权贡献"
-                        },
-                        headerStyle
-                );
-
-                for (List<AchievementLedgerRow> objectiveRows : rowsByObjective.values()) {
-                    AchievementLedgerRow objectiveFirst = objectiveRows.get(0);
-                    Row objectiveRow = sheet.createRow(rowIndex++);
-                    writeCell(objectiveRow.createCell(0), objectiveFirst.getObjectiveCode(), centeredBodyStyle);
-                    writeCell(objectiveRow.createCell(1), objectiveFirst.getCoDescription(), bodyStyle);
-                    writeCell(objectiveRow.createCell(2), objectiveFirst.getObjectiveAchievement(), centeredBodyStyle);
-                    writeCell(objectiveRow.createCell(3), objectiveFirst.getInternalWeight(), centeredBodyStyle);
-                    writeCell(objectiveRow.createCell(4), multiply(objectiveFirst.getObjectiveAchievement(), objectiveFirst.getInternalWeight()), centeredBodyStyle);
-
-                    rowIndex = writeMergedTextRow(
-                            sheet,
-                            rowIndex,
-                            "四、目标 " + valueOrEmpty(objectiveFirst.getObjectiveCode()) + " 得分明细",
-                            detailSectionStyle,
-                            4,
-                            22
-                    );
-                    rowIndex = writeHeaderRow(
-                            sheet,
-                            rowIndex,
-                            new String[]{
-                                    "考核点", "满分", "学号", "姓名", "原始成绩"
-                            },
-                            detailHeaderStyle
-                    );
-
-                    for (AchievementLedgerRow detailRow : objectiveRows) {
-                        Row scoreRow = sheet.createRow(rowIndex++);
-                        writeCell(scoreRow.createCell(0), detailRow.getApName(), bodyStyle);
-                        writeCell(scoreRow.createCell(1), detailRow.getFullScore(), centeredBodyStyle);
-                        writeCell(scoreRow.createCell(2), detailRow.getStudentNo(), centeredBodyStyle);
-                        writeCell(scoreRow.createCell(3), detailRow.getStudentName(), centeredBodyStyle);
-                        writeCell(scoreRow.createCell(4), detailRow.getActualScore(), centeredBodyStyle);
-                    }
-                    rowIndex++;
-                }
-            }
-
             rowIndex++;
         }
 
-        sheet.createFreezePane(0, 3);
-        for (int i = 0; i <= 5; i++) {
-            sheet.autoSizeColumn(i);
-            int width = Math.min(Math.max(sheet.getColumnWidth(i) + 512, 14 * 256), 42 * 256);
-            sheet.setColumnWidth(i, width);
+        sheet.createFreezePane(0, 2);
+        applyColumnWidths(sheet, new int[]{18, 42, 18, 48, 18, 16});
+    }
+
+    private int writeCourseSupportHeaderRow(XSSFSheet sheet, int rowIndex, CellStyle headerStyle) {
+        Row row = sheet.createRow(rowIndex);
+        row.setHeightInPoints(20);
+        writeCell(row.createCell(0), "课程代码", headerStyle);
+        writeCell(row.createCell(1), "课程名称", headerStyle);
+        writeCell(row.createCell(2), "", headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 1, 2));
+        writeCell(row.createCell(3), "课程级达成度 Ek", headerStyle);
+        writeCell(row.createCell(4), "宏观权重 W", headerStyle);
+        writeCell(row.createCell(5), "加权贡献 Ek×W", headerStyle);
+        return rowIndex + 1;
+    }
+
+    private void mergeSameRequirementCells(XSSFSheet sheet, Map<Long, List<AchievementLedgerRow>> rowsByIp, int dataStartRow) {
+        List<AchievementLedgerRow> summaryRows = rowsByIp.values().stream()
+                .filter(list -> !list.isEmpty())
+                .map(list -> list.get(0))
+                .toList();
+        if (summaryRows.isEmpty()) {
+            return;
+        }
+        int groupStart = 0;
+        for (int index = 1; index <= summaryRows.size(); index++) {
+            boolean groupEnded = index == summaryRows.size()
+                    || !Objects.equals(summaryRows.get(index - 1).getGrId(), summaryRows.get(index).getGrId());
+            if (!groupEnded) {
+                continue;
+            }
+            int firstRow = dataStartRow + groupStart;
+            int lastRow = dataStartRow + index - 1;
+            if (lastRow > firstRow) {
+                sheet.addMergedRegion(new CellRangeAddress(firstRow, lastRow, 0, 0));
+                sheet.addMergedRegion(new CellRangeAddress(firstRow, lastRow, 1, 1));
+            }
+            groupStart = index;
+        }
+    }
+
+    private void applyColumnWidths(XSSFSheet sheet, int[] widths) {
+        for (int i = 0; i < widths.length; i++) {
+            sheet.setColumnWidth(i, widths[i] * 256);
         }
     }
 
@@ -699,6 +628,12 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
     private CellStyle createBodyStyle(XSSFWorkbook workbook, boolean centered) {
         CellStyle style = createBaseStyle(workbook);
         style.setAlignment(centered ? HorizontalAlignment.CENTER : HorizontalAlignment.LEFT);
+        return style;
+    }
+
+    private CellStyle createNumberStyle(XSSFWorkbook workbook, String dataFormat) {
+        CellStyle style = createBodyStyle(workbook, true);
+        style.setDataFormat(workbook.createDataFormat().getFormat(dataFormat));
         return style;
     }
 
@@ -839,3 +774,4 @@ public class AchievementTraceServiceImpl implements AchievementTraceService {
         }
     }
 }
+

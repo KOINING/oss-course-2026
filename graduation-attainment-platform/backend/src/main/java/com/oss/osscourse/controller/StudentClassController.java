@@ -2,6 +2,7 @@ package com.oss.osscourse.controller;
 
 import com.oss.osscourse.common.AcademicAffairsAccessGuard;
 import com.oss.osscourse.common.Result;
+import com.oss.osscourse.dto.teachingclass.StudentClassGenerateRequest;
 import com.oss.osscourse.dto.teachingclass.StudentClassImportResult;
 import com.oss.osscourse.dto.teachingclass.StudentClassListRequest;
 import com.oss.osscourse.dto.teachingclass.StudentClassRemoveRequest;
@@ -39,6 +40,16 @@ public class StudentClassController {
             @RequestAttribute(value = "roles", required = false) List<String> roles) {
         accessGuard.assertAcademicAffairs(roles);
         return Result.ok(studentClassService.importStudentClasses(file));
+    }
+
+    @PostMapping("/generateStudentClasses")
+    @Operation(summary = "自动生成教学班学生名单", description = "按教学班所属专业和年级补齐学生与教学班关联")
+    public Result<StudentClassImportResult> generateStudentClasses(
+            @Parameter(description = "自动生成请求", required = true)
+            @Valid @RequestBody StudentClassGenerateRequest request,
+            @RequestAttribute(value = "roles", required = false) List<String> roles) {
+        accessGuard.assertAcademicAffairs(roles);
+        return Result.ok(studentClassService.generateStudentClasses(request.getTeachingClassId()));
     }
 
     @PostMapping("/listStudentsByTeachingClass")

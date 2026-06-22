@@ -54,6 +54,9 @@ public class TeachingClassResponse {
     @Schema(description = "主讲教师姓名", example = "张教授")
     private String teacherName;
 
+    @Schema(description = "教学班学生人数", example = "40")
+    private Long studentCount;
+
     @Schema(description = "计算状态", example = "unsubmitted")
     private String calcStatus;
 

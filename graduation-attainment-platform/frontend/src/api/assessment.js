@@ -62,7 +62,10 @@ export function importScorePreviewApi(data) {
 }
 
 export function saveScoresApi(data) {
-  return request.post('/teacher/saveScores', data)
+  return request.post('/teacher/saveScores', data, {
+    timeout: 60000,
+    suppressGlobalError: true,
+  })
 }
 
 export function getScoreImportContextApi(data) {
@@ -70,7 +73,10 @@ export function getScoreImportContextApi(data) {
 }
 
 export function calculateCourseLevelApi(data) {
-  return request.post('/teacher/calcCourseAchievement', data)
+  return request.post('/teacher/calcCourseAchievement', data, {
+    timeout: 60000,
+    suppressGlobalError: true,
+  })
 }
 
 export function getCourseObjectiveDashboardApi(data) {

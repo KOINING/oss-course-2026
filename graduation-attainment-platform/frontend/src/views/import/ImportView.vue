@@ -39,7 +39,7 @@ const studentResult = reactive({
 })
 
 const studentClassResult = reactive({
-  summary: { totalCount: 0, successCount: 0, failureCount: 0 },
+  summary: { totalCount: 0, successCount: 0, skippedCount: undefined, failureCount: 0 },
   failedItems: [],
 })
 
@@ -213,6 +213,7 @@ async function submitStudentClassImport() {
     studentClassResult.summary = {
       totalCount: data.totalCount ?? 0,
       successCount: data.successCount ?? 0,
+      skippedCount: data.skippedCount ?? 0,
       failureCount: data.failureCount ?? 0,
     }
     studentClassResult.failedItems = data.failedItems ?? []

@@ -43,7 +43,7 @@ public class CourseReportServiceImpl implements CourseReportService {
 
 
     @Override
-    public CourseReportResponse getCourseReport(CourseReportRequest request) {
+    public CourseReportResponse getCourseReport(CourseReportRequest request, Long userId, List<String> roles) {
         Course course = courseMapper.selectById(request.getCourseId());
         if (course == null) {
             throw new BusinessException(404, "Course not found");
@@ -65,9 +65,18 @@ public class CourseReportServiceImpl implements CourseReportService {
         if (request.getTermId() != null) {
             tcWrapper.eq(TeachingClass::getTermId, request.getTermId());
         }
-        List<TeachingClass> teachingClasses = teachingClassMapper.selectList(tcWrapper);
-        if (teachingClasses.isEmpty()) {
+        List<TeachingClass> matchedTeachingClasses = teachingClassMapper.selectList(tcWrapper);
+        if (matchedTeachingClasses.isEmpty()) {
             throw new BusinessException(404, "No teaching class matches the selected course, major and grade");
+        }
+        Long instructorTeacherId = resolveInstructorTeacherId(userId, roles);
+        List<TeachingClass> teachingClasses = instructorTeacherId == null
+                ? matchedTeachingClasses
+                : matchedTeachingClasses.stream()
+                .filter(item -> Objects.equals(item.getTeacherId(), instructorTeacherId))
+                .toList();
+        if (teachingClasses.isEmpty()) {
+            throw new BusinessException(403, "当前教师无权查看该课程级评价报表");
         }
         String teacherName = teacherMapper.selectBatchIds(
                         teachingClasses.stream()
@@ -140,7 +149,7 @@ public class CourseReportServiceImpl implements CourseReportService {
             List<ObjectiveAchievementDetail> objectiveDetails = new ArrayList<>();
             for (CourseObjective objective : objectives) {
                 CourseObjectiveAchievement achievement = coaMap.get(objective.getCoId());
-                float averageAchievement = achievement == null ? 0 : achievement.getAverageAchievement();
+                Float averageAchievement = achievement == null ? null : achievement.getAverageAchievement();
                 objectiveDetails.add(ObjectiveAchievementDetail.builder()
                         .coId(objective.getCoId())
                         .objectiveCode(objective.getObjectiveCode())
@@ -217,8 +226,7 @@ public class CourseReportServiceImpl implements CourseReportService {
         List<ObjectiveAchievementSummary> objectiveSummaries = new ArrayList<>();
         for (CourseObjective objective : objectives) {
             List<ClassAchievement> classAchievements = coAchievementMap.getOrDefault(objective.getCoId(), List.of());
-            float courseAverage = classAchievements.isEmpty() ? 0
-                    : (float) classAchievements.stream().mapToDouble(ClassAchievement::getAchievement).average().orElse(0);
+            Float courseAverage = averageAchievement(classAchievements);
             objectiveSummaries.add(ObjectiveAchievementSummary.builder()
                     .coId(objective.getCoId())
                     .objectiveCode(objective.getObjectiveCode())
@@ -236,8 +244,7 @@ public class CourseReportServiceImpl implements CourseReportService {
                 continue;
             }
             List<ClassAchievement> classAchievements = ipAchievementMap.getOrDefault(indicatorPoint.getIpId(), List.of());
-            float courseAchievement = classAchievements.isEmpty() ? 0
-                    : (float) classAchievements.stream().mapToDouble(ClassAchievement::getAchievement).average().orElse(0);
+            Float courseAchievement = averageAchievement(classAchievements);
             indicatorSummaries.add(IndicatorAchievementSummary.builder()
                     .ipId(indicatorPoint.getIpId())
                     .ipCode(indicatorPoint.getIpCode())
@@ -268,8 +275,8 @@ public class CourseReportServiceImpl implements CourseReportService {
     }
 
     @Override
-    public byte[] exportCourseReportExcel(CourseReportRequest request) {
-        CourseReportResponse report = getCourseReport(request);
+    public byte[] exportCourseReportExcel(CourseReportRequest request, Long userId, List<String> roles) {
+        CourseReportResponse report = getCourseReport(request, userId, roles);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("课程级评价报表");
@@ -283,6 +290,7 @@ public class CourseReportServiceImpl implements CourseReportService {
             CellStyle infoValueStyle = createInfoValueStyle(workbook);
             CellStyle dataStyle = createDataStyle(workbook);
             CellStyle centeredDataStyle = createCenteredDataStyle(workbook);
+            CellStyle twoDecimalStyle = createNumberStyle(workbook, "0.00");
             CellStyle emphasisStyle = createEmphasisStyle(workbook);
 
             int rowIndex = 0;
@@ -307,7 +315,7 @@ public class CourseReportServiceImpl implements CourseReportService {
                     Row apRow = sheet.createRow(rowIndex++);
                     writeCell(apRow.createCell(0), ap.getApName(), dataStyle);
                     writeCell(apRow.createCell(1), ap.getFullScore(), centeredDataStyle);
-                    writeCell(apRow.createCell(2), ap.getAverageScore(), centeredDataStyle);
+                    writeCell(apRow.createCell(2), ap.getAverageScore(), twoDecimalStyle);
                     writeCell(apRow.createCell(3), formatPercent(ap.getScoreRate()), centeredDataStyle);
                     mergeCells(sheet, apRow.getRowNum(), apRow.getRowNum(), 3, 5, centeredDataStyle);
                 }
@@ -398,8 +406,8 @@ public class CourseReportServiceImpl implements CourseReportService {
     }
 
     @Override
-    public byte[] exportCourseReportPdf(CourseReportRequest request) {
-        CourseReportResponse report = getCourseReport(request);
+    public byte[] exportCourseReportPdf(CourseReportRequest request, Long userId, List<String> roles) {
+        CourseReportResponse report = getCourseReport(request, userId, roles);
 
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
             java.io.InputStream fontStream = getClass().getClassLoader().getResourceAsStream("fonts/NotoSansSC-Regular.ttf");
@@ -488,7 +496,7 @@ public class CourseReportServiceImpl implements CourseReportService {
                     drawPdfRightAlignedText(contentStream, font, 10,
                             String.format(Locale.ROOT, "%.1f", ap.getFullScore()), fullScoreX, yPosition);
                     drawPdfRightAlignedText(contentStream, font, 10,
-                            String.format(Locale.ROOT, "%.1f", ap.getAverageScore()), averageScoreX, yPosition);
+                            String.format(Locale.ROOT, "%.2f", ap.getAverageScore()), averageScoreX, yPosition);
                     drawPdfRightAlignedText(contentStream, font, 10,
                             String.format(Locale.ROOT, "%.4f", ap.getScoreRate()), scoreRateX, yPosition);
                     yPosition -= lineHeight;
@@ -511,9 +519,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                     if (desc.length() > 40) {
                         desc = desc.substring(0, 37) + "...";
                     }
-                    contentStream.showText(String.format("%s - %s：%.4f",
+                    contentStream.showText(String.format("%s - %s：%s",
                             co.getObjectiveCode(), desc,
-                            co.getAverageAchievement()));
+                            formatPercent(co.getAverageAchievement())));
                     contentStream.endText();
                     yPosition -= lineHeight;
                 }
@@ -535,9 +543,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                     if (ipDesc.length() > 40) {
                         ipDesc = ipDesc.substring(0, 37) + "...";
                     }
-                    contentStream.showText(String.format("%s - %s：%.4f",
+                    contentStream.showText(String.format("%s - %s：%s",
                             ip.getIpCode(), ipDesc,
-                            ip.getAchievement()));
+                            formatPercent(ip.getAchievement())));
                     contentStream.endText();
                     yPosition -= lineHeight;
                 }
@@ -576,9 +584,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                 if (desc.length() > 40) {
                     desc = desc.substring(0, 37) + "...";
                 }
-                contentStream.showText(String.format("%s - %s：%.4f",
+                contentStream.showText(String.format("%s - %s：%s",
                         co.getObjectiveCode(), desc,
-                        co.getAverageAchievement()));
+                        formatPercent(co.getAverageAchievement())));
                 contentStream.endText();
                 yPosition -= lineHeight;
             }
@@ -600,9 +608,9 @@ public class CourseReportServiceImpl implements CourseReportService {
                 if (ipDesc.length() > 40) {
                     ipDesc = ipDesc.substring(0, 37) + "...";
                 }
-                contentStream.showText(String.format("%s - %s：%.4f",
+                contentStream.showText(String.format("%s - %s：%s",
                         ip.getIpCode(), ipDesc,
-                        ip.getAverageAchievement()));
+                        formatPercent(ip.getAverageAchievement())));
                 contentStream.endText();
                 yPosition -= lineHeight;
             }
@@ -640,6 +648,25 @@ public class CourseReportServiceImpl implements CourseReportService {
             throw new BusinessException(400, "No course-major binding found for the selected course and grade");
         }
         throw new BusinessException(400, "Major is required because the selected course and grade map to multiple majors");
+    }
+
+    private Long resolveInstructorTeacherId(Long userId, List<String> roles) {
+        if (roles != null && (roles.contains("program_director") || roles.contains("academic_affairs"))) {
+            return null;
+        }
+        if (roles == null || !roles.contains("instructor")) {
+            throw new BusinessException(403, "当前账号无权查看课程级评价报表");
+        }
+        if (userId == null) {
+            throw new BusinessException(403, "当前账号未绑定教师身份，无法查看课程级评价报表");
+        }
+        Teacher teacher = teacherMapper.selectOne(new LambdaQueryWrapper<Teacher>()
+                .eq(Teacher::getUserId, userId)
+                .last("LIMIT 1"));
+        if (teacher == null) {
+            throw new BusinessException(403, "当前账号未绑定教师身份，无法查看课程级评价报表");
+        }
+        return teacher.getId();
     }
 
     private void drawPdfText(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream,
@@ -794,6 +821,12 @@ public class CourseReportServiceImpl implements CourseReportService {
         return style;
     }
 
+    private CellStyle createNumberStyle(Workbook workbook, String dataFormat) {
+        CellStyle style = createCenteredDataStyle(workbook);
+        style.setDataFormat(workbook.createDataFormat().getFormat(dataFormat));
+        return style;
+    }
+
     private CellStyle createEmphasisStyle(Workbook workbook) {
         CellStyle style = createCenteredDataStyle(workbook);
         style.setFillForegroundColor(IndexedColors.LEMON_CHIFFON.getIndex());
@@ -871,6 +904,17 @@ public class CourseReportServiceImpl implements CourseReportService {
         }
     }
 
+    private Float averageAchievement(List<ClassAchievement> classAchievements) {
+        if (classAchievements == null || classAchievements.isEmpty()) {
+            return null;
+        }
+        OptionalDouble average = classAchievements.stream()
+                .map(ClassAchievement::getAchievement)
+                .filter(Objects::nonNull)
+                .mapToDouble(Float::doubleValue)
+                .average();
+        return average.isPresent() ? (float) average.getAsDouble() : null;
+    }
     private String formatPercent(Float value) {
         if (value == null) {
             return "-";

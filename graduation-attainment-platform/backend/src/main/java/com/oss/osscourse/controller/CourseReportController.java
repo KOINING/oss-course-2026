@@ -39,9 +39,10 @@ public class CourseReportController {
     public Result<CourseReportResponse> getCourseReport(
             @Parameter(description = "报表查询请求", required = true)
             @Valid @RequestBody CourseReportRequest request,
+            @RequestAttribute("userId") Long userId,
             @RequestAttribute("roles") List<String> roles) {
         ensureCourseReportAccess(roles);
-        return Result.ok(courseReportService.getCourseReport(request));
+        return Result.ok(courseReportService.getCourseReport(request, userId, roles));
     }
 
     @PostMapping("/export/excel")
@@ -49,9 +50,10 @@ public class CourseReportController {
     public ResponseEntity<byte[]> exportExcel(
             @Parameter(description = "报表查询请求", required = true)
             @Valid @RequestBody CourseReportRequest request,
+            @RequestAttribute("userId") Long userId,
             @RequestAttribute("roles") List<String> roles) {
         ensureCourseReportAccess(roles);
-        byte[] excelBytes = courseReportService.exportCourseReportExcel(request);
+        byte[] excelBytes = courseReportService.exportCourseReportExcel(request, userId, roles);
 
         String fileName = "课程级评价报表_" + request.getCourseId() + "_" + request.getGradeYear() + ".xlsx";
         String encodedFileName;
@@ -78,9 +80,10 @@ public class CourseReportController {
     public ResponseEntity<byte[]> exportPdf(
             @Parameter(description = "报表查询请求", required = true)
             @Valid @RequestBody CourseReportRequest request,
+            @RequestAttribute("userId") Long userId,
             @RequestAttribute("roles") List<String> roles) {
         ensureCourseReportAccess(roles);
-        byte[] pdfBytes = courseReportService.exportCourseReportPdf(request);
+        byte[] pdfBytes = courseReportService.exportCourseReportPdf(request, userId, roles);
 
         String fileName = "课程级评价报表_" + request.getCourseId() + "_" + request.getGradeYear() + ".pdf";
         String encodedFileName;

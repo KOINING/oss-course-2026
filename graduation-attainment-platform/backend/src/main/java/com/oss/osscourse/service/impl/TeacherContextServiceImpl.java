@@ -105,9 +105,6 @@ public class TeacherContextServiceImpl implements TeacherContextService {
         if (internalWeightCount == null || internalWeightCount == 0) {
             blockReasons.add("当前课程未配置内部权重 w，不能生成成绩模板或导入成绩");
         }
-        if ("locked".equals(teachingClass.getCalcStatus())) {
-            blockReasons.add("当前课程级计算状态为 locked，不能导入成绩");
-        }
 
         boolean canGenerateTemplate = ownsClass
                 && hasInstructorRole

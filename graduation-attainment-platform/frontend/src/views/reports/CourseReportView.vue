@@ -115,7 +115,7 @@
           <!-- 各教学班单项平均分 -->
           <section class="report-section">
             <h2>各教学班单项平均分</h2>
-            <el-table :data="reportData.classScoreSummaries" border stripe>
+            <el-table class="report-table" :data="reportData.classScoreSummaries" border stripe>
               <el-table-column prop="className" label="教学班" min-width="160" />
               <el-table-column prop="studentCount" label="人数" width="80" align="center" />
               <el-table-column
@@ -138,7 +138,7 @@
           <!-- 各课程目标达成度明细 -->
           <section class="report-section">
             <h2>各课程目标达成度明细</h2>
-            <el-table :data="reportData.objectiveAchievements" border stripe>
+            <el-table class="report-table" :data="reportData.objectiveAchievements" border stripe>
               <el-table-column prop="objectiveCode" label="目标编号" width="100" align="center" />
               <el-table-column prop="objectiveName" label="目标名称" min-width="160" />
               <el-table-column
@@ -154,7 +154,7 @@
               </el-table-column>
               <el-table-column label="课程级均值" width="120" align="center">
                 <template #default="{ row }">
-                  <span class="highlight">{{ formatAchievement(row.courseAverage) }}</span>
+                  <span :class="getAchievementHighlightClass(row.courseAverage)">{{ formatAchievement(row.courseAverage) }}</span>
                 </template>
               </el-table-column>
               <template #empty>
@@ -165,8 +165,12 @@
 
           <!-- 课程级指标点达成度 -->
           <section class="report-section">
-            <h2>课程级指标点达成度</h2>
-            <el-table :data="reportData.indicatorAchievements" border stripe>
+            <div class="section-title-row">
+              <h2>课程级指标点达成度</h2>
+              <span v-if="hasCalculatedIndicatorAchievement" class="threshold-note">达成度低于 0.60 标记为未达成</span>
+              <span v-else class="threshold-note">课程级计算完成后显示达成度结果</span>
+            </div>
+            <el-table class="report-table" :data="reportData.indicatorAchievements" border stripe>
               <el-table-column prop="ipCode" label="指标点编号" width="120" align="center" />
               <el-table-column prop="ipDescription" label="指标点描述" min-width="200" />
               <el-table-column
@@ -235,7 +239,14 @@ const exportingExcel = ref(false)
 const exportingPdf = ref(false)
 
 const canQuery = computed(() => filters.courseId && filters.majorId && filters.gradeYear)
-
+const hasCalculatedIndicatorAchievement = computed(() => {
+  const rows = reportData.value?.indicatorAchievements || []
+  return rows.some((row) =>
+    row.courseAchievement !== null
+    && row.courseAchievement !== undefined
+    && !Number.isNaN(Number(row.courseAchievement)),
+  )
+})
 async function loadCourses() {
   try {
     const list = (await listMyTeachingClassesApi({})) || []
@@ -424,7 +435,12 @@ function formatScore(val) {
 
 function getAchievementClass(val) {
   if (val === null || val === undefined) return ''
-  return Number(val) >= 0.7 ? 'achievement-pass' : 'achievement-fail'
+  return Number(val) >= 0.6 ? 'achievement-pass' : 'achievement-fail'
+}
+
+function getAchievementHighlightClass(val) {
+  if (val === null || val === undefined || Number.isNaN(Number(val))) return ''
+  return 'highlight'
 }
 
 async function exportExcel() {
@@ -487,10 +503,18 @@ onMounted(async () => {
 
 <style scoped>
 .course-report-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 20px;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .page-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
@@ -517,6 +541,7 @@ onMounted(async () => {
 
 .page-content {
   display: grid;
+  min-width: 0;
   gap: 24px;
 }
 
@@ -527,6 +552,7 @@ onMounted(async () => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+  min-width: 0;
 }
 
 .context-section h2,
@@ -535,6 +561,22 @@ onMounted(async () => {
   margin: 0 0 14px;
   color: #1f2937;
   font-size: 18px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section-title-row h2 {
+  margin: 0;
+}
+
+.threshold-note {
+  font-size: 13px;
+  color: #64748b;
 }
 
 .context-note {
@@ -555,6 +597,10 @@ onMounted(async () => {
 
 .context-section {
   padding-top: 16px;
+}
+
+.report-section {
+  overflow-x: auto;
 }
 
 .filter-form {
@@ -610,5 +656,40 @@ onMounted(async () => {
 .achievement-fail {
   font-weight: 600;
   color: #dc2626;
+}
+.report-table {
+  min-width: 760px;
+}
+
+.report-section :deep(.el-table) {
+  max-width: 100%;
+}
+
+.report-section :deep(.el-table__header-wrapper),
+.report-section :deep(.el-table__body-wrapper),
+.report-section :deep(.el-scrollbar) {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .course-report-page {
+    padding: 12px;
+  }
+
+  .section-header,
+  .section-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .filter-form :deep(.el-form-item) {
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .filter-form :deep(.el-select),
+  .filter-form :deep(.el-button) {
+    width: 100% !important;
+  }
 }
 </style>
